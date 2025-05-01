@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.image.ImageObserver;
 import java.io.IOException;
 import javax.imageio.ImageIO;
@@ -12,6 +13,8 @@ public abstract class WorldObject implements Drawable {
     protected Point position;
     protected String location;
     protected Image sprite;
+    protected int width;
+    protected int height;
 
     public WorldObject(Point position, String location) {
         try {
@@ -21,6 +24,8 @@ public abstract class WorldObject implements Drawable {
             sprite = null;
         }
         this.position = position;
+        width = sprite.getWidth(null);
+        height = sprite.getHeight(null);
     }
 
     // The draw method to draw the object on the board
@@ -45,5 +50,9 @@ public abstract class WorldObject implements Drawable {
 
     public Image getSprite() {
         return sprite;
+    }
+
+    public Rectangle getBounds(int tileSize) {
+        return new Rectangle(position.x * tileSize, position.y * tileSize, width, height);
     }
 }

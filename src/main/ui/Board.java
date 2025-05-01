@@ -57,19 +57,19 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         boolean isMoving = false;
-        if (upPressed) {
+        if (upPressed && canMove(0, -1)) {
             player.move(0, -1);
             isMoving = true;
         }
-        if (downPressed) {
+        if (downPressed && canMove(0, 1)) {
             player.move(0, 1);
             isMoving = true;
         }
-        if (leftPressed) {
+        if (leftPressed && canMove(-1, 0)) {
             player.move(-1, 0);
             isMoving = true;
         }
-        if (rightPressed) {
+        if (rightPressed && canMove(1, 0)) {
             player.move(1, 0);
             isMoving = true;
         }
@@ -92,9 +92,23 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         repaint();
     }
     
+    public boolean canMove(int dx, int dy) {
+        Rectangle nextBounds = new Rectangle(
+            (player.getPosition().x + dx) * TILE_SIZE,
+            ((player.getPosition().y + dy) * TILE_SIZE) + 30,
+            player.getWidth(),
+            player.getHeight()
+        );
+        for (WorldObject obj : objects) {
+            if (nextBounds.intersects(obj.getBounds(TILE_SIZE))) {
+                return false; // Collision detected
+            }
+        }
+        return true; // No collision
+    }
 
     public void placeObjects() {
-        objects.add(new Building(new Point(5, 5), "/resources/red_house.png"));
+        objects.add(new Building(new Point(40, 40), "/resources/red_house.png"));
     }
 
     @Override

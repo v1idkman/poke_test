@@ -1,6 +1,7 @@
 package model;
 
 import java.awt.Point;
+import java.awt.Rectangle;
 
 public class Player extends Trainer {
     protected Point pos;
@@ -21,6 +22,8 @@ public class Player extends Trainer {
         initSprites();
         setSprite(facingFront);
         pos = new Point(0, 0);
+        width = 50;
+        height = 50;
     }
 
     public void initSprites() {
@@ -48,6 +51,18 @@ public class Player extends Trainer {
     public void move(int dx, int dy) {
         pos.translate(dx, dy);
     }
+
+    public void setSpriteSize(int width, int height) {
+        this.width = width;
+        this.height = height;   
+    }
+
+    public Rectangle getBounds(int tileSize) {
+        // The position where the sprite is drawn
+        int x = pos.x * tileSize;
+        int y = pos.y * tileSize;
+        return new Rectangle(x, y, width, height);
+    }   
 
     public void tick(int maxCols, int maxRows) {
         if (pos.x < 0) pos.x = 0;
@@ -78,5 +93,13 @@ public class Player extends Trainer {
     
     public int getAnimationFrame() {
         return animationFrame;
+    }
+
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
     }
 }

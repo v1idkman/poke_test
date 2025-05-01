@@ -33,6 +33,9 @@ public class PlayerView {
         }
         try {
             image = ImageIO.read(getClass().getResource(path));
+            if (image != null) {
+                player.setSpriteSize(image.getWidth(null), image.getHeight(null));
+            }
         } catch (IOException | IllegalArgumentException exc) {
             System.out.println("Error opening image file: " + exc.getMessage());
             image = null;

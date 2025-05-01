@@ -13,6 +13,8 @@ public abstract class Trainer {
     protected BufferedImage image;
     protected Point pos;
     protected String currentSpite;
+    protected int width;
+    protected int height;
     
     public Trainer(String name) {
         currentSpite = "NEEDS TO BE SET INDIVIDUALLY";
