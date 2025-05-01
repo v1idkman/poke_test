@@ -9,6 +9,13 @@ public class Player extends Trainer {
     protected String facingRight;
     protected String facingBack;
 
+    public enum Direction { FRONT, BACK, LEFT, RIGHT }
+
+    private Direction direction = Direction.BACK;
+    private boolean moving = false;
+    private int animationFrame = 0;
+    private static final int NUM_FRAMES = 2;
+
     public Player(String name) {
         super(name);
         initSprites();
@@ -23,10 +30,14 @@ public class Player extends Trainer {
         facingBack = "/resources/s_facing_back.png";
     }
 
-    public String getSprite(String dir) {
-        if (dir == "front") return facingFront;
-        else if (dir == "left") return facingLeft;
-        else if (dir == "right") return facingRight;
+    public void setAnimationFrame(int frame) {
+        animationFrame = frame;
+    }
+
+    public String getSprite() {
+        if (direction == Direction.FRONT) return facingFront;
+        else if (direction == Direction.LEFT) return facingLeft;
+        else if (direction == Direction.RIGHT) return facingRight;
         else return facingBack;
     }
 
@@ -43,5 +54,29 @@ public class Player extends Trainer {
         else if (pos.x >= maxCols) pos.x = maxCols - 1;
         if (pos.y < 0) pos.y = 0;
         else if (pos.y >= maxRows) pos.y = maxRows - 1;
+    }
+
+    public void setDirection(Direction dir) {
+        direction = dir;
+    }
+    
+    public Direction getDirection() {
+        return direction;
+    }
+    
+    public void setMoving(boolean moving) {
+        this.moving = moving;
+    }
+    
+    public boolean isMoving() {
+        return moving;
+    }
+    
+    public void nextAnimationFrame() {
+        animationFrame = (animationFrame + 1) % NUM_FRAMES;
+    }
+    
+    public int getAnimationFrame() {
+        return animationFrame;
     }
 }

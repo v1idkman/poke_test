@@ -16,13 +16,29 @@ public class PlayerView {
     }
 
     public void loadImage() {
+        String path;
+        if (player.isMoving()) {
+            // Walking animation frame
+            path = String.format(
+                "/resources/s_walking_%s_%d.png",
+                player.getDirection().toString().toLowerCase(),
+                player.getAnimationFrame()
+            );
+        } else {
+            // Standing sprite
+            path = String.format(
+                "/resources/s_facing_%s.png",
+                player.getDirection().toString().toLowerCase()
+            );
+        }
         try {
-            image = ImageIO.read(getClass().getResource(player.getSpriteLocation()));
+            image = ImageIO.read(getClass().getResource(path));
         } catch (IOException | IllegalArgumentException exc) {
             System.out.println("Error opening image file: " + exc.getMessage());
             image = null;
         }
     }
+    
 
     public void draw(Graphics g, ImageObserver observer, int tileSize) {
         Point pos = player.getPosition();
