@@ -1,16 +1,31 @@
 package model;
 
 import java.util.List;
+import java.awt.Point;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 // abstract class of a trainer
 public abstract class Trainer {
-    private String name;
-    private List<Pokemon> pokes;
-    private Inventory inventory;
+    protected String name;
+    protected List<Pokemon> pokes;
+    protected Inventory inventory;
+    protected BufferedImage image;
+    protected Point pos;
+    protected String currentSpite;
     
-    public Trainer() {
+    public Trainer(String name) {
+        currentSpite = "NEEDS TO BE SET INDIVIDUALLY";
+        this.name = name;
         pokes = new ArrayList<>();
+    }
+
+    public void setSprite(String filePath) {
+        currentSpite = filePath;
+    }
+
+    public String getSpriteLocation() {
+        return currentSpite;
     }
 
     public void setName(String name) {
