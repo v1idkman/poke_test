@@ -16,6 +16,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     public static final int TILE_SIZE = 5;
     public static final int ROWS = 120;
     public static final int COLUMNS = 180;
+    private static final int PLAYER_HEIGHT_COLLISION = 30;
     private List<WorldObject> objects;
 
     private Timer timer;
@@ -38,7 +39,15 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         setFocusable(true);
         requestFocusInWindow();
         addKeyListener(this);
-        placeObjects();
+        addObject("/resources/red_house.png", 40, 40);
+        addObject("/resources/red_house.png", 60, 80);
+        addObject("/resources/red_house.png", 20, 20);
+        
+        // Initialize the menu singleton with this board's information
+        Menu menu = Menu.getInstance();
+        menu.setPlayer(player);
+        menu.setGameTimer(timer);
+        menu.initializeMenuButton(this, TILE_SIZE, COLUMNS, ROWS);
     }
 
     @Override
@@ -51,7 +60,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
 
         playerView.draw(g, this, TILE_SIZE);
-        drawScore(g);
+        drawDebugBounds(g);
     }
     
     @Override
@@ -95,9 +104,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     public boolean canMove(int dx, int dy) {
         Rectangle nextBounds = new Rectangle(
             (player.getPosition().x + dx) * TILE_SIZE,
-            ((player.getPosition().y + dy) * TILE_SIZE) + 30,
+            ((player.getPosition().y + dy) * TILE_SIZE) + PLAYER_HEIGHT_COLLISION,
             player.getWidth(),
-            player.getHeight()
+            player.getHeight() - PLAYER_HEIGHT_COLLISION
         );
         for (WorldObject obj : objects) {
             if (nextBounds.intersects(obj.getBounds(TILE_SIZE))) {
@@ -107,14 +116,28 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         return true; // No collision
     }
 
-    public void placeObjects() {
-        objects.add(new Building(new Point(40, 40), "/resources/red_house.png"));
+    public void addObject(String path, int x, int y) {
+        objects.add(new Building(new Point(x, y), path));
+    }
+
+    private void drawDebugBounds(Graphics g) {
+        g.setColor(Color.RED);
+        // Draw player bounds
+        g.drawRect((player.getPosition().x) * TILE_SIZE, ((player.getPosition().y) * TILE_SIZE) + PLAYER_HEIGHT_COLLISION, 
+        player.getWidth(), player.getHeight() - PLAYER_HEIGHT_COLLISION);
+        
+        // Draw object bounds
+        g.setColor(Color.BLUE);
+        for (WorldObject obj : objects) {
+            Rectangle bounds = obj.getBounds(TILE_SIZE);
+            g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        }
     }
 
     @Override
     public void keyTyped(KeyEvent e) {}
 
-        @Override
+    @Override
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
         if (key == KeyEvent.VK_UP) {
@@ -152,7 +175,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
     }
 
-
     private void drawBackground(Graphics g) {
         g.setColor(new Color(214, 214, 214));
         for (int row = 0; row < ROWS; row++) {
@@ -162,20 +184,5 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 }
             }
         }
-    }
-
-    private void drawScore(Graphics g) {
-        String text = "TEST";
-        Graphics2D g2d = (Graphics2D) g;
-        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        g2d.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-        g2d.setColor(new Color(30, 201, 139));
-        g2d.setFont(new Font("Lato", Font.BOLD, 25));
-        FontMetrics metrics = g2d.getFontMetrics(g2d.getFont());
-        Rectangle rect = new Rectangle(0, TILE_SIZE * (ROWS - 1), TILE_SIZE * COLUMNS, TILE_SIZE);
-        int x = rect.x + (rect.width - metrics.stringWidth(text)) / 2;
-        int y = rect.y + ((rect.height - metrics.getHeight()) / 2) + metrics.getAscent();
-        g2d.drawString(text, x, y);
     }
 }

@@ -9,9 +9,9 @@ public class App {
         JFrame window = new JFrame("Poke test");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        Board board = new Board();
-        window.add(board);
-        window.addKeyListener(board);
+        Board initialBoard = new Board();
+        window.add(initialBoard);
+        window.addKeyListener(initialBoard);
         window.setResizable(false);
         window.pack();
         window.setLocationRelativeTo(null);
