@@ -9,25 +9,24 @@ import java.util.ArrayList;
 public abstract class Trainer {
     protected String name;
     protected List<Pokemon> pokes;
-    protected Inventory inventory;
     protected BufferedImage image;
     protected Point pos;
-    protected String currentSpite;
+    protected String currentSprite;
     protected int width;
     protected int height;
     
     public Trainer(String name) {
-        currentSpite = "NEEDS TO BE SET INDIVIDUALLY";
+        currentSprite = "NEEDS TO BE SET INDIVIDUALLY";
         this.name = name;
         pokes = new ArrayList<>();
     }
 
     public void setSprite(String filePath) {
-        currentSpite = filePath;
+        currentSprite = filePath;
     }
 
     public String getSpriteLocation() {
-        return currentSpite;
+        return currentSprite;
     }
 
     public void setName(String name) {
@@ -40,9 +39,5 @@ public abstract class Trainer {
 
     public List<Pokemon> getPokes() {
         return pokes;
-    }
-
-    public Inventory getInv() {
-        return inventory;
     }
 }

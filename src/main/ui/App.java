@@ -2,14 +2,30 @@ package ui;
 
 import javax.swing.*;
 
+import model.Item;
+import model.Medicine;
+import model.Medicine.MedicineType;
+import model.Pokeball.PokeBallType;
+import model.Player;
+import model.Pokeball;
+
 public class App {
+    private static Item potion;
+    private static Item pokeball;
+
+    private static void initItems() {
+        potion = new Medicine(MedicineType.POTION, "/resources/items/potion.png");
+        pokeball = new Pokeball(PokeBallType.POKE_BALL, "/resources/items/pokeball.png");
+    }
 
     private static void initWindow() {
         // create a window frame and set the title in the toolbar
         JFrame window = new JFrame("Poke test");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        Board initialBoard = new Board();
+        Player player = new Player("sarp");
+        player.addToInventory(potion);
+        player.addToInventory(pokeball);
+        Board initialBoard = new Board(player);
         window.add(initialBoard);
         window.addKeyListener(initialBoard);
         window.setResizable(false);
@@ -19,6 +35,7 @@ public class App {
     }
 
     public static void main(String[] args) {
+        initItems();
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 initWindow();

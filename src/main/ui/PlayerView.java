@@ -20,14 +20,14 @@ public class PlayerView {
         if (player.isMoving()) {
             // Walking animation frame
             path = String.format(
-                "/resources/s_walking_%s_%d.png",
+                "/resources/player_sprites/s_walking_%s_%d.png",
                 player.getDirection().toString().toLowerCase(),
                 player.getAnimationFrame()
             );
         } else {
             // Standing sprite
             path = String.format(
-                "/resources/s_facing_%s.png",
+                "/resources/player_sprites/s_facing_%s.png",
                 player.getDirection().toString().toLowerCase()
             );
         }

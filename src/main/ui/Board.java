@@ -28,20 +28,20 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private int animationCounter = 0;
     private static final int ANIMATION_DELAY = 5;
 
-    public Board() {
+    public Board(Player player) {
         objects = new ArrayList<>();
         setPreferredSize(new Dimension(TILE_SIZE * COLUMNS, TILE_SIZE * ROWS));
         setBackground(new Color(232, 232, 232));
-        player = new Player("sarp");
+        this.player = player;
         playerView = new PlayerView(player);
         timer = new Timer(DELAY, this);
         timer.start();
         setFocusable(true);
         requestFocusInWindow();
         addKeyListener(this);
-        addObject("/resources/red_house.png", 40, 40);
-        addObject("/resources/red_house.png", 60, 80);
-        addObject("/resources/red_house.png", 20, 20);
+        addObject("/resources/buildings/red_house.png", 40, 40);
+        addObject("/resources/buildings/red_house.png", 60, 80);
+        addObject("/resources/buildings/red_house.png", 20, 20);
         
         // Initialize the menu singleton with this board's information
         Menu menu = Menu.getInstance();

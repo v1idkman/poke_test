@@ -2,6 +2,8 @@ package model;
 
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Player extends Trainer {
     protected Point pos;
@@ -10,12 +12,14 @@ public class Player extends Trainer {
     protected String facingRight;
     protected String facingBack;
 
-    public enum Direction { FRONT, BACK, LEFT, RIGHT }
+    public enum Direction {FRONT, BACK, LEFT, RIGHT}
 
     private Direction direction = Direction.BACK;
     private boolean moving = false;
     private int animationFrame = 0;
     private static final int NUM_FRAMES = 2;
+
+    private Set<Item> inventory;
 
     public Player(String name) {
         super(name);
@@ -24,13 +28,14 @@ public class Player extends Trainer {
         pos = new Point(0, 0);
         width = 50;
         height = 50;
+        inventory = new HashSet<>();
     }
 
     public void initSprites() {
-        facingFront = "/resources/s_facing_front.png";
-        facingLeft = "/resources/s_facing_left.png";
-        facingRight = "/resources/s_facing_right.png";
-        facingBack = "/resources/s_facing_back.png";
+        facingFront = "/resources/player_sprites/s_facing_front.png";
+        facingLeft = "/resources/player_sprites/s_facing_left.png";
+        facingRight = "/resources/player_sprites/s_facing_right.png";
+        facingBack = "/resources/player_sprites/s_facing_back.png";
     }
 
     public void setAnimationFrame(int frame) {
@@ -101,5 +106,21 @@ public class Player extends Trainer {
 
     public int getHeight() {
         return height;
+    }
+
+    public Set<Item> getInventory() {
+        return inventory;
+    }
+
+    public void addToInventory(Item item) {
+        if (!inventory.contains(item)) {
+            inventory.add(item);
+        } else {}
+    }
+
+    public void removeItem(Item item) {
+        if (inventory.contains(item)) {
+            inventory.remove(item);
+        }
     }
 }

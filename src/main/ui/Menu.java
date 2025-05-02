@@ -1,8 +1,19 @@
 package ui;
 
-import java.awt.*;
 import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.*;
+import javax.swing.Timer;
+
 import model.Player;
+import model.Item;
+import model.Medicine;
+import model.Pokeball;
+import model.KeyItem;
+
+import java.util.List;
+
 
 public class Menu {
     private static Menu instance;
@@ -107,25 +118,132 @@ public class Menu {
         return panel;
     }
     
-    private JPanel createInventoryPanel() {
-        JPanel panel = new JPanel(new GridLayout(0, 4, 10, 10));
-        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+    private JComponent createInventoryPanel() {
+        // Check if player is available
+        if (player == null || player.getInventory() == null || player.getInventory().isEmpty()) {
+            JPanel emptyPanel = new JPanel(new BorderLayout());
+            JLabel emptyLabel = new JLabel("Your inventory is empty", JLabel.CENTER);
+            emptyLabel.setFont(new Font("Lato", Font.PLAIN, 18));
+            emptyPanel.add(emptyLabel, BorderLayout.CENTER);
+            return emptyPanel;
+        }
         
-        String[] items = {"Poké Ball", "Great Ball", "Ultra Ball", "Potion", 
-                          "Super Potion", "Hyper Potion", "Revive", "Escape Rope"};
+        // Create a tabbed pane for different item categories
+        JTabbedPane itemCategories = new JTabbedPane();
         
-        for (String item : items) {
+        // Get player's inventory
+        Set<Item> inventory = player.getInventory();
+        
+        // Create maps to organize items by type
+        Map<String, List<Item>> itemsByType = new HashMap<>();
+        
+        // Sort items by their types
+        for (Item item : inventory) {
+            String type = getItemType(item);
+            if (!itemsByType.containsKey(type)) {
+                itemsByType.put(type, new ArrayList<>());
+            }
+            itemsByType.get(type).add(item);
+        }
+        
+        // Add tabs for each item type
+        for (String type : itemsByType.keySet()) {
+            JPanel typePanel = createItemTypePanel(itemsByType.get(type));
+            itemCategories.addTab(type, typePanel);
+        }
+        
+        // If there are no categories (shouldn't happen if inventory has items)
+        if (itemCategories.getTabCount() == 0) {
+            JPanel emptyPanel = new JPanel(new BorderLayout());
+            JLabel emptyLabel = new JLabel("Your inventory is empty", JLabel.CENTER);
+            emptyLabel.setFont(new Font("Lato", Font.PLAIN, 18));
+            emptyPanel.add(emptyLabel, BorderLayout.CENTER);
+            return emptyPanel;
+        }
+        
+        return itemCategories;
+    }
+    
+    private String getItemType(Item item) {
+        if (item instanceof Medicine) {
+            return "Medicine";
+        } else if (item instanceof Pokeball) {
+            return "Poké Balls";
+        } else if (item instanceof KeyItem) {
+            return "Key Items";
+        } else {
+            // For any other item types that might be added later
+            return "Other Items";
+        }
+    }
+    
+    private JPanel createItemTypePanel(List<Item> items) {
+        JPanel panel = new JPanel();
+        
+        // Use a scroll pane in case there are many items
+        JScrollPane scrollPane = new JScrollPane();
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        
+        // Create a panel with grid layout for the items
+        JPanel itemsPanel = new JPanel(new GridLayout(0, 4, 10, 10));
+        itemsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Add each item to the panel
+        for (Item item : items) {
             JPanel itemPanel = new JPanel(new BorderLayout());
             itemPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
             
-            JLabel itemLabel = new JLabel(item, JLabel.CENTER);
-            JLabel countLabel = new JLabel("x5", JLabel.CENTER);
+            // Create a panel for the item image if available
+            JPanel imagePanel = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    if (item.getImage() != null) {
+                        g.drawImage(item.getImage(), 0, 0, getWidth(), getHeight(), this);
+                    }
+                }
+            };
+            imagePanel.setPreferredSize(new Dimension(32, 32));
             
+            JLabel itemLabel = new JLabel(item.getName(), JLabel.CENTER);
+            JLabel countLabel = new JLabel("x" + item.getQuantity(), JLabel.CENTER);
+            
+            itemPanel.add(imagePanel, BorderLayout.NORTH);
             itemPanel.add(itemLabel, BorderLayout.CENTER);
-            itemPanel.add(countLabel, BorderLayout.SOUTH);
             
-            panel.add(itemPanel);
+            // Only show quantity for stackable items
+            if (item.isStackable()) {
+                itemPanel.add(countLabel, BorderLayout.SOUTH);
+            }
+            
+            // Add tooltip with description
+            itemPanel.setToolTipText(item.getDescription());
+            
+            // Add click listener to use item
+            itemPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2) {
+                        // Double-click to use item
+                        boolean used = item.use(player);
+                        if (used && item.getQuantity() <= 0) {
+                            player.removeItem(item);
+                        }
+                        
+                        // Refresh inventory panel
+                        menuDialog.dispose();
+                        openPlayerMenu((JPanel)menuButton.getParent());
+                    }
+                }
+            });
+            
+            itemsPanel.add(itemPanel);
         }
+        
+        scrollPane.setViewportView(itemsPanel);
+        panel.setLayout(new BorderLayout());
+        panel.add(scrollPane, BorderLayout.CENTER);
         
         return panel;
     }
