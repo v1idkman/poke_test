@@ -3,19 +3,24 @@ package ui;
 import javax.swing.*;
 
 import model.Item;
+import model.KeyItem;
 import model.Medicine;
 import model.Medicine.MedicineType;
 import model.Pokeball.PokeBallType;
 import model.Player;
 import model.Pokeball;
+import model.KeyItem.KeyItemType;
 
 public class App {
     private static Item potion;
     private static Item pokeball;
+    private static Item goodRod;
 
     private static void initItems() {
         potion = new Medicine(MedicineType.POTION, "/resources/items/potion.png");
         pokeball = new Pokeball(PokeBallType.POKE_BALL, "/resources/items/pokeball.png");
+        goodRod = new KeyItem(KeyItemType.GOOD_ROD, "/resources/items/fishing-rod.png");
+
     }
 
     private static void initWindow() {
@@ -25,6 +30,7 @@ public class App {
         Player player = new Player("sarp");
         player.addToInventory(potion);
         player.addToInventory(pokeball);
+        player.addToInventory(goodRod);
         Board initialBoard = new Board(player);
         window.add(initialBoard);
         window.addKeyListener(initialBoard);

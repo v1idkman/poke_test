@@ -4,26 +4,32 @@ public class KeyItem extends Item {
     private KeyItemType type;
     
     public enum KeyItemType {
-        TOWN_MAP("Shows a map of the region"),
-        BICYCLE("Allows faster movement"),
-        FISHING_ROD("Used to catch water Pokémon"),
-        OLD_ROD("A basic fishing rod"),
-        GOOD_ROD("A better fishing rod"),
-        SUPER_ROD("The best fishing rod");
+        TOWN_MAP("Town Map", "Shows a map of the region"),
+        BICYCLE("Bicycle", "Allows faster movement"),
+        FISHING_ROD("Fishing Rod", "Used to catch water Pokémon"),
+        OLD_ROD("Old Rod", "A basic fishing rod"),
+        GOOD_ROD("Good Rod", "A better fishing rod"),
+        SUPER_ROD("Super Rod", "The best fishing rod");
         
         private final String description;
+        private final String name;
         
-        KeyItemType(String description) {
+        KeyItemType(String name, String description) {
+            this.name = name;
             this.description = description;
         }
         
         public String getDescription() {
             return description;
         }
+
+        public String getName() {
+            return name;
+        }
     }
     
     public KeyItem(KeyItemType type, String imagePath) {
-        super(type.name(), type.getDescription(), imagePath);
+        super(type.getName(), type.getDescription(), imagePath);
         this.type = type;
         this.stackable = false;
     }

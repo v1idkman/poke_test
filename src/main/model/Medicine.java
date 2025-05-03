@@ -5,19 +5,25 @@ public class Medicine extends Item {
     private MedicineType type;
     
     public enum MedicineType {
-        POTION(20, "Restores 20 HP"),
-        SUPER_POTION(50, "Restores 50 HP"),
-        HYPER_POTION(200, "Restores 200 HP"),
-        MAX_POTION(999, "Fully restores HP"),
-        REVIVE(0, "Revives a fainted Pokémon with half HP"),
-        MAX_REVIVE(0, "Revives a fainted Pokémon with full HP");
+        POTION("Potion", 20, "Restores 20 HP"),
+        SUPER_POTION("Super Potion", 50, "Restores 50 HP"),
+        HYPER_POTION("Hyper Potion", 200, "Restores 200 HP"),
+        MAX_POTION("Max Potion", 999, "Fully restores HP"),
+        REVIVE("Revive", 0, "Revives a fainted Pokémon with half HP"),
+        MAX_REVIVE("Max Revive", 0, "Revives a fainted Pokémon with full HP");
         
+        private final String name;
         private final int healValue;
         private final String description;
         
-        MedicineType(int healValue, String description) {
+        MedicineType(String name, int healValue, String description) {
+            this.name = name;
             this.healValue = healValue;
             this.description = description;
+        }
+
+        public String getName() {
+            return name;
         }
         
         public int getHealValue() {
@@ -30,7 +36,7 @@ public class Medicine extends Item {
     }
     
     public Medicine(MedicineType type, String imagePath) {
-        super(type.name(), type.getDescription(), imagePath);
+        super(type.getName(), type.getDescription(), imagePath);
         this.type = type;
         this.healAmount = type.getHealValue();
         this.stackable = true;

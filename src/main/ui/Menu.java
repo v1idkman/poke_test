@@ -148,7 +148,7 @@ public class Menu {
         
         // Add tabs for each item type
         for (String type : itemsByType.keySet()) {
-            JPanel typePanel = createItemTypePanel(itemsByType.get(type));
+            JPanel typePanel = createItemTypePanel(itemsByType.get(type), type);
             itemCategories.addTab(type, typePanel);
         }
         
@@ -177,75 +177,185 @@ public class Menu {
         }
     }
     
-    private JPanel createItemTypePanel(List<Item> items) {
-        JPanel panel = new JPanel();
+    private JPanel createItemTypePanel(List<Item> items, String itemType) {
+        // Main panel with BorderLayout to have items on left, info on right
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
         
-        // Use a scroll pane in case there are many items
+        // Left side - scrollable item grid
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        
+        // Use a scroll pane for the items
         JScrollPane scrollPane = new JScrollPane();
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         
-        // Create a panel with grid layout for the items
-        JPanel itemsPanel = new JPanel(new GridLayout(0, 4, 10, 10));
-        itemsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        // Create a panel with grid layout for the items - make it 5 columns to make items smaller
+        JPanel itemsPanel = new JPanel(new GridLayout(0, 5, 5, 5));
+        itemsPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         
-        // Add each item to the panel
-        for (Item item : items) {
-            JPanel itemPanel = new JPanel(new BorderLayout());
-            itemPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-            
-            // Create a panel for the item image if available
-            JPanel imagePanel = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    if (item.getImage() != null) {
-                        g.drawImage(item.getImage(), 0, 0, getWidth(), getHeight(), this);
+        // Right side - item information panel
+        JPanel infoPanel = new JPanel(new BorderLayout(0, 10));
+        infoPanel.setBorder(BorderFactory.createTitledBorder("Item Info"));
+        infoPanel.setPreferredSize(new Dimension(180, 0)); // Set width for info panel
+        
+        // Components for the info panel
+        JLabel itemNameLabel = new JLabel();
+        itemNameLabel.setFont(new Font("Lato", Font.BOLD, 18)); // Larger font
+        itemNameLabel.setHorizontalAlignment(SwingConstants.CENTER); // Center text
+        
+        JLabel itemDescLabel = new JLabel();
+        itemDescLabel.setFont(new Font("Lato", Font.PLAIN, 14)); // Larger font
+        
+        // Create a panel for the item image with BorderLayout to center it
+        JPanel itemImagePanel = new JPanel(new BorderLayout());
+        itemImagePanel.setPreferredSize(new Dimension(100, 100)); // Larger image size
+        itemImagePanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        
+        // Layout the info panel - image at top, name below it, description at bottom
+        JPanel imageContainer = new JPanel(new BorderLayout());
+        imageContainer.add(itemImagePanel, BorderLayout.CENTER);
+        
+        infoPanel.add(imageContainer, BorderLayout.NORTH);
+        infoPanel.add(itemNameLabel, BorderLayout.CENTER);
+        infoPanel.add(itemDescLabel, BorderLayout.SOUTH);
+        
+        // Check if there are items of this type
+        if (items.isEmpty()) {
+            // No items of this type
+            itemNameLabel.setText("No Items");
+            itemDescLabel.setText("<html>No items of type " + itemType + " available</html>");
+        } else {
+            // Add each item to the grid panel
+            for (Item item : items) {
+                JPanel itemPanel = new JPanel(new BorderLayout(2, 2));
+                itemPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+                
+                // Create a panel for the item image
+                JPanel imagePanel = new JPanel() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        if (item.getImage() != null) {
+                            Image img = item.getImage();
+                            int imgWidth = img.getWidth(this);
+                            int imgHeight = img.getHeight(this);
+                            
+                            // Calculate scaling factor to maintain aspect ratio
+                            double scale = Math.min(
+                                (double)getWidth() / imgWidth,
+                                (double)getHeight() / imgHeight
+                            );
+                            
+                            // Calculate new dimensions
+                            int scaledWidth = (int)(imgWidth * scale);
+                            int scaledHeight = (int)(imgHeight * scale);
+                            
+                            // Calculate position to center the image
+                            int x = (getWidth() - scaledWidth) / 2;
+                            int y = (getHeight() - scaledHeight) / 2;
+                            
+                            // Draw the scaled image
+                            g.drawImage(img, x, y, scaledWidth, scaledHeight, this);
+                        }
                     }
-                }
-            };
-            imagePanel.setPreferredSize(new Dimension(32, 32));
-            
-            JLabel itemLabel = new JLabel(item.getName(), JLabel.CENTER);
-            JLabel countLabel = new JLabel("x" + item.getQuantity(), JLabel.CENTER);
-            
-            itemPanel.add(imagePanel, BorderLayout.NORTH);
-            itemPanel.add(itemLabel, BorderLayout.CENTER);
-            
-            // Only show quantity for stackable items
-            if (item.isStackable()) {
-                itemPanel.add(countLabel, BorderLayout.SOUTH);
+                };
+                imagePanel.setPreferredSize(new Dimension(24, 24)); // Smaller image size
+                
+                JLabel itemLabel = new JLabel(item.getName(), JLabel.CENTER);
+                itemLabel.setFont(new Font("Lato", Font.PLAIN, 10)); // Smaller font
+                
+                itemPanel.add(imagePanel, BorderLayout.CENTER);
+                itemPanel.add(itemLabel, BorderLayout.SOUTH);
+                
+                // Add tooltip with description
+                itemPanel.setToolTipText(item.getDescription());
+                
+                // Add click listener to show item info and use item
+                itemPanel.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        // Update info panel with selected item details
+                        updateItemInfoPanel(item, itemNameLabel, itemDescLabel, itemImagePanel);
+                        
+                        if (e.getClickCount() == 2) {
+                            // Double-click to use item
+                            boolean used = item.use(player);
+                            if (used && item.getQuantity() <= 0) {
+                                player.removeItem(item);
+                                
+                                // Refresh inventory panel
+                                menuDialog.dispose();
+                                openPlayerMenu((JPanel)menuButton.getParent());
+                            }
+                        }
+                    }
+                });
+                
+                itemsPanel.add(itemPanel);
             }
             
-            // Add tooltip with description
-            itemPanel.setToolTipText(item.getDescription());
-            
-            // Add click listener to use item
-            itemPanel.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (e.getClickCount() == 2) {
-                        // Double-click to use item
-                        boolean used = item.use(player);
-                        if (used && item.getQuantity() <= 0) {
-                            player.removeItem(item);
-                        }
-                        
-                        // Refresh inventory panel
-                        menuDialog.dispose();
-                        openPlayerMenu((JPanel)menuButton.getParent());
-                    }
-                }
-            });
-            
-            itemsPanel.add(itemPanel);
+            // Display the first item's info by default
+            updateItemInfoPanel(items.get(0), itemNameLabel, itemDescLabel, itemImagePanel);
         }
         
         scrollPane.setViewportView(itemsPanel);
-        panel.setLayout(new BorderLayout());
-        panel.add(scrollPane, BorderLayout.CENTER);
+        leftPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Add both panels to the main panel
+        panel.add(leftPanel, BorderLayout.CENTER);
+        panel.add(infoPanel, BorderLayout.EAST);
         
         return panel;
+    }
+    
+    // Helper method to update the item info panel
+    private void updateItemInfoPanel(Item item, JLabel nameLabel, JLabel descLabel, JPanel imagePanel) {
+        // Update name with quantity if stackable
+        nameLabel.setText(item.getName() + (item.isStackable() ? " (x" + item.getQuantity() + ")" : ""));
+        
+        // Update description
+        descLabel.setText("<html>" + item.getDescription() + "</html>");
+        
+        // Update image panel
+        imagePanel.removeAll();
+        
+        // Create a custom panel to draw the image with proper scaling
+        if (item.getImage() != null) {
+            final Image itemImage = item.getImage();
+            
+            JPanel scaledImagePanel = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    
+                    int imgWidth = itemImage.getWidth(this);
+                    int imgHeight = itemImage.getHeight(this);
+                    
+                    // Calculate scaling factor to maintain aspect ratio
+                    double scale = Math.min(
+                        (double)getWidth() / imgWidth,
+                        (double)getHeight() / imgHeight
+                    );
+                    
+                    // Calculate new dimensions
+                    int scaledWidth = (int)(imgWidth * scale);
+                    int scaledHeight = (int)(imgHeight * scale);
+                    
+                    // Calculate position to center the image
+                    int x = (getWidth() - scaledWidth) / 2;
+                    int y = (getHeight() - scaledHeight) / 2;
+                    
+                    // Draw the scaled image
+                    g.drawImage(itemImage, x, y, scaledWidth, scaledHeight, this);
+                }
+            };
+            
+            imagePanel.setLayout(new BorderLayout());
+            imagePanel.add(scaledImagePanel, BorderLayout.CENTER);
+        }
+        
+        imagePanel.revalidate();
+        imagePanel.repaint();
     }
     
     private JPanel createBadgesPanel() {
@@ -281,9 +391,9 @@ public class Menu {
         
         JPanel statsPanel = new JPanel(new GridLayout(4, 2, 10, 10));
         statsPanel.add(new JLabel("Trainer ID:"));
-        statsPanel.add(new JLabel("#" + (int)(Math.random() * 100000)));
+        statsPanel.add(new JLabel("#" + player.getId()));
         statsPanel.add(new JLabel("Money:"));
-        statsPanel.add(new JLabel("₽" + (int)(Math.random() * 10000)));
+        statsPanel.add(new JLabel("₽" + player.getMoney()));
         statsPanel.add(new JLabel("Pokédex:"));
         statsPanel.add(new JLabel("25 seen, 12 caught"));
         statsPanel.add(new JLabel("Play Time:"));

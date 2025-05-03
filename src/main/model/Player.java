@@ -20,6 +20,8 @@ public class Player extends Trainer {
     private static final int NUM_FRAMES = 2;
 
     private Set<Item> inventory;
+    private int money;
+    private int trainerId;
 
     public Player(String name) {
         super(name);
@@ -29,6 +31,8 @@ public class Player extends Trainer {
         width = 50;
         height = 50;
         inventory = new HashSet<>();
+        money = 0;
+        trainerId = (int)(Math.random() * 100000);
     }
 
     public void initSprites() {
@@ -110,6 +114,14 @@ public class Player extends Trainer {
 
     public Set<Item> getInventory() {
         return inventory;
+    }
+
+    public int getMoney() {
+        return money;
+    }
+
+    public int getId() {
+        return trainerId;
     }
 
     public void addToInventory(Item item) {
