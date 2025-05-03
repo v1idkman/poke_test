@@ -8,9 +8,6 @@ import java.util.Set;
 public class Player extends Trainer {
     protected Point pos;
     protected String facingFront;
-    protected String facingLeft;
-    protected String facingRight;
-    protected String facingBack;
 
     public enum Direction {FRONT, BACK, LEFT, RIGHT}
 
@@ -25,7 +22,7 @@ public class Player extends Trainer {
 
     public Player(String name) {
         super(name);
-        initSprites();
+        facingFront = "/resources/player_sprites/s_facing_front";
         setSprite(facingFront);
         pos = new Point(0, 0);
         width = 50;
@@ -35,22 +32,8 @@ public class Player extends Trainer {
         trainerId = (int)(Math.random() * 100000);
     }
 
-    public void initSprites() {
-        facingFront = "/resources/player_sprites/s_facing_front.png";
-        facingLeft = "/resources/player_sprites/s_facing_left.png";
-        facingRight = "/resources/player_sprites/s_facing_right.png";
-        facingBack = "/resources/player_sprites/s_facing_back.png";
-    }
-
     public void setAnimationFrame(int frame) {
         animationFrame = frame;
-    }
-
-    public String getSprite() {
-        if (direction == Direction.FRONT) return facingFront;
-        else if (direction == Direction.LEFT) return facingLeft;
-        else if (direction == Direction.RIGHT) return facingRight;
-        else return facingBack;
     }
 
     public Point getPosition() {

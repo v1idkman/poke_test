@@ -10,6 +10,7 @@ import model.Player;
 import model.Item;
 import model.Medicine;
 import model.Pokeball;
+import pokes.Pokemon;
 import model.KeyItem;
 
 import java.util.List;
@@ -109,14 +110,155 @@ public class Menu {
         menuDialog.setVisible(true);
     }
     
-    // The panel creation methods remain mostly the same
     private JPanel createPokemonPanel() {
+        // Main panel with BorderLayout
         JPanel panel = new JPanel(new BorderLayout());
-        JLabel placeholder = new JLabel("Your Pokémon team will appear here", JLabel.CENTER);
-        placeholder.setFont(new Font("Lato", Font.PLAIN, 18));
-        panel.add(placeholder, BorderLayout.CENTER);
+
+        // Check if player is available or has Pokémon
+        if (player == null || player.getTeam() == null || player.getTeam().isEmpty()) {
+            JLabel placeholder = new JLabel("You don't have any Pokémon yet", JLabel.CENTER);
+            placeholder.setFont(new Font("Lato", Font.PLAIN, 18));
+            panel.add(placeholder, BorderLayout.CENTER);
+            return panel;
+        }
+        
+        // Create a panel to display Pokémon list (similar to Pokétch app)
+        JPanel pokemonListPanel = new JPanel(new GridLayout(6, 1, 5, 5)); // Max 6 Pokémon in team
+        pokemonListPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Right side - Pokémon details panel
+        JPanel detailsPanel = new JPanel(new BorderLayout(0, 10));
+        detailsPanel.setBorder(BorderFactory.createTitledBorder("Pokémon Info"));
+        detailsPanel.setPreferredSize(new Dimension(200, 0));
+        
+        // Components for the details panel
+        JLabel pokemonNameLabel = new JLabel();
+        pokemonNameLabel.setFont(new Font("Lato", Font.BOLD, 18));
+        pokemonNameLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        
+        JLabel pokemonStatsLabel = new JLabel();
+        pokemonStatsLabel.setFont(new Font("Lato", Font.PLAIN, 14));
+        
+        // Panel for Pokémon image
+        JPanel pokemonImagePanel = new JPanel(new BorderLayout());
+        pokemonImagePanel.setPreferredSize(new Dimension(120, 120));
+        pokemonImagePanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        
+        // Layout the details panel
+        JPanel imageContainer = new JPanel(new BorderLayout());
+        imageContainer.add(pokemonImagePanel, BorderLayout.CENTER);
+        
+        detailsPanel.add(imageContainer, BorderLayout.NORTH);
+        detailsPanel.add(pokemonNameLabel, BorderLayout.CENTER);
+        detailsPanel.add(pokemonStatsLabel, BorderLayout.SOUTH);
+        
+        // Add each Pokémon to the list
+        List<Pokemon> team = player.getTeam();
+        for (Pokemon pokemon : team) {
+            // Create a panel for each Pokémon in the list
+            JPanel pokemonPanel = new JPanel(new BorderLayout());
+            pokemonPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+            
+            // Create a PokemonView to handle drawing
+            PokemonView pokemonView = new PokemonView(pokemon);
+            
+            // Create a custom panel to display the Pokémon sprite
+            JPanel spritePanel = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    // Draw the Pokémon icon (using PokemonView)
+                    pokemonView.draw(g, this, 5, 5, getWidth() - 10, getHeight() - 10, false);
+                }
+            };
+            spritePanel.setPreferredSize(new Dimension(50, 50));
+            
+            // Create HP bar similar to Pokétch
+            JProgressBar hpBar = new JProgressBar(0, pokemon.getStats().getMaxHp());
+            hpBar.setValue(pokemon.getStats().getCurrentHp());
+            hpBar.setForeground(new Color(30, 201, 139));
+            hpBar.setStringPainted(false);
+            
+            // Display Pokémon name
+            JLabel nameLabel = new JLabel(pokemon.getName(), JLabel.CENTER);
+            
+            // Add components to the Pokémon panel
+            JPanel infoPanel = new JPanel(new BorderLayout());
+            infoPanel.add(nameLabel, BorderLayout.NORTH);
+            infoPanel.add(hpBar, BorderLayout.SOUTH);
+            
+            pokemonPanel.add(spritePanel, BorderLayout.WEST);
+            pokemonPanel.add(infoPanel, BorderLayout.CENTER);
+            
+            // Add item icon if Pokémon is holding an item
+            if (pokemon.getHeldItem() != null) {
+                JLabel itemLabel = new JLabel(new ImageIcon(pokemon.getHeldItem().getImage()));
+                pokemonPanel.add(itemLabel, BorderLayout.EAST);
+            }
+            
+            // Add click listener to show Pokémon details
+            pokemonPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    // Update details panel with selected Pokémon
+                    updatePokemonDetailsPanel(pokemon, pokemonNameLabel, pokemonStatsLabel, pokemonImagePanel, pokemonView);
+                }
+            });
+            
+            pokemonListPanel.add(pokemonPanel);
+        }
+        
+        // Display the first Pokémon's details by default
+        if (!team.isEmpty()) {
+            updatePokemonDetailsPanel(team.get(0), pokemonNameLabel, pokemonStatsLabel, pokemonImagePanel, 
+                                    new PokemonView(team.get(0)));
+        }
+        
+        // Create a split layout
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pokemonListPanel, detailsPanel);
+        splitPane.setDividerLocation(300);
+        splitPane.setEnabled(false); // Prevent user from moving the divider
+        
+        panel.add(splitPane, BorderLayout.CENTER);
         return panel;
     }
+
+    // Helper method to update the Pokémon details panel
+    private void updatePokemonDetailsPanel(Pokemon pokemon, JLabel nameLabel, JLabel statsLabel, 
+                                        JPanel imagePanel, PokemonView pokemonView) {
+        if (pokemon == null || pokemon.getStats() == null) {
+            nameLabel.setText("No Pokémon selected");
+            statsLabel.setText("");
+            return;
+        }
+        // Update name
+        nameLabel.setText(pokemon.getName());
+        
+        // Update stats
+        statsLabel.setText("<html>HP: " + pokemon.getStats().getCurrentHp() + "/" + pokemon.getStats().getMaxHp() + 
+                        "<br>Level: " + pokemon.getStats().getLevel() + 
+                        "<br>Dex #: " + pokemon.getDex() + "</html>");
+        
+        // Update image panel
+        imagePanel.removeAll();
+        
+        // Create a custom panel to draw the Pokémon
+        JPanel largeImagePanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                // Draw the Pokémon (larger view)
+                pokemonView.draw(g, this, 0, 0, getWidth(), getHeight(), false);
+            }
+        };
+        
+        imagePanel.setLayout(new BorderLayout());
+        imagePanel.add(largeImagePanel, BorderLayout.CENTER);
+        
+        imagePanel.revalidate();
+        imagePanel.repaint();
+    }
+
     
     private JComponent createInventoryPanel() {
         // Check if player is available
@@ -369,7 +511,7 @@ public class Menu {
             JPanel badgePanel = new JPanel(new BorderLayout());
             JLabel badgeLabel = new JLabel(badge + " Badge", JLabel.CENTER);
             
-            boolean hasBadge = Math.random() > 0.5; // Random for demo
+            boolean hasBadge = Math.random() > 0.5;
             if (!hasBadge) {
                 badgeLabel.setForeground(Color.GRAY);
             }

@@ -7,11 +7,14 @@ import model.KeyItem;
 import model.Medicine;
 import model.Medicine.MedicineType;
 import model.Pokeball.PokeBallType;
+import pokes.Bulbasaur;
 import model.Player;
 import model.Pokeball;
 import model.KeyItem.KeyItemType;
+import pokes.Pokemon;
 
 public class App {
+    private static Player player;
     private static Item potion;
     private static Item pokeball;
     private static Item goodRod;
@@ -20,14 +23,13 @@ public class App {
         potion = new Medicine(MedicineType.POTION, "/resources/items/potion.png");
         pokeball = new Pokeball(PokeBallType.POKE_BALL, "/resources/items/pokeball.png");
         goodRod = new KeyItem(KeyItemType.GOOD_ROD, "/resources/items/fishing-rod.png");
-
     }
 
     private static void initWindow() {
         // create a window frame and set the title in the toolbar
         JFrame window = new JFrame("Poke test");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        Player player = new Player("sarp");
+        
         player.addToInventory(potion);
         player.addToInventory(pokeball);
         player.addToInventory(goodRod);
@@ -40,8 +42,15 @@ public class App {
         window.setVisible(true);
     }
 
+    private static void initPokemon() {
+        Pokemon bulbasaur = new Bulbasaur();
+        player.addPokemonToCurrentTeam(bulbasaur);
+    }
+
     public static void main(String[] args) {
+        player = new Player("sarp");
         initItems();
+        initPokemon();
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 initWindow();

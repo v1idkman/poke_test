@@ -1,6 +1,9 @@
 package model;
 
 import java.util.List;
+
+import pokes.Pokemon;
+
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -9,6 +12,7 @@ import java.util.ArrayList;
 public abstract class Trainer {
     protected String name;
     protected List<Pokemon> pokes;
+    protected List<Pokemon> currentPokemon;
     protected BufferedImage image;
     protected Point pos;
     protected String currentSprite;
@@ -19,6 +23,7 @@ public abstract class Trainer {
         currentSprite = "NEEDS TO BE SET INDIVIDUALLY";
         this.name = name;
         pokes = new ArrayList<>();
+        currentPokemon = new ArrayList<>();
     }
 
     public void setSprite(String filePath) {
@@ -39,5 +44,13 @@ public abstract class Trainer {
 
     public List<Pokemon> getPokes() {
         return pokes;
+    }
+
+    public void addPokemonToCurrentTeam(Pokemon pokemon) {
+        currentPokemon.add(pokemon);
+    }
+
+    public List<Pokemon> getTeam() {
+        return currentPokemon;
     }
 }
