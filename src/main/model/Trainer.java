@@ -12,7 +12,7 @@ import java.util.ArrayList;
 public abstract class Trainer {
     protected String name;
     protected List<Pokemon> pokes;
-    protected List<Pokemon> currentPokemon;
+    protected List<Pokemon> currentTeam;
     protected BufferedImage image;
     protected Point pos;
     protected String currentSprite;
@@ -23,7 +23,7 @@ public abstract class Trainer {
         currentSprite = "NEEDS TO BE SET INDIVIDUALLY";
         this.name = name;
         pokes = new ArrayList<>();
-        currentPokemon = new ArrayList<>();
+        currentTeam = new ArrayList<>();
     }
 
     public void setSprite(String filePath) {
@@ -47,10 +47,14 @@ public abstract class Trainer {
     }
 
     public void addPokemonToCurrentTeam(Pokemon pokemon) {
-        currentPokemon.add(pokemon);
+        if (currentTeam.size() < 6) {
+            currentTeam.add(pokemon);
+        } else {
+            // add to pc
+        }
     }
 
     public List<Pokemon> getTeam() {
-        return currentPokemon;
+        return currentTeam;
     }
 }

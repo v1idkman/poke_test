@@ -8,6 +8,7 @@ import model.Medicine;
 import model.Medicine.MedicineType;
 import model.Pokeball.PokeBallType;
 import pokes.Bulbasaur;
+import pokes.Charizard;
 import model.Player;
 import model.Pokeball;
 import model.KeyItem.KeyItemType;
@@ -44,6 +45,13 @@ public class App {
 
     private static void initPokemon() {
         Pokemon bulbasaur = new Bulbasaur();
+        Pokemon charizard = new Charizard();
+        player.addPokemonToCurrentTeam(bulbasaur);
+        player.addPokemonToCurrentTeam(bulbasaur);
+        player.addPokemonToCurrentTeam(charizard);
+        player.addPokemonToCurrentTeam(charizard);
+        player.addPokemonToCurrentTeam(charizard);
+        player.addPokemonToCurrentTeam(charizard);
         player.addPokemonToCurrentTeam(bulbasaur);
     }
 
