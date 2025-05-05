@@ -3,7 +3,6 @@ package model;
 import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.Rectangle;
-import javax.swing.ImageIcon;
 import javax.swing.JPanel;
 
 public abstract class Item {
@@ -11,28 +10,17 @@ public abstract class Item {
     protected String name;
     protected String description;
     protected int quantity;
-    protected String imagePath;
     protected Image image;
     protected boolean stackable;
     
     // Constructor for basic item properties
-    public Item(String name, String description, String imagePath) {
+    public Item(String name, String description) {
         this.name = name;
         this.description = description;
-        this.imagePath = imagePath;
         this.quantity = 1;
-        loadImage();
     }
-    
-    // Load the item's image
-    private void loadImage() {
-        try {
-            ImageIcon icon = new ImageIcon(getClass().getResource(imagePath));
-            image = icon.getImage();
-        } catch (Exception e) {
-            System.err.println("Error loading item image: " + e.getMessage());
-        }
-    }
+
+    public abstract void loadImage();
     
     // Abstract method that all items must implement
     public abstract boolean use(Player player);
@@ -97,6 +85,6 @@ public abstract class Item {
     
     @Override
     public String toString() {
-        return name + (stackable ? " (x" + quantity + ")" : "");
+        return name;
     }
 }

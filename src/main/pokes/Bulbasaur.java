@@ -9,6 +9,7 @@ public class Bulbasaur extends Pokemon {
         dex = 1;
         id = (int)(Math.random() * 100000);
         isShiny = false; // change to odds later on
-        stats = new Stats(dex, dex, dex, dex, id, dex);
+        stats = new Stats(dex, dex, dex, dex, dex, dex, dex);
+        types.add(PokemonType.GRASS);
     }
 }

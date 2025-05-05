@@ -107,10 +107,11 @@ public class Player extends Trainer {
         return trainerId;
     }
 
-    public void addToInventory(Item item) {
-        if (!inventory.contains(item)) {
+    public void addToInventory(String itemName) {
+        Item item = ItemFactory.createItem(itemName);
+        if (item != null && !inventory.contains(item)) {
             inventory.add(item);
-        } else {}
+        }
     }
 
     public void removeItem(Item item) {

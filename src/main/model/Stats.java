@@ -9,7 +9,8 @@ public class Stats {
     private int attack;
     private int defense;
     private int speed;
-    private int special; // In Gen 1, Special was a single stat
+    private int specialAtk;
+    private int specialDef;
     private int level;
     
     // Individual Values (IVs) - randomized per Pokémon instance (0-15 in Gen 1)
@@ -17,30 +18,33 @@ public class Stats {
     private final int attackIV;
     private final int defenseIV;
     private final int speedIV;
-    private final int specialIV;
+    private final int specialAtkIV;
+    private final int specialDefIV;
     
     // For tracking stat changes during battle
     private int attackModifier;
     private int defenseModifier;
     private int speedModifier;
-    private int specialModifier;
+    private int spAttModifier;
+    private int spDefModifier;
     private int accuracyModifier;
     private int evasionModifier;
     
     // Constructor for creating stats with base values
-    public Stats(int baseHp, int baseAttack, int baseDefense, int baseSpeed, int baseSpecial, int level) {
+    public Stats(int baseHp, int baseAttack, int baseDefense, int baseSpeed, int baseSpAtt, int baseSpDef, int level) {
         // Generate random IVs (0-15 range for Gen 1 style)
         Random random = new Random();
         this.hpIV = random.nextInt(16);
         this.attackIV = random.nextInt(16);
         this.defenseIV = random.nextInt(16);
         this.speedIV = random.nextInt(16);
-        this.specialIV = random.nextInt(16);
+        this.specialAtkIV = random.nextInt(16);
+        this.specialDefIV = random.nextInt(16);
         
         this.level = level;
         
         // Calculate the actual stats based on base stats, IVs and level
-        calculateStats(baseHp, baseAttack, baseDefense, baseSpeed, baseSpecial);
+        calculateStats(baseHp, baseAttack, baseDefense, baseSpeed, baseSpAtt, baseSpDef);
         
         // Initialize current HP to max HP
         this.currentHp = this.maxHp;
@@ -50,7 +54,7 @@ public class Stats {
     }
     
     // Calculate all stats based on base values, IVs, and level
-    private void calculateStats(int baseHp, int baseAttack, int baseDefense, int baseSpeed, int baseSpecial) {
+    private void calculateStats(int baseHp, int baseAttack, int baseDefense, int baseSpeed, int baseSpAtt, int baseSpDef) {
         // HP calculation (different formula from other stats)
         this.maxHp = calculateHP(baseHp);
         
@@ -58,7 +62,8 @@ public class Stats {
         this.attack = calculateStat(baseAttack, attackIV);
         this.defense = calculateStat(baseDefense, defenseIV);
         this.speed = calculateStat(baseSpeed, speedIV);
-        this.special = calculateStat(baseSpecial, specialIV);
+        this.specialAtk = calculateStat(baseSpAtt, specialAtkIV);
+        this.specialDef = calculateStat(baseSpDef, specialDefIV);
     }
     
     // HP calculation formula (based on Gen 1)
@@ -76,7 +81,8 @@ public class Stats {
         attackModifier = 0;
         defenseModifier = 0;
         speedModifier = 0;
-        specialModifier = 0;
+        spAttModifier = 0;
+        spDefModifier = 0;
         accuracyModifier = 0;
         evasionModifier = 0;
     }
@@ -116,8 +122,10 @@ public class Stats {
                 return adjustModifier(defenseModifier, stages, "defenseModifier");
             case "speed":
                 return adjustModifier(speedModifier, stages, "speedModifier");
-            case "special":
-                return adjustModifier(specialModifier, stages, "specialModifier");
+            case "sp.Att":
+                return adjustModifier(spAttModifier, stages, "spAttModifier");
+            case "sp.Def":
+                return adjustModifier(spDefModifier, stages, "spDefModifier");
             case "accuracy":
                 return adjustModifier(accuracyModifier, stages, "accuracyModifier");
             case "evasion":
@@ -162,8 +170,11 @@ public class Stats {
             case "speed":
                 modifier = speedModifier;
                 break;
-            case "special":
-                modifier = specialModifier;
+            case "sp.Att":
+                modifier = spAttModifier;
+                break;
+            case "sp.Def":
+                modifier = spDefModifier;
                 break;
             case "accuracy":
                 modifier = accuracyModifier;
@@ -194,8 +205,10 @@ public class Stats {
                 return (int)(defense * multiplier);
             case "speed":
                 return (int)(speed * multiplier);
-            case "special":
-                return (int)(special * multiplier);
+            case "sp. attack":
+                return (int)(specialAtk * multiplier);
+            case "sp.defense":
+                return (int)(specialDef * multiplier);
             default:
                 return 0;
         }
@@ -230,8 +243,12 @@ public class Stats {
         return speed;
     }
     
-    public int getSpecial() {
-        return special;
+    public int getSpecialAtk() {
+        return specialAtk;
+    }
+
+    public int getSpecialDef() {
+        return specialDef;
     }
     
     public int getLevel() {
@@ -256,7 +273,8 @@ public class Stats {
                 ", Attack=" + attack + (attackModifier != 0 ? " (" + attackModifier + ")" : "") +
                 ", Defense=" + defense + (defenseModifier != 0 ? " (" + defenseModifier + ")" : "") +
                 ", Speed=" + speed + (speedModifier != 0 ? " (" + speedModifier + ")" : "") +
-                ", Special=" + special + (specialModifier != 0 ? " (" + specialModifier + ")" : "") +
+                ", Sp.Atk=" + specialAtk + (spAttModifier != 0 ? " (" + spAttModifier + ")" : "") +
+                ", Sp.Def=" + specialDef + (spDefModifier != 0 ? " (" + spDefModifier + ")" : "") +
                 ", Level=" + level +
                 '}';
     }

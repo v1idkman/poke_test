@@ -1,11 +1,13 @@
 package model;
 
+import javax.swing.ImageIcon;
+
 public class Pokeball extends Item {
     private double catchRate;
     private PokeBallType type;
     
     public enum PokeBallType {
-        POKE_BALL("Poké Ball", 1.0, "Standard Poké Ball"),
+        POKE_BALL("Poke Ball", 1.0, "Standard Poké Ball"),
         GREAT_BALL("Great Ball", 1.5, "Better than a standard Poké Ball"),
         ULTRA_BALL("Ultra Ball", 2.0, "High-performance Poké Ball"),
         MASTER_BALL("Master Ball", 255.0, "The best Poké Ball with the ultimate performance");
@@ -33,12 +35,34 @@ public class Pokeball extends Item {
         }
     }
     
-    public Pokeball(PokeBallType type, String imagePath) {
-        super(type.getName(), type.getDescription(), imagePath);
+    public Pokeball(PokeBallType type) {
+        super(type.getName(), type.getDescription());
         this.type = type;
         this.catchRate = type.getMultiplier();
         this.stackable = true;
+        loadImage();
     }
+
+    public void loadImage() {
+        if (type == null) {
+            System.out.println("type is null");
+            return;
+        }
+        String lookupName = type.getName().replace(" ", "-").toLowerCase();
+        String imagePath = "sprites/sprites/items/" + lookupName + ".png";
+        try {
+            // Use File instead of getResource for external files
+            java.io.File file = new java.io.File(imagePath);
+            if (file.exists()) {
+                image = new ImageIcon(file.getAbsolutePath()).getImage();
+            } else {
+                System.err.println("File not found: " + imagePath);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading item image: " + e.getMessage());
+        }
+    }
+    
     
     @Override
     public boolean use(Player player) {

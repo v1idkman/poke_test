@@ -42,7 +42,7 @@ public class PokemonView {
         }
     }
 
-    public void draw(Graphics g, JPanel panel, int x, int y, int width, int height, boolean battleView) {
+    public void draw(Graphics g, JPanel panel, int x, int y, int width, int height, boolean battleView, boolean isShiny) {
         if (normalIcon == null) {
             // Draw a placeholder or return
             return;

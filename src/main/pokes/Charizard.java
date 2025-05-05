@@ -1,8 +1,6 @@
 package pokes;
 
-import model.Medicine;
 import model.Stats;
-import model.Medicine.MedicineType;
 
 public class Charizard extends Pokemon {
 
@@ -11,7 +9,8 @@ public class Charizard extends Pokemon {
         dex = 6;
         id = (int)(Math.random() * 100000);
         isShiny = false; // change to odds later on
-        stats = new Stats(dex, dex, dex, dex, id, dex); // placeholder values
-        heldItem = new Medicine(MedicineType.POTION, "/resources/items/potion.png");
+        stats = new Stats(dex, dex, dex, dex, dex, dex, dex); // placeholder values
+        types.add(PokemonType.FIRE);
+        types.add(PokemonType.FLYING);
     }
 }

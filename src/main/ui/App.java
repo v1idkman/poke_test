@@ -2,38 +2,26 @@ package ui;
 
 import javax.swing.*;
 
-import model.Item;
-import model.KeyItem;
-import model.Medicine;
-import model.Medicine.MedicineType;
-import model.Pokeball.PokeBallType;
+import model.Move;
 import pokes.Bulbasaur;
 import pokes.Charizard;
 import model.Player;
-import model.Pokeball;
-import model.KeyItem.KeyItemType;
 import pokes.Pokemon;
+import pokes.Pokemon.PokemonType;
+import model.ItemFactory;
+
 
 public class App {
     private static Player player;
-    private static Item potion;
-    private static Item pokeball;
-    private static Item goodRod;
-
-    private static void initItems() {
-        potion = new Medicine(MedicineType.POTION, "/resources/items/potion.png");
-        pokeball = new Pokeball(PokeBallType.POKE_BALL, "/resources/items/pokeball.png");
-        goodRod = new KeyItem(KeyItemType.GOOD_ROD, "/resources/items/fishing-rod.png");
-    }
 
     private static void initWindow() {
         // create a window frame and set the title in the toolbar
         JFrame window = new JFrame("Poke test");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
-        player.addToInventory(potion);
-        player.addToInventory(pokeball);
-        player.addToInventory(goodRod);
+        player.addToInventory("potion");
+        player.addToInventory("master ball");
+        player.addToInventory("good Rod");
         Board initialBoard = new Board(player);
         window.add(initialBoard);
         window.addKeyListener(initialBoard);
@@ -46,18 +34,17 @@ public class App {
     private static void initPokemon() {
         Pokemon bulbasaur = new Bulbasaur();
         Pokemon charizard = new Charizard();
+        Pokemon charizard2 = new Charizard();
+        charizard.holdItem(ItemFactory.createItem("great ball"));
+        charizard.addMove(new Move("flamethrower", PokemonType.FIRE, 90, 10, null, 0));
         player.addPokemonToCurrentTeam(bulbasaur);
-        player.addPokemonToCurrentTeam(bulbasaur);
         player.addPokemonToCurrentTeam(charizard);
-        player.addPokemonToCurrentTeam(charizard);
-        player.addPokemonToCurrentTeam(charizard);
-        player.addPokemonToCurrentTeam(charizard);
-        player.addPokemonToCurrentTeam(bulbasaur);
+        player.addPokemonToCurrentTeam(charizard2);
+
     }
 
     public static void main(String[] args) {
         player = new Player("sarp");
-        initItems();
         initPokemon();
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {

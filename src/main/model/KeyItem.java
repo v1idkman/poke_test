@@ -1,5 +1,7 @@
 package model;
 
+import javax.swing.ImageIcon;
+
 public class KeyItem extends Item {
     private KeyItemType type;
     
@@ -28,11 +30,29 @@ public class KeyItem extends Item {
         }
     }
     
-    public KeyItem(KeyItemType type, String imagePath) {
-        super(type.getName(), type.getDescription(), imagePath);
+    public KeyItem(KeyItemType type) {
+        super(type.getName(), type.getDescription());
         this.type = type;
         this.stackable = false;
+        loadImage();
     }
+
+    public void loadImage() {
+        String lookupName = type.getName().replace(" ", "-").toLowerCase();
+        String imagePath = "sprites/sprites/items/" + lookupName + ".png"; // Add file extension
+        try {
+            // Use File instead of getResource for external files
+            java.io.File file = new java.io.File(imagePath);
+            if (file.exists()) {
+                image = new ImageIcon(file.getAbsolutePath()).getImage();
+            } else {
+                System.err.println("File not found: " + imagePath);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading item image: " + e.getMessage());
+        }
+    }
+    
     
     @Override
     public boolean use(Player player) {
