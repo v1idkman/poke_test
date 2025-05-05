@@ -36,6 +36,9 @@ public class App {
         Pokemon bulbasaur = new Bulbasaur();
         Pokemon charizard = new Charizard();
         Pokemon charizard2 = new Charizard();
+        charizard.getStats().setLevel(36);
+        charizard.getStats().addEVs(100, 140, 80, 70, 100, 150);
+        charizard2.getStats().addEVs(100, 140, 80, 70, 100, 150);
         charizard.holdItem(ItemFactory.createItem("great ball"));
         charizard.addMove(new Move("Flamethrower", PokemonType.FIRE, 90, 80, 15, MoveCategory.SPECIAL));
         charizard.addMove(new Move("Fly", PokemonType.FLYING, 60, 90, 15, MoveCategory.SPECIAL));

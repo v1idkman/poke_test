@@ -68,27 +68,39 @@ public class Stats {
     }
     
     // Calculate all stats based on base values, IVs, and level
-    private void calculateStats(int baseHp, int baseAttack, int baseDefense, int baseSpeed, int baseSpAtt, int baseSpDef) {
-        // HP calculation (different formula from other stats)
-        this.maxHp = calculateHP(baseHp);
+    private void calculateStats(int baseHp, int baseAttack, int baseDefense, int baseSpeed, int baseSpecialAtk, int baseSpecialDef) {
+        // HP calculation with EVs
+        int oldHp = getCurrentHp();
+        this.maxHp = calculateHp(baseHp, hpEV);
+        if (currentHp == oldHp) {
+            setHp(maxHp);
+        }
         
-        // Other stats calculation
-        this.attack = calculateStat(baseAttack, attackIV);
-        this.defense = calculateStat(baseDefense, defenseIV);
-        this.speed = calculateStat(baseSpeed, speedIV);
-        this.specialAtk = calculateStat(baseSpAtt, specialAtkIV);
-        this.specialDef = calculateStat(baseSpDef, specialDefIV);
+        // Other stats calculation with EVs
+        this.attack = calculateStat(baseAttack, attackIV, attackEV);
+        this.defense = calculateStat(baseDefense, defenseIV, defenseEV);
+        this.speed = calculateStat(baseSpeed, speedIV, speedEV);
+        this.specialAtk = calculateStat(baseSpecialAtk, specialAtkIV, specialAtkEV);
+        this.specialDef = calculateStat(baseSpecialDef, specialDefIV, specialDefEV);
     }
     
-    // HP calculation formula (based on Gen 1)
-    private int calculateHP(int baseHp) {
-        return ((baseHp + hpIV) * 2 * level) / 100 + level + 10;
+    private int calculateHp(int baseHp, int ev) {
+        // Modern formula would include EVs
+        return ((2 * baseHp + hpIV + ev/4) * level / 100) + level + 10;
+    }
+
+    public void setHp(int newHp) {
+        if (newHp <= maxHp) {
+            currentHp = newHp;
+        }
     }
     
     // Stat calculation formula for Attack, Defense, Speed, Special (based on Gen 1)
-    private int calculateStat(int baseStat, int iv) {
-        return ((baseStat + iv) * 2 * level) / 100 + 5;
+    private int calculateStat(int baseStat, int iv, int ev) {
+        // Modern formula: ((2 * Base + IV + EV/4) * Level / 100) + 5
+        return ((2 * baseStat + iv + ev/4) * level / 100) + 5;
     }
+    
     
     // Reset all battle stat modifiers
     public void resetStatModifiers() {
@@ -246,27 +258,27 @@ public class Stats {
     }
 
     public int getHpEV() {
-        return calculateHP(hpIV);
+        return hpEV;
     }
     
     public int getAttackEV() {
-        return attack;
+        return attackEV;
     }
     
     public int getDefenseEV() {
-        return defense;
+        return defenseEV;
     }
     
     public int getSpeedEV() {
-        return speed;
+        return speedEV;
     }
     
     public int getSpecialAtkEV() {
-        return specialAtk;
+        return specialAtkEV;
     }
 
     public int getSpecialDefEV() {
-        return specialDef;
+        return specialDefEV;
     }
 
     public int getHpIV() {
@@ -342,9 +354,10 @@ public class Stats {
         setSpecialAtkEV(specialAtkEV + spAtk);
         setSpecialDefEV(specialDefEV + spDef);
         
-        // Recalculate stats after EV changes
+        // Recalculate stats with the new EVs
         calculateStats(baseHp, baseAttack, baseDefense, baseSpeed, baseSpAtk, baseSpDef);
     }
+    
 
     public int getAttack() {
         return attack;

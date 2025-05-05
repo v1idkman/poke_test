@@ -362,7 +362,7 @@ public class Menu {
 
     private void openStatsPanel(Pokemon pokemon) {
         JDialog statsDialog = new JDialog(menuDialog, "Stats - " + pokemon.getName(), true);
-        statsDialog.setSize(450, 550);
+        statsDialog.setSize(450, 600);
         statsDialog.setResizable(false);
         statsDialog.setLocationRelativeTo(menuDialog); // Center the dialog relative to the menu
         
