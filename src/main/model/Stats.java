@@ -13,13 +13,20 @@ public class Stats {
     private int specialDef;
     private int level;
     
-    // Individual Values (IVs) - randomized per Pokémon instance (0-15 in Gen 1)
+    // Individual Values (IVs) - randomized per Pokémon instance (0-31)
     private final int hpIV;
     private final int attackIV;
     private final int defenseIV;
     private final int speedIV;
     private final int specialAtkIV;
     private final int specialDefIV;
+
+    private int hpEV = 0;
+    private int attackEV = 0;
+    private int defenseEV = 0;
+    private int speedEV = 0;
+    private int specialAtkEV = 0;
+    private int specialDefEV = 0;
     
     // For tracking stat changes during battle
     private int attackModifier;
@@ -29,17 +36,24 @@ public class Stats {
     private int spDefModifier;
     private int accuracyModifier;
     private int evasionModifier;
+
+    private int baseHp;
+    private int baseAttack;
+    private int baseDefense;
+    private int baseSpeed;
+    private int baseSpAtk;
+    private int baseSpDef;
     
     // Constructor for creating stats with base values
     public Stats(int baseHp, int baseAttack, int baseDefense, int baseSpeed, int baseSpAtt, int baseSpDef, int level) {
         // Generate random IVs (0-15 range for Gen 1 style)
         Random random = new Random();
-        this.hpIV = random.nextInt(16);
-        this.attackIV = random.nextInt(16);
-        this.defenseIV = random.nextInt(16);
-        this.speedIV = random.nextInt(16);
-        this.specialAtkIV = random.nextInt(16);
-        this.specialDefIV = random.nextInt(16);
+        this.hpIV = random.nextInt(32);
+        this.attackIV = random.nextInt(32);
+        this.defenseIV = random.nextInt(32);
+        this.speedIV = random.nextInt(32);
+        this.specialAtkIV = random.nextInt(32);
+        this.specialDefIV = random.nextInt(32);
         
         this.level = level;
         
@@ -230,25 +244,53 @@ public class Stats {
     public int getCurrentHp() {
         return currentHp;
     }
+
+    public int getHpEV() {
+        return calculateHP(hpIV);
+    }
     
-    public int getAttack() {
+    public int getAttackEV() {
         return attack;
     }
     
-    public int getDefense() {
+    public int getDefenseEV() {
         return defense;
     }
     
-    public int getSpeed() {
+    public int getSpeedEV() {
         return speed;
     }
     
-    public int getSpecialAtk() {
+    public int getSpecialAtkEV() {
         return specialAtk;
     }
 
-    public int getSpecialDef() {
+    public int getSpecialDefEV() {
         return specialDef;
+    }
+
+    public int getHpIV() {
+        return hpIV;
+    }
+
+    public int getAttackIV() {
+        return attackIV;
+    }
+
+    public int getDefenseIV() {
+        return defenseIV;
+    }
+
+    public int getSpecialAtkIV() {
+        return specialAtkIV;
+    }
+
+    public int getSpecialDefIV() {
+        return specialDefIV;
+    }
+
+    public int getSpeedIV() {
+        return speedIV;
     }
     
     public int getLevel() {
@@ -264,6 +306,64 @@ public class Stats {
     public void setLevel(int level) {
         this.level = level;
         // Recalculate stats with the new level
+    }
+
+    // Add these setter methods for EVs (with 252 max per stat)
+    public void setHpEV(int value) {
+        this.hpEV = Math.min(252, Math.max(0, value));
+    }
+
+    public void setAttackEV(int value) {
+        this.attackEV = Math.min(252, Math.max(0, value));
+    }
+
+    public void setDefenseEV(int value) {
+        this.defenseEV = Math.min(252, Math.max(0, value));
+    }
+
+    public void setSpeedEV(int value) {
+        this.speedEV = Math.min(252, Math.max(0, value));
+    }
+
+    public void setSpecialAtkEV(int value) {
+        this.specialAtkEV = Math.min(252, Math.max(0, value));
+    }
+
+    public void setSpecialDefEV(int value) {
+        this.specialDefEV = Math.min(252, Math.max(0, value));
+    }
+
+    // Method to add EVs after battles
+    public void addEVs(int hp, int atk, int def, int spd, int spAtk, int spDef) {
+        setHpEV(hpEV + hp);
+        setAttackEV(attackEV + atk);
+        setDefenseEV(defenseEV + def);
+        setSpeedEV(speedEV + spd);
+        setSpecialAtkEV(specialAtkEV + spAtk);
+        setSpecialDefEV(specialDefEV + spDef);
+        
+        // Recalculate stats after EV changes
+        calculateStats(baseHp, baseAttack, baseDefense, baseSpeed, baseSpAtk, baseSpDef);
+    }
+
+    public int getAttack() {
+        return attack;
+    }
+
+    public int getDefense() {
+        return defense;
+    }
+
+    public int getSpeed() {
+        return speed;
+    }
+
+    public int getSpecialAtk() {
+        return specialAtk;
+    }
+
+    public int getSpecialDef() {
+        return specialDef;
     }
     
     @Override

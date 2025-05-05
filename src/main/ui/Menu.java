@@ -361,23 +361,20 @@ public class Menu {
     }
 
     private void openStatsPanel(Pokemon pokemon) {
-        // Create a dialog to show the stats - make it larger
         JDialog statsDialog = new JDialog(menuDialog, "Stats - " + pokemon.getName(), true);
-        statsDialog.setSize(450, 450); // Increased size
-        statsDialog.setLocationRelativeTo(menuDialog);
+        statsDialog.setSize(450, 550);
+        statsDialog.setResizable(false);
+        statsDialog.setLocationRelativeTo(menuDialog); // Center the dialog relative to the menu
         
-        // Create the main panel for the stats
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 15));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 20, 15)); // Reduced top padding
         
-        // Create a panel for the Pokémon info at the top
-        JPanel pokemonInfoPanel = new JPanel(new BorderLayout());
+        // Create a more compact Pokémon info panel
+        JPanel pokemonInfoPanel = new JPanel(new BorderLayout(5, 0)); // Reduced horizontal gap
         
-        // Show Pokémon name and image
         JLabel nameLabel = new JLabel(pokemon.getName(), JLabel.CENTER);
-        nameLabel.setFont(new Font("Lato", Font.BOLD, 22)); // Larger font
+        nameLabel.setFont(new Font("Lato", Font.BOLD, 20)); // Slightly smaller font
         
-        // Create a panel for the Pokémon image
         JPanel imagePanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -386,159 +383,171 @@ public class Menu {
                 pokemonView.draw(g, this, 0, 0, getWidth(), getHeight(), false, pokemon.getIsShiny());
             }
         };
-        imagePanel.setPreferredSize(new Dimension(100, 100)); // Larger image
+        imagePanel.setPreferredSize(new Dimension(80, 80)); // Smaller image
         
         pokemonInfoPanel.add(imagePanel, BorderLayout.WEST);
         pokemonInfoPanel.add(nameLabel, BorderLayout.CENTER);
         
-        // Create a panel for the stat hexagon - make it much larger
+        // Stat hexagon panel
         JPanel statHexagonPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                drawStatHexagon(g, pokemon);
+                drawCombinedStatHexagon(g, pokemon);
             }
         };
-        statHexagonPanel.setPreferredSize(new Dimension(300, 300)); // Much larger hexagon
+        statHexagonPanel.setPreferredSize(new Dimension(300, 300));
         
-        // Create a panel for numeric stat values - improved layout
-        JPanel numericStatsPanel = new JPanel(new GridLayout(3, 4, 10, 10));
+        // Create a legend for the hexagon colors
+        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
+        
+        JPanel ivColorSample = new JPanel();
+        ivColorSample.setBackground(new Color(30, 201, 139, 150)); // Green for IVs
+        ivColorSample.setPreferredSize(new Dimension(20, 20));
+        legendPanel.add(ivColorSample);
+        legendPanel.add(new JLabel("IVs"));
+        
+        JPanel evColorSample = new JPanel();
+        evColorSample.setBackground(new Color(255, 165, 0, 150)); // Orange for EVs
+        evColorSample.setPreferredSize(new Dimension(20, 20));
+        legendPanel.add(evColorSample);
+        legendPanel.add(new JLabel("EVs"));
+        
+        // Improved numeric stats panel with IVs column
+        JPanel numericStatsPanel = new JPanel(new GridLayout(7, 4, 10, 8));
         numericStatsPanel.setBorder(BorderFactory.createTitledBorder("Numeric Values"));
         
-        // Add labels with bold text
         Font labelFont = new Font("Lato", Font.BOLD, 12);
-        Font valueFont = new Font("Lato", Font.PLAIN, 14);
         
-        // First row
+        // Header row
+        numericStatsPanel.add(new JLabel("Stat", JLabel.CENTER));
+        numericStatsPanel.add(new JLabel("Value", JLabel.CENTER));
+        numericStatsPanel.add(new JLabel("IV", JLabel.CENTER));
+        numericStatsPanel.add(new JLabel("EV", JLabel.CENTER));
+        
+        // HP row
         JLabel hpLabel = new JLabel("HP:", JLabel.RIGHT);
         hpLabel.setFont(labelFont);
         numericStatsPanel.add(hpLabel);
         
-        JLabel hpValue = new JLabel(String.valueOf(pokemon.getStats().getMaxHp()));
-        hpValue.setFont(valueFont);
-        numericStatsPanel.add(hpValue);
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getMaxHp()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getHpIV()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getHpEV()), JLabel.CENTER));
         
-        JLabel atkLabel = new JLabel("Attack:", JLabel.RIGHT);
-        atkLabel.setFont(labelFont);
-        numericStatsPanel.add(atkLabel);
+        // Attack row
+        numericStatsPanel.add(new JLabel("Attack:", JLabel.RIGHT));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getAttack()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getAttackIV()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getAttackEV()), JLabel.CENTER));
         
-        JLabel atkValue = new JLabel(String.valueOf(pokemon.getStats().getAttack()));
-        atkValue.setFont(valueFont);
-        numericStatsPanel.add(atkValue);
+        // Defense row
+        numericStatsPanel.add(new JLabel("Defense:", JLabel.RIGHT));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getDefense()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getDefenseIV()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getDefenseEV()), JLabel.CENTER));
         
-        // Second row
-        JLabel defLabel = new JLabel("Defense:", JLabel.RIGHT);
-        defLabel.setFont(labelFont);
-        numericStatsPanel.add(defLabel);
+        // Speed row
+        numericStatsPanel.add(new JLabel("Speed:", JLabel.RIGHT));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpeed()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpeedIV()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpeedEV()), JLabel.CENTER));
         
-        JLabel defValue = new JLabel(String.valueOf(pokemon.getStats().getDefense()));
-        defValue.setFont(valueFont);
-        numericStatsPanel.add(defValue);
+        // Sp.Attack row
+        numericStatsPanel.add(new JLabel("Sp.Attack:", JLabel.RIGHT));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialAtk()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialAtkIV()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialAtkEV()), JLabel.CENTER));
         
-        JLabel spdLabel = new JLabel("Speed:", JLabel.RIGHT);
-        spdLabel.setFont(labelFont);
-        numericStatsPanel.add(spdLabel);
+        // Sp.Defense row
+        numericStatsPanel.add(new JLabel("Sp.Defense:", JLabel.RIGHT));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialDef()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialDefIV()), JLabel.CENTER));
+        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialDefEV()), JLabel.CENTER));
         
-        JLabel spdValue = new JLabel(String.valueOf(pokemon.getStats().getSpeed()));
-        spdValue.setFont(valueFont);
-        numericStatsPanel.add(spdValue);
-        
-        // Third row
-        JLabel spAtkLabel = new JLabel("Sp.Attack:", JLabel.RIGHT);
-        spAtkLabel.setFont(labelFont);
-        numericStatsPanel.add(spAtkLabel);
-        
-        JLabel spAtkValue = new JLabel(String.valueOf(pokemon.getStats().getSpecialAtk()));
-        spAtkValue.setFont(valueFont);
-        numericStatsPanel.add(spAtkValue);
-        
-        JLabel spDefLabel = new JLabel("Sp.Defense:", JLabel.RIGHT);
-        spDefLabel.setFont(labelFont);
-        numericStatsPanel.add(spDefLabel);
-        
-        JLabel spDefValue = new JLabel(String.valueOf(pokemon.getStats().getSpecialDef()));
-        spDefValue.setFont(valueFont);
-        numericStatsPanel.add(spDefValue);
-        
-        // Create a panel to hold both stat visualizations
+        // Assemble the stats display panel
         JPanel statsDisplayPanel = new JPanel(new BorderLayout(10, 10));
+        statsDisplayPanel.add(legendPanel, BorderLayout.NORTH);
         statsDisplayPanel.add(statHexagonPanel, BorderLayout.CENTER);
         statsDisplayPanel.add(numericStatsPanel, BorderLayout.SOUTH);
         
-        // Create close button at bottom right
+        // Close button
         JPanel buttonPanel = new JPanel(new BorderLayout());
         JButton closeButton = new JButton("Close");
         closeButton.addActionListener(e -> statsDialog.dispose());
         buttonPanel.add(closeButton, BorderLayout.LINE_END);
         
-        // Add all components to the main panel
+        // Assemble the main panel
         mainPanel.add(pokemonInfoPanel, BorderLayout.NORTH);
         mainPanel.add(statsDisplayPanel, BorderLayout.CENTER);
         mainPanel.add(buttonPanel, BorderLayout.SOUTH);
         
-        // Set up and show the dialog
         statsDialog.add(mainPanel);
         statsDialog.setVisible(true);
     }
     
-    // Helper method to draw the stat hexagon
-    private void drawStatHexagon(Graphics g, Pokemon pokemon) {
+
+    // New method to draw the combined IV/EV hexagon
+    private void drawCombinedStatHexagon(Graphics g, Pokemon pokemon) {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         
         int centerX = g.getClipBounds().width / 2;
         int centerY = g.getClipBounds().height / 2;
-        int radius = Math.min(centerX, centerY) - 30; // Slightly smaller to ensure labels fit
+        int radius = Math.min(centerX, centerY) - 30;
         
-        // Get the stats (normalized to 0.0-1.0 scale)
-        double hpRatio = normalizeStatValue(pokemon.getStats().getMaxHp(), 255);
-        double attackRatio = normalizeStatValue(pokemon.getStats().getAttack(), 255);
-        double defenseRatio = normalizeStatValue(pokemon.getStats().getDefense(), 255);
-        double speedRatio = normalizeStatValue(pokemon.getStats().getSpeed(), 255);
-        double specialAtkRatio = normalizeStatValue(pokemon.getStats().getSpecialAtk(), 255);
-        double specialDefRatio = normalizeStatValue(pokemon.getStats().getSpecialDef(), 255);
+        // Get the IV stats (normalized to 0.0-1.0 scale)
+        double hpIVRatio = normalizeStatValue(pokemon.getStats().getHpIV(), 31);
+        double attackIVRatio = normalizeStatValue(pokemon.getStats().getAttackIV(), 31);
+        double defenseIVRatio = normalizeStatValue(pokemon.getStats().getDefenseIV(), 31);
+        double speedIVRatio = normalizeStatValue(pokemon.getStats().getSpeedIV(), 31);
+        double specialAtkIVRatio = normalizeStatValue(pokemon.getStats().getSpecialAtkIV(), 31);
+        double specialDefIVRatio = normalizeStatValue(pokemon.getStats().getSpecialDefIV(), 31);
         
-        // Calculate points for the hexagon axes (6 stats in modern games)
+        // Get the EV stats (normalized to 0.0-1.0 scale)
+        double hpEVRatio = normalizeStatValue(pokemon.getStats().getHpEV(), 252);
+        double attackEVRatio = normalizeStatValue(pokemon.getStats().getAttackEV(), 252);
+        double defenseEVRatio = normalizeStatValue(pokemon.getStats().getDefenseEV(), 252);
+        double speedEVRatio = normalizeStatValue(pokemon.getStats().getSpeedEV(), 252);
+        double specialAtkEVRatio = normalizeStatValue(pokemon.getStats().getSpecialAtkEV(), 252);
+        double specialDefEVRatio = normalizeStatValue(pokemon.getStats().getSpecialDefEV(), 252);
+        
+        // Calculate points for the hexagon axes (6 stats)
         int sides = 6; // HP, Attack, Defense, Speed, Sp.Atk, Sp.Def
-        double[] statValues = {hpRatio, attackRatio, defenseRatio, speedRatio, specialAtkRatio, specialDefRatio};
-        int[] xPoints = new int[sides];
-        int[] yPoints = new int[sides];
+        double[] ivValues = {hpIVRatio, attackIVRatio, defenseIVRatio, speedIVRatio, specialAtkIVRatio, specialDefIVRatio};
+        double[] evValues = {hpEVRatio, attackEVRatio, defenseEVRatio, speedEVRatio, specialAtkEVRatio, specialDefEVRatio};
         
-        // Draw axes
+        int[] ivXPoints = new int[sides];
+        int[] ivYPoints = new int[sides];
+        int[] evXPoints = new int[sides];
+        int[] evYPoints = new int[sides];
+        
+        // Draw axes and labels
         g2d.setColor(Color.LIGHT_GRAY);
+        String[] labels = {"HP", "Atk", "Def", "Spd", "Sp.Atk", "Sp.Def"};
+        g2d.setFont(new Font("Lato", Font.BOLD, 14));
+        
         for (int i = 0; i < sides; i++) {
             double angle = Math.PI * 2 * i / sides - Math.PI / 2;
             int xEnd = centerX + (int)(Math.cos(angle) * radius);
             int yEnd = centerY + (int)(Math.sin(angle) * radius);
+            
+            // Draw axis line
             g2d.drawLine(centerX, centerY, xEnd, yEnd);
             
-            // Draw stat labels with larger font
-            String[] labels = {"HP", "Atk", "Def", "Spd", "Sp.Atk", "Sp.Def"};
-            g2d.setFont(new Font("Lato", Font.BOLD, 14));
+            // Draw stat label
             FontMetrics fm = g2d.getFontMetrics();
             int labelX = centerX + (int)(Math.cos(angle) * (radius + 20)) - fm.stringWidth(labels[i])/2;
             int labelY = centerY + (int)(Math.sin(angle) * (radius + 20)) + fm.getHeight()/2;
             g2d.drawString(labels[i], labelX, labelY);
             
-            // Draw stat values near the axes
-            String statValue = "";
-            switch (i) {
-                case 0: statValue = String.valueOf(pokemon.getStats().getMaxHp()); break;
-                case 1: statValue = String.valueOf(pokemon.getStats().getAttack()); break;
-                case 2: statValue = String.valueOf(pokemon.getStats().getDefense()); break;
-                case 3: statValue = String.valueOf(pokemon.getStats().getSpeed()); break;
-                case 4: statValue = String.valueOf(pokemon.getStats().getSpecialAtk()); break;
-                case 5: statValue = String.valueOf(pokemon.getStats().getSpecialDef()); break;
-            }
+            // Calculate points for both polygons
+            double ivRadius = radius * ivValues[i];
+            ivXPoints[i] = centerX + (int)(Math.cos(angle) * ivRadius);
+            ivYPoints[i] = centerY + (int)(Math.sin(angle) * ivRadius);
             
-            // Position the stat values closer to the polygon
-            double valueAngle = angle;
-            int valueRadius = (int)(radius * 0.7); // Position values at 70% of the radius
-            int valueX = centerX + (int)(Math.cos(valueAngle) * valueRadius) - fm.stringWidth(statValue)/2;
-            int valueY = centerY + (int)(Math.sin(valueAngle) * valueRadius) + fm.getHeight()/2;
-            g2d.setColor(Color.DARK_GRAY);
-            g2d.drawString(statValue, valueX, valueY);
-            g2d.setColor(Color.LIGHT_GRAY);
+            double evRadius = radius * evValues[i];
+            evXPoints[i] = centerX + (int)(Math.cos(angle) * evRadius);
+            evYPoints[i] = centerY + (int)(Math.sin(angle) * evRadius);
         }
         
         // Draw concentric circles for reference
@@ -549,23 +558,21 @@ public class Menu {
                         circleRadius * 2, circleRadius * 2);
         }
         
-        // Calculate points for the stat polygon
-        for (int i = 0; i < sides; i++) {
-            double angle = Math.PI * 2 * i / sides - Math.PI / 2;
-            double statRadius = radius * statValues[i];
-            xPoints[i] = centerX + (int)(Math.cos(angle) * statRadius);
-            yPoints[i] = centerY + (int)(Math.sin(angle) * statRadius);
-        }
+        // Draw the EV polygon first (so IV polygon appears on top)
+        g2d.setColor(new Color(255, 165, 0, 150)); // Semi-transparent orange for EVs
+        g2d.fillPolygon(evXPoints, evYPoints, sides);
+        g2d.setColor(new Color(255, 165, 0));
+        g2d.setStroke(new BasicStroke(1.5f));
+        g2d.drawPolygon(evXPoints, evYPoints, sides);
         
-        // Draw the stat polygon
-        g2d.setColor(new Color(30, 201, 139, 150)); // Semi-transparent green
-        g2d.fillPolygon(xPoints, yPoints, sides);
-        
-        // Draw the outline
+        // Draw the IV polygon on top
+        g2d.setColor(new Color(30, 201, 139, 150)); // Semi-transparent green for IVs
+        g2d.fillPolygon(ivXPoints, ivYPoints, sides);
         g2d.setColor(new Color(30, 201, 139));
         g2d.setStroke(new BasicStroke(2.0f));
-        g2d.drawPolygon(xPoints, yPoints, sides);
-    }    
+        g2d.drawPolygon(ivXPoints, ivYPoints, sides);
+    }
+    
 
     private void openMovesPanel(Pokemon pokemon) {
         // Create a dialog to show the moves
@@ -668,7 +675,6 @@ public class Menu {
         return Math.min(1.0, Math.max(0.0, (double)statValue / maxPossibleValue));
     }
 
-    // TODO: implement visual for normalized hex values
     // Helper method to get color based on Pokémon type
     private Color getColorForType(PokemonType type) {
         // You'll need to implement this method with appropriate colors for each type
