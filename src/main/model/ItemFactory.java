@@ -3,7 +3,7 @@ package model;
 public class ItemFactory {
     public static Item createItem(String itemName) {
         // Normalize the item name for lookup
-        String normalizedName = itemName.toLowerCase().replace(" ", "-");
+        String normalizedName = itemName.toLowerCase().replace(" ", "-").trim();
         
         for (Medicine.MedicineType type : Medicine.MedicineType.values()) {
             String enumName = type.getName().replace(" ", "-");

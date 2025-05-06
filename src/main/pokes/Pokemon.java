@@ -164,10 +164,6 @@ public abstract class Pokemon {
                 }
                 break;
         }
-        
-        // Store the previous status for reference when curing
-        StatusEffect previousStatus = this.status;
-        
         return true;
     }
 

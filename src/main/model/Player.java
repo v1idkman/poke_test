@@ -108,10 +108,18 @@ public class Player extends Trainer {
     }
 
     public void addToInventory(String itemName) {
-        Item item = ItemFactory.createItem(itemName);
-        if (item != null && !inventory.contains(item)) {
-            inventory.add(item);
+        Item newItem = ItemFactory.createItem(itemName);
+        if (newItem == null) return;
+        
+        if (newItem.isStackable()) {
+            for (Item existingItem : inventory) {
+                if (existingItem.getName().equals(newItem.getName())) {
+                    existingItem.setQuantity(existingItem.getQuantity() + 1);
+                    return;
+                }
+            }
         }
+        inventory.add(newItem);
     }
 
     public void removeItem(Item item) {

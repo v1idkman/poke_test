@@ -173,7 +173,7 @@ public class Menu {
                     pokemonView.draw(g, this, 5, 5, getWidth() - 10, getHeight() - 10, false, pokemon.getIsShiny());
                 }
             };
-            spritePanel.setPreferredSize(new Dimension(50, 50));
+            spritePanel.setPreferredSize(new Dimension(60, 60));
             
             // Create HP bar similar to Pokétch
             JProgressBar hpBar = new JProgressBar(0, pokemon.getStats().getMaxHp());
@@ -192,11 +192,28 @@ public class Menu {
             pokemonPanel.add(spritePanel, BorderLayout.WEST);
             pokemonPanel.add(infoPanel, BorderLayout.CENTER);
             
-            // Add item icon if Pokémon is holding an item
+            JLabel itemLabel;
             if (pokemon.getHeldItem() != null) {
-                JLabel itemLabel = new JLabel(new ImageIcon(pokemon.getHeldItem().getImage()));
-                pokemonPanel.add(itemLabel, BorderLayout.EAST);
+                itemLabel = new JLabel(new ImageIcon(pokemon.getHeldItem().getImage()));
+            } else {
+                itemLabel = new JLabel() {
+                    @Override
+                    public Dimension getPreferredSize() {
+                        return new Dimension(40, 40);
+                    }
+                    
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        // Uncomment for debugging to see the invisible area
+                        // g.setColor(new Color(255, 0, 0, 30));
+                        // g.fillRect(0, 0, getWidth(), getHeight());
+                    }
+                };
             }
+            itemLabel.setVerticalAlignment(SwingConstants.TOP);
+            itemLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+            pokemonPanel.add(itemLabel, BorderLayout.EAST);
             
             // Add click listener to show Pokémon details
             pokemonPanel.addMouseListener(new MouseAdapter() {
@@ -758,40 +775,49 @@ public class Menu {
     }
     
     private JPanel createItemTypePanel(List<Item> items, String itemType) {
-        // Main panel with BorderLayout to have items on left, info on right
+        // Main panel with BorderLayout
         JPanel panel = new JPanel(new BorderLayout(10, 0));
         
         // Left side - scrollable item grid
         JPanel leftPanel = new JPanel(new BorderLayout());
         
-        // Use a scroll pane for the items
-        JScrollPane scrollPane = new JScrollPane();
+        // Create a panel with grid layout for the items
+        // Create a panel with FlowLayout instead of GridLayout
+        JPanel itemsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
+        itemsPanel.setBorder(BorderFactory.createEmptyBorder(10, 4, 10, 10));
+
+        // Calculate rows needed based on item count
+        int rows = (int)Math.ceil(items.size() / 5.0); // 5 items per row
+        int preferredHeight = rows * 65; // 60px for item + 5px for spacing
+        itemsPanel.setPreferredSize(new Dimension(300, preferredHeight));
+        
+        // Configure scroll pane with proper policies
+        JScrollPane scrollPane = new JScrollPane(itemsPanel);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        
-        // Create a panel with grid layout for the items - make it 5 columns to make items smaller
-        JPanel itemsPanel = new JPanel(new GridLayout(0, 5, 5, 5));
-        itemsPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
+
+        scrollPane.getViewport().setAlignmentY(Component.TOP_ALIGNMENT);
         
         // Right side - item information panel
         JPanel infoPanel = new JPanel(new BorderLayout(0, 10));
         infoPanel.setBorder(BorderFactory.createTitledBorder("Item Info"));
-        infoPanel.setPreferredSize(new Dimension(180, 0)); // Set width for info panel
+        infoPanel.setPreferredSize(new Dimension(180, 0));
         
         // Components for the info panel
         JLabel itemNameLabel = new JLabel();
-        itemNameLabel.setFont(new Font("Lato", Font.BOLD, 18)); // Larger font
-        itemNameLabel.setHorizontalAlignment(SwingConstants.CENTER); // Center text
+        itemNameLabel.setFont(new Font("Lato", Font.BOLD, 18));
+        itemNameLabel.setHorizontalAlignment(SwingConstants.CENTER);
         
         JLabel itemDescLabel = new JLabel();
-        itemDescLabel.setFont(new Font("Lato", Font.PLAIN, 14)); // Larger font
+        itemDescLabel.setFont(new Font("Lato", Font.PLAIN, 14));
         
-        // Create a panel for the item image with BorderLayout to center it
+        // Create a panel for the item image
         JPanel itemImagePanel = new JPanel(new BorderLayout());
-        itemImagePanel.setPreferredSize(new Dimension(100, 100)); // Larger image size
+        itemImagePanel.setPreferredSize(new Dimension(100, 100));
         itemImagePanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
         
-        // Layout the info panel - image at top, name below it, description at bottom
+        // Layout the info panel
         JPanel imageContainer = new JPanel(new BorderLayout());
         imageContainer.add(itemImagePanel, BorderLayout.CENTER);
         
@@ -801,60 +827,36 @@ public class Menu {
         
         // Check if there are items of this type
         if (items.isEmpty()) {
-            // No items of this type
             itemNameLabel.setText("No Items");
             itemDescLabel.setText("<html>No items of type " + itemType + " available</html>");
         } else {
             // Add each item to the grid panel
             for (Item item : items) {
-                JPanel itemPanel = new JPanel(new BorderLayout(2, 2));
-                itemPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-                
-                // Create a panel for the item image
-                JPanel imagePanel = new JPanel() {
+                // Create a small square panel for each item
+                JPanel itemPanel = new JPanel() {
                     @Override
                     protected void paintComponent(Graphics g) {
                         super.paintComponent(g);
                         if (item.getImage() != null) {
                             Image img = item.getImage();
-                            int imgWidth = img.getWidth(this);
-                            int imgHeight = img.getHeight(this);
-                            
-                            // Calculate scaling factor to maintain aspect ratio
-                            double scale = Math.min(
-                                (double)getWidth() / imgWidth,
-                                (double)getHeight() / imgHeight
-                            );
-                            
-                            // Calculate new dimensions
-                            int scaledWidth = (int)(imgWidth * scale);
-                            int scaledHeight = (int)(imgHeight * scale);
-                            
-                            // Calculate position to center the image
-                            int x = (getWidth() - scaledWidth) / 2;
-                            int y = (getHeight() - scaledHeight) / 2;
-                            
-                            // Draw the scaled image
-                            g.drawImage(img, x, y, scaledWidth, scaledHeight, this);
+                            int size = Math.min(getWidth(), getHeight()) - 10; // Smaller padding
+                            g.drawImage(img, (getWidth() - size)/2, (getHeight() - size)/2, size, size, this);
                         }
                     }
                 };
-                imagePanel.setPreferredSize(new Dimension(24, 24)); // Smaller image size
                 
-                JLabel itemLabel = new JLabel(item.getName(), JLabel.CENTER);
-                itemLabel.setFont(new Font("Lato", Font.PLAIN, 10)); // Smaller font
+                // Set fixed size for the item squares - make them larger with padding
+                // Set larger fixed size for the item squares
+                itemPanel.setPreferredSize(new Dimension(60, 60));
+                itemPanel.setMinimumSize(new Dimension(60, 60));
+
                 
-                itemPanel.add(imagePanel, BorderLayout.CENTER);
-                itemPanel.add(itemLabel, BorderLayout.SOUTH);
+                itemPanel.setToolTipText(item.getName());
                 
-                // Add tooltip with description
-                itemPanel.setToolTipText(item.getDescription());
-                
-                // Add click listener to show item info and use item
+                // Add click listener to show item info
                 itemPanel.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        // Update info panel with selected item details
                         updateItemInfoPanel(item, itemNameLabel, itemDescLabel, itemImagePanel);
                         
                         if (e.getClickCount() == 2) {
@@ -862,8 +864,6 @@ public class Menu {
                             boolean used = item.use(player);
                             if (used && item.getQuantity() <= 0) {
                                 player.removeItem(item);
-                                
-                                // Refresh inventory panel
                                 menuDialog.dispose();
                                 openPlayerMenu((JPanel)menuButton.getParent());
                             }

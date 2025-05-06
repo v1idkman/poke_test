@@ -48,6 +48,7 @@ public class Medicine extends Item {
     public void loadImage() {
         String lookupName = type.getName().replace(" ", "-").toLowerCase();
         String imagePath = "sprites/sprites/items/" + lookupName + ".png"; // Add file extension
+        imagePath = imagePath.trim();
         try {
             // Use File instead of getResource for external files
             java.io.File file = new java.io.File(imagePath);

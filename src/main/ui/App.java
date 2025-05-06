@@ -29,6 +29,11 @@ public class App {
         
         player.addToInventory("potion");
         player.addToInventory("master ball");
+        player.addToInventory("poke ball");
+        player.addToInventory("great ball");
+        player.addToInventory("ultra ball");
+        player.addToInventory("dusk ball");
+        player.addToInventory("luxury ball");
         player.addToInventory("good Rod");
         Board initialBoard = new Board(player);
         window.add(initialBoard);

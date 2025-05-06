@@ -10,7 +10,11 @@ public class Pokeball extends Item {
         POKE_BALL("Poke Ball", 1.0, "Standard Poké Ball"),
         GREAT_BALL("Great Ball", 1.5, "Better than a standard Poké Ball"),
         ULTRA_BALL("Ultra Ball", 2.0, "High-performance Poké Ball"),
-        MASTER_BALL("Master Ball", 255.0, "The best Poké Ball with the ultimate performance");
+        MASTER_BALL("Master Ball", 255.0, "The best Poké Ball with the ultimate performance"),
+        LUXURY_BALL("Luxury Ball", 1, "Doubles the rate at which the contained Pokémon's friendship increases."),
+        SAFARI("Safari Ball", 1, "Prior to Generation VIII, it was only usable within Safari Zones."),
+        DUSK_BALL("Dusk Ball", 2.0, "Works especially well in the dark");
+
         
         private final String name;
         private final double multiplier;
