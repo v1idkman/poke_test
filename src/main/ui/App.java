@@ -3,17 +3,24 @@ package ui;
 import javax.swing.*;
 
 import model.Move;
-import pokes.Bulbasaur;
-import pokes.Charizard;
 import model.Player;
 import model.Move.MoveCategory;
 import pokes.Pokemon;
 import pokes.Pokemon.PokemonType;
+import pokes.PokemonFactory;
+import pokes.PokemonStatsLoader;
 import model.ItemFactory;
 
 
 public class App {
     private static Player player;
+    private static PokemonStatsLoader statsLoader;
+
+    // Add this method
+    private static void initPokemonData() {
+        statsLoader = PokemonStatsLoader.getInstance();
+        statsLoader.loadFromCSV("src/main/resources/pokemon_info.csv");
+    }
 
     private static void initWindow() {
         // create a window frame and set the title in the toolbar
@@ -33,12 +40,12 @@ public class App {
     }
 
     private static void initPokemon() {
-        Pokemon bulbasaur = new Bulbasaur();
-        Pokemon charizard = new Charizard();
-        Pokemon charizard2 = new Charizard();
-        charizard.getStats().setLevel(36);
-        charizard.getStats().addEVs(100, 140, 80, 70, 100, 150);
-        charizard2.getStats().addEVs(100, 140, 80, 70, 100, 150);
+        Pokemon bulbasaur = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
+        Pokemon charizard = PokemonFactory.createPokemon(6, 36, "Charizard");
+        Pokemon charizard2 = PokemonFactory.createPokemon(6, 40,  "Charizard");
+        Pokemon blastoise = PokemonFactory.createPokemon(9, 45, "Blastoise");
+        blastoise.holdItem(ItemFactory.createItem("max revive"));
+        charizard.getStats().addEVs(100, 140, 80, 0, 100, 0);
         charizard.holdItem(ItemFactory.createItem("great ball"));
         charizard.addMove(new Move("Flamethrower", PokemonType.FIRE, 90, 80, 15, MoveCategory.SPECIAL));
         charizard.addMove(new Move("Fly", PokemonType.FLYING, 60, 90, 15, MoveCategory.SPECIAL));
@@ -47,11 +54,13 @@ public class App {
         player.addPokemonToCurrentTeam(bulbasaur);
         player.addPokemonToCurrentTeam(charizard);
         player.addPokemonToCurrentTeam(charizard2);
+        player.addPokemonToCurrentTeam(blastoise);
 
     }
 
     public static void main(String[] args) {
         player = new Player("sarp");
+        initPokemonData();
         initPokemon();
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {

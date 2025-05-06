@@ -27,6 +27,31 @@ public abstract class Pokemon {
         // Methods for type effectiveness could go here
     }
 
+    protected Pokemon(int dexNumber, String name, int level) {
+        this.name = name;
+        this.dex = dexNumber;
+        this.id = (int)(Math.random() * 100000);
+        this.isShiny = Math.random() < 0.0122; // Shiny chance
+        
+        // Get base stats from the loader using both dex and name
+        int[] baseStats = PokemonStatsLoader.getInstance().getBaseStats(dexNumber, name);
+        if (baseStats != null) {
+            this.stats = new Stats(
+                baseStats[0], // HP
+                baseStats[1], // Attack
+                baseStats[2], // Defense
+                baseStats[3], // Speed
+                baseStats[4], // Sp. Attack
+                baseStats[5], // Sp. Defense
+                level
+            );
+        } else {
+            // Fallback if stats not found
+            this.stats = new Stats(50, 50, 50, 50, 50, 50, level);
+        }
+    }
+    
+
     public List<PokemonType> getTypes() {
         return types;
     }

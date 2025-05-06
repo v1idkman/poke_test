@@ -56,6 +56,13 @@ public class Stats {
         this.specialDefIV = random.nextInt(32);
         
         this.level = level;
+
+        this.baseHp = baseHp;
+        this.baseAttack = baseAttack;
+        this.baseDefense = baseDefense;
+        this.baseSpeed = baseSpeed;
+        this.baseSpAtk = baseSpAtt;
+        this.baseSpDef = baseSpDef;
         
         // Calculate the actual stats based on base stats, IVs and level
         calculateStats(baseHp, baseAttack, baseDefense, baseSpeed, baseSpAtt, baseSpDef);
