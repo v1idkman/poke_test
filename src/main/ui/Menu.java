@@ -8,15 +8,9 @@ import javax.swing.Timer;
 
 import model.Player;
 import model.Item;
-import model.Medicine;
-import model.Move;
-import model.Pokeball;
 import pokes.Pokemon;
-import pokes.Pokemon.PokemonType;
-import model.KeyItem;
 
 import java.util.List;
-
 
 public class Menu {
     private static Menu instance;
@@ -25,6 +19,9 @@ public class Menu {
     private JDialog menuDialog;
     private Timer gameTimer;
     private Player player;
+    
+    private ItemManager itemManager;
+    private PokemonPanelManager pokemonManager;
     
     private Menu() {
         // Initialize any constant properties here
@@ -60,6 +57,8 @@ public class Menu {
     // Set the current player for the menu
     public void setPlayer(Player player) {
         this.player = player;
+        this.itemManager = new ItemManager(player, menuDialog, menuButton);
+        this.pokemonManager = new PokemonPanelManager(player, menuDialog);
     }
     
     // Set the game timer for pausing/resuming
@@ -67,7 +66,7 @@ public class Menu {
         this.gameTimer = timer;
     }
     
-    private void openPlayerMenu(JPanel parentBoard) {
+    public void openPlayerMenu(JPanel parentBoard) {
         // Pause the game timer when menu is open
         if (gameTimer != null) {
             gameTimer.stop();
@@ -79,6 +78,10 @@ public class Menu {
         menuDialog.setSize(500, 400);
         menuDialog.setLocationRelativeTo(parentBoard);
         menuDialog.setModal(true);
+        
+        // Reinitialize managers with the new dialog
+        this.itemManager = new ItemManager(player, menuDialog, menuButton);
+        this.pokemonManager = new PokemonPanelManager(player, menuDialog);
         
         // Create tabbed pane for different menu sections
         JTabbedPane tabbedPane = new JTabbedPane();
@@ -152,7 +155,6 @@ public class Menu {
         
         detailsPanel.add(imageContainer, BorderLayout.NORTH);
         detailsPanel.add(pokemonNameLabel, BorderLayout.CENTER);
-        // detailsPanel.add(pokemonStatsLabel, BorderLayout.SOUTH);
         
         // Add each Pokémon to the list
         List<Pokemon> team = player.getTeam();
@@ -205,9 +207,6 @@ public class Menu {
                     @Override
                     protected void paintComponent(Graphics g) {
                         super.paintComponent(g);
-                        // Uncomment for debugging to see the invisible area
-                        // g.setColor(new Color(255, 0, 0, 30));
-                        // g.fillRect(0, 0, getWidth(), getHeight());
                     }
                 };
             }
@@ -220,7 +219,8 @@ public class Menu {
                 @Override
                 public void mouseClicked(MouseEvent e) {
                     // Update details panel with selected Pokémon
-                    updatePokemonDetailsPanel(pokemon, pokemonNameLabel, pokemonStatsLabel, pokemonImagePanel, pokemonView);
+                    pokemonManager.updatePokemonDetailsPanel(pokemon, pokemonNameLabel, pokemonStatsLabel, 
+                                                           pokemonImagePanel, pokemonView);
                 }
             });
             
@@ -229,8 +229,8 @@ public class Menu {
         
         // Display the first Pokémon's details by default
         if (!team.isEmpty()) {
-            updatePokemonDetailsPanel(team.get(0), pokemonNameLabel, pokemonStatsLabel, pokemonImagePanel, 
-                                    new PokemonView(team.get(0)));
+            pokemonManager.updatePokemonDetailsPanel(team.get(0), pokemonNameLabel, pokemonStatsLabel, 
+                                                   pokemonImagePanel, new PokemonView(team.get(0)));
         }
         
         // Create a split layout
@@ -241,172 +241,8 @@ public class Menu {
         panel.add(splitPane, BorderLayout.CENTER);
         return panel;
     }
-
-    // Helper method to update the Pokémon details panel
-    private void updatePokemonDetailsPanel(Pokemon pokemon, JLabel nameLabel, JLabel statsLabel, 
-                                    JPanel imagePanel, PokemonView pokemonView) {
-        if (pokemon == null || pokemon.getStats() == null) {
-            nameLabel.setText("No Pokémon selected");
-            statsLabel.setText("");
-            return;
-        }
-        
-        // Update name with larger, centered text
-        nameLabel.setText(pokemon.getName());
-        nameLabel.setFont(new Font("Lato", Font.BOLD, 22));
-        
-        // Create a panel for the Pokémon image with a border
-        imagePanel.removeAll();
-        imagePanel.setLayout(new BorderLayout());
-        imagePanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-            BorderFactory.createEmptyBorder(5, 5, 5, 5)
-        ));
-        
-        // Create a custom panel to draw the Pokémon
-        JPanel largeImagePanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                // Draw the Pokémon (larger view)
-                pokemonView.draw(g, this, 0, 0, getWidth(), getHeight(), false, pokemon.getIsShiny());
-            }
-        };
-        imagePanel.add(largeImagePanel, BorderLayout.CENTER);
-        
-        // Create a panel for basic stats information
-        JPanel statsInfoPanel = new JPanel(new BorderLayout(10, 10));
-        
-        // Create HP bar
-        JPanel hpPanel = new JPanel(new BorderLayout(5, 0));
-        hpPanel.add(new JLabel("HP:"), BorderLayout.WEST);
-        
-        JProgressBar hpBar = new JProgressBar(0, pokemon.getStats().getMaxHp());
-        hpBar.setValue(pokemon.getStats().getCurrentHp());
-        hpBar.setForeground(new Color(30, 201, 139));
-        hpBar.setStringPainted(true);
-        hpBar.setString(pokemon.getStats().getCurrentHp() + "/" + pokemon.getStats().getMaxHp());
-        hpPanel.add(hpBar, BorderLayout.CENTER);
-        
-        JPanel basicInfoPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(2, 2, 2, 2);
-        gbc.anchor = GridBagConstraints.WEST;
-
-        // Level
-        gbc.gridx = 0; gbc.gridy = 0;
-        basicInfoPanel.add(new JLabel("Level:"), gbc);
-        gbc.gridx = 1;
-        basicInfoPanel.add(new JLabel(String.valueOf(pokemon.getStats().getLevel())), gbc);
-
-        // Dex #
-        gbc.gridx = 0; gbc.gridy = 1;
-        basicInfoPanel.add(new JLabel("Dex #:"), gbc);
-        gbc.gridx = 1;
-        basicInfoPanel.add(new JLabel(String.valueOf(pokemon.getDex())), gbc);
-
-        // Type (label)
-        gbc.gridx = 0; gbc.gridy = 2;
-        basicInfoPanel.add(new JLabel("Type:"), gbc);
-
-        // Type (panel with multiple types)
-        JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
-        for (PokemonType type : pokemon.getTypes()) {
-            JLabel typeLabel = new JLabel(type.name());
-            typeLabel.setOpaque(true);
-            typeLabel.setBackground(getColorForType(type));
-            typeLabel.setForeground(Color.WHITE);
-            typeLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
-            typePanel.add(typeLabel);
-        }
-        gbc.gridx = 1;
-        basicInfoPanel.add(typePanel, gbc);
-
-        // In the updatePokemonDetailsPanel method, modify the held item section:
-        gbc.gridx = 0; gbc.gridy = 3;
-        basicInfoPanel.add(new JLabel("Held Item:"), gbc);
-        gbc.gridx = 1;
-
-        // Create a panel to hold both the item label and the button
-        JPanel heldItemPanel = new JPanel(new BorderLayout(5, 0));
-        JLabel itemLabel = new JLabel(pokemon.holdsItem() ? pokemon.getHeldItem().getName() : "Nothing");
-        heldItemPanel.add(itemLabel, BorderLayout.CENTER);
-
-        // Create the button based on whether the Pokémon is holding an item
-        JButton itemButton = new JButton(pokemon.holdsItem() ? "Take" : "Give");
-        itemButton.setFont(new Font("Lato", Font.PLAIN, 10));
-        itemButton.setMargin(new Insets(1, 3, 1, 3));
-        itemButton.addActionListener(e -> {
-            if (pokemon.holdsItem()) {
-                Item takenItem = pokemon.getHeldItem();
-                pokemon.holdItem(null);
-                player.addToInventory(takenItem); // Direct transfer
-                
-                // Update UI elements
-                itemLabel.setText("Nothing");
-                itemButton.setText("Give");
-                
-                // Refresh both panels
-                refreshPokemonPanel();
-                refreshInventoryPanel();
-            } else {
-                // Show dialog to select an item to give
-                showItemSelectionDialog(pokemon);
-            }
-        });        
-
-        heldItemPanel.add(itemButton, BorderLayout.EAST);
-        basicInfoPanel.add(heldItemPanel, gbc);
-
-                
-        // Add HP and basic info to the stats panel
-        JPanel topStatsPanel = new JPanel(new BorderLayout(0, 10));
-        topStatsPanel.add(hpPanel, BorderLayout.NORTH);
-        topStatsPanel.add(basicInfoPanel, BorderLayout.CENTER);
-        
-        // Create buttons panel for Moves and Stats
-        JPanel buttonsPanel = new JPanel(new GridLayout(1, 2, 5, 0));
-        
-        // Create Moves button
-        JButton movesButton = new JButton("Moves");
-        movesButton.setBackground(new Color(30, 201, 139));
-        movesButton.setForeground(Color.WHITE);
-        movesButton.setFocusPainted(false);
-        movesButton.addActionListener(e -> openMovesPanel(pokemon));
-        
-        // Create Stats button
-        JButton statsButton = new JButton("Stats");
-        statsButton.setBackground(new Color(30, 201, 139));
-        statsButton.setForeground(Color.WHITE);
-        statsButton.setFocusPainted(false);
-        statsButton.addActionListener(e -> openStatsPanel(pokemon));
-        
-        // Add buttons to panel
-        buttonsPanel.add(movesButton);
-        buttonsPanel.add(statsButton);
-        
-        // Add all components to the stats info panel
-        statsInfoPanel.add(topStatsPanel, BorderLayout.CENTER);
-        statsInfoPanel.add(buttonsPanel, BorderLayout.SOUTH);
-        
-        // Get the parent container (details panel)
-        Container parent = imagePanel.getParent();
-        if (parent != null && parent instanceof JPanel) {
-            JPanel detailsPanel = (JPanel) parent;
-            
-            // Clear the details panel and rebuild it
-            detailsPanel.removeAll();
-            detailsPanel.add(imagePanel, BorderLayout.NORTH);
-            detailsPanel.add(nameLabel, BorderLayout.CENTER);
-            detailsPanel.add(statsInfoPanel, BorderLayout.SOUTH);
-            
-            // Force the panel to refresh
-            detailsPanel.revalidate();
-            detailsPanel.repaint();
-        }
-    }
-
-    private void refreshPokemonPanel() {
+    
+    public void refreshPokemonPanel() {
         // Get the current tab index
         int currentTab = 0;
         Container contentPane = menuDialog.getContentPane();
@@ -423,84 +259,9 @@ public class Menu {
                 tabbedPane.setSelectedIndex(currentTab);
             }
         }
-    }    
-
-    private void showItemSelectionDialog(Pokemon pokemon) {
-        // Create dialog for selecting an item
-        JDialog itemDialog = new JDialog(menuDialog, "Select Item", true);
-        itemDialog.setSize(300, 400);
-        itemDialog.setLocationRelativeTo(menuDialog);
-        
-        JPanel dialogMainPanel = new JPanel(new BorderLayout(10, 10));
-        dialogMainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        // Get all items from player's inventory
-        Set<Item> inventory = player.getInventory();
-        
-        // Create a panel for the items list
-        JPanel itemsPanel = new JPanel(new GridLayout(0, 1, 5, 5));
-        
-        // Add each item to the list
-        for (Item item : inventory) {
-            if (!(item instanceof KeyItem)) {
-                JPanel itemPanel = new JPanel(new BorderLayout(5, 0));
-            itemPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-            
-            // Create a panel for the item image
-            JPanel imagePanel = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    if (item.getImage() != null) {
-                        g.drawImage(item.getImage(), 5, 5, 30, 30, this);
-                    }
-                }
-            };
-            imagePanel.setPreferredSize(new Dimension(40, 40));
-            
-            JLabel nameLabel = new JLabel(item.getName());
-            
-            itemPanel.add(imagePanel, BorderLayout.WEST);
-            itemPanel.add(nameLabel, BorderLayout.CENTER);
-            
-            itemPanel.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    // Give the item to the Pokémon
-                    pokemon.holdItem(item);
-                    player.removeItem(item);
-                    
-                    // Close dialog before refreshing
-                    itemDialog.dispose();
-                    
-                    // Refresh panels
-                    refreshInventoryPanel();
-                    refreshPokemonPanel();
-                }
-            });
-            
-            itemsPanel.add(itemPanel);
-            }
-        }
-        
-        JScrollPane scrollPane = new JScrollPane(itemsPanel);
-        
-        // Add cancel button
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> itemDialog.dispose());
-        
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(cancelButton);
-        
-        dialogMainPanel.add(scrollPane, BorderLayout.CENTER);
-        dialogMainPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        itemDialog.add(dialogMainPanel);
-        itemDialog.setVisible(true);
     }
     
-    
-    private void refreshInventoryPanel() {
+    public void refreshInventoryPanel() {
         if (menuDialog != null && menuDialog.isVisible()) {
             // Get the tabbed pane
             Container contentPane = menuDialog.getContentPane();
@@ -525,344 +286,6 @@ public class Menu {
             }
         }
     }
-
-    private void openStatsPanel(Pokemon pokemon) {
-        JDialog statsDialog = new JDialog(menuDialog, "Stats - " + pokemon.getName(), true);
-        statsDialog.setSize(450, 600);
-        statsDialog.setResizable(false);
-        statsDialog.setLocationRelativeTo(menuDialog); // Center the dialog relative to the menu
-        
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 15));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 15, 20, 15)); // Reduced top padding
-        
-        // Create a more compact Pokémon info panel
-        JPanel pokemonInfoPanel = new JPanel(new BorderLayout(5, 0)); // Reduced horizontal gap
-        
-        JLabel nameLabel = new JLabel(pokemon.getName(), JLabel.CENTER);
-        nameLabel.setFont(new Font("Lato", Font.BOLD, 20)); // Slightly smaller font
-        
-        JPanel imagePanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                PokemonView pokemonView = new PokemonView(pokemon);
-                pokemonView.draw(g, this, 0, 0, getWidth(), getHeight(), false, pokemon.getIsShiny());
-            }
-        };
-        imagePanel.setPreferredSize(new Dimension(80, 80)); // Smaller image
-        
-        pokemonInfoPanel.add(imagePanel, BorderLayout.WEST);
-        pokemonInfoPanel.add(nameLabel, BorderLayout.CENTER);
-        
-        // Stat hexagon panel
-        JPanel statHexagonPanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                drawCombinedStatHexagon(g, pokemon);
-            }
-        };
-        statHexagonPanel.setPreferredSize(new Dimension(300, 300));
-        
-        // Create a legend for the hexagon colors
-        JPanel legendPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
-        
-        JPanel ivColorSample = new JPanel();
-        ivColorSample.setBackground(new Color(30, 201, 139, 150)); // Green for IVs
-        ivColorSample.setPreferredSize(new Dimension(20, 20));
-        legendPanel.add(ivColorSample);
-        legendPanel.add(new JLabel("IVs"));
-        
-        JPanel evColorSample = new JPanel();
-        evColorSample.setBackground(new Color(255, 165, 0, 150)); // Orange for EVs
-        evColorSample.setPreferredSize(new Dimension(20, 20));
-        legendPanel.add(evColorSample);
-        legendPanel.add(new JLabel("EVs"));
-        
-        // Improved numeric stats panel with IVs column
-        JPanel numericStatsPanel = new JPanel(new GridLayout(7, 4, 10, 8));
-        numericStatsPanel.setBorder(BorderFactory.createTitledBorder("Numeric Values"));
-        
-        Font labelFont = new Font("Lato", Font.BOLD, 12);
-        
-        // Header row
-        numericStatsPanel.add(new JLabel("Stat", JLabel.CENTER));
-        numericStatsPanel.add(new JLabel("Value", JLabel.CENTER));
-        numericStatsPanel.add(new JLabel("IV", JLabel.CENTER));
-        numericStatsPanel.add(new JLabel("EV", JLabel.CENTER));
-        
-        // HP row
-        JLabel hpLabel = new JLabel("HP:", JLabel.RIGHT);
-        hpLabel.setFont(labelFont);
-        numericStatsPanel.add(hpLabel);
-        
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getMaxHp()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getHpIV()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getHpEV()), JLabel.CENTER));
-        
-        // Attack row
-        numericStatsPanel.add(new JLabel("Attack:", JLabel.RIGHT));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getAttack()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getAttackIV()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getAttackEV()), JLabel.CENTER));
-        
-        // Defense row
-        numericStatsPanel.add(new JLabel("Defense:", JLabel.RIGHT));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getDefense()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getDefenseIV()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getDefenseEV()), JLabel.CENTER));
-        
-        // Speed row
-        numericStatsPanel.add(new JLabel("Speed:", JLabel.RIGHT));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpeed()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpeedIV()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpeedEV()), JLabel.CENTER));
-        
-        // Sp.Attack row
-        numericStatsPanel.add(new JLabel("Sp.Attack:", JLabel.RIGHT));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialAtk()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialAtkIV()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialAtkEV()), JLabel.CENTER));
-        
-        // Sp.Defense row
-        numericStatsPanel.add(new JLabel("Sp.Defense:", JLabel.RIGHT));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialDef()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialDefIV()), JLabel.CENTER));
-        numericStatsPanel.add(new JLabel(String.valueOf(pokemon.getStats().getSpecialDefEV()), JLabel.CENTER));
-        
-        // Assemble the stats display panel
-        JPanel statsDisplayPanel = new JPanel(new BorderLayout(10, 10));
-        statsDisplayPanel.add(legendPanel, BorderLayout.NORTH);
-        statsDisplayPanel.add(statHexagonPanel, BorderLayout.CENTER);
-        statsDisplayPanel.add(numericStatsPanel, BorderLayout.SOUTH);
-        
-        // Close button
-        JPanel buttonPanel = new JPanel(new BorderLayout());
-        JButton closeButton = new JButton("Close");
-        closeButton.addActionListener(e -> statsDialog.dispose());
-        buttonPanel.add(closeButton, BorderLayout.LINE_END);
-        
-        // Assemble the main panel
-        mainPanel.add(pokemonInfoPanel, BorderLayout.NORTH);
-        mainPanel.add(statsDisplayPanel, BorderLayout.CENTER);
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        statsDialog.add(mainPanel);
-        statsDialog.setVisible(true);
-    }
-    
-
-    // New method to draw the combined IV/EV hexagon
-    private void drawCombinedStatHexagon(Graphics g, Pokemon pokemon) {
-        Graphics2D g2d = (Graphics2D) g;
-        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        
-        int centerX = g.getClipBounds().width / 2;
-        int centerY = g.getClipBounds().height / 2;
-        int radius = Math.min(centerX, centerY) - 30;
-        
-        // Get the IV stats (normalized to 0.0-1.0 scale)
-        double hpIVRatio = normalizeStatValue(pokemon.getStats().getHpIV(), 31);
-        double attackIVRatio = normalizeStatValue(pokemon.getStats().getAttackIV(), 31);
-        double defenseIVRatio = normalizeStatValue(pokemon.getStats().getDefenseIV(), 31);
-        double speedIVRatio = normalizeStatValue(pokemon.getStats().getSpeedIV(), 31);
-        double specialAtkIVRatio = normalizeStatValue(pokemon.getStats().getSpecialAtkIV(), 31);
-        double specialDefIVRatio = normalizeStatValue(pokemon.getStats().getSpecialDefIV(), 31);
-        
-        // Get the EV stats (normalized to 0.0-1.0 scale)
-        double hpEVRatio = normalizeStatValue(pokemon.getStats().getHpEV(), 252);
-        double attackEVRatio = normalizeStatValue(pokemon.getStats().getAttackEV(), 252);
-        double defenseEVRatio = normalizeStatValue(pokemon.getStats().getDefenseEV(), 252);
-        double speedEVRatio = normalizeStatValue(pokemon.getStats().getSpeedEV(), 252);
-        double specialAtkEVRatio = normalizeStatValue(pokemon.getStats().getSpecialAtkEV(), 252);
-        double specialDefEVRatio = normalizeStatValue(pokemon.getStats().getSpecialDefEV(), 252);
-        
-        // Calculate points for the hexagon axes (6 stats)
-        int sides = 6; // HP, Attack, Defense, Speed, Sp.Atk, Sp.Def
-        double[] ivValues = {hpIVRatio, attackIVRatio, defenseIVRatio, speedIVRatio, specialAtkIVRatio, specialDefIVRatio};
-        double[] evValues = {hpEVRatio, attackEVRatio, defenseEVRatio, speedEVRatio, specialAtkEVRatio, specialDefEVRatio};
-        
-        int[] ivXPoints = new int[sides];
-        int[] ivYPoints = new int[sides];
-        int[] evXPoints = new int[sides];
-        int[] evYPoints = new int[sides];
-        
-        // Draw axes and labels
-        g2d.setColor(Color.LIGHT_GRAY);
-        String[] labels = {"HP", "Atk", "Def", "Spd", "Sp.Atk", "Sp.Def"};
-        g2d.setFont(new Font("Lato", Font.BOLD, 14));
-        
-        for (int i = 0; i < sides; i++) {
-            double angle = Math.PI * 2 * i / sides - Math.PI / 2;
-            int xEnd = centerX + (int)(Math.cos(angle) * radius);
-            int yEnd = centerY + (int)(Math.sin(angle) * radius);
-            
-            // Draw axis line
-            g2d.drawLine(centerX, centerY, xEnd, yEnd);
-            
-            // Draw stat label
-            FontMetrics fm = g2d.getFontMetrics();
-            int labelX = centerX + (int)(Math.cos(angle) * (radius + 20)) - fm.stringWidth(labels[i])/2;
-            int labelY = centerY + (int)(Math.sin(angle) * (radius + 20)) + fm.getHeight()/2;
-            g2d.drawString(labels[i], labelX, labelY);
-            
-            // Calculate points for both polygons
-            double ivRadius = radius * ivValues[i];
-            ivXPoints[i] = centerX + (int)(Math.cos(angle) * ivRadius);
-            ivYPoints[i] = centerY + (int)(Math.sin(angle) * ivRadius);
-            
-            double evRadius = radius * evValues[i];
-            evXPoints[i] = centerX + (int)(Math.cos(angle) * evRadius);
-            evYPoints[i] = centerY + (int)(Math.sin(angle) * evRadius);
-        }
-        
-        // Draw concentric circles for reference
-        g2d.setColor(new Color(230, 230, 230));
-        for (int i = 1; i <= 5; i++) {
-            int circleRadius = radius * i / 5;
-            g2d.drawOval(centerX - circleRadius, centerY - circleRadius, 
-                        circleRadius * 2, circleRadius * 2);
-        }
-        
-        // Draw the EV polygon first (so IV polygon appears on top)
-        g2d.setColor(new Color(255, 165, 0, 150)); // Semi-transparent orange for EVs
-        g2d.fillPolygon(evXPoints, evYPoints, sides);
-        g2d.setColor(new Color(255, 165, 0));
-        g2d.setStroke(new BasicStroke(1.5f));
-        g2d.drawPolygon(evXPoints, evYPoints, sides);
-        
-        // Draw the IV polygon on top
-        g2d.setColor(new Color(30, 201, 139, 150)); // Semi-transparent green for IVs
-        g2d.fillPolygon(ivXPoints, ivYPoints, sides);
-        g2d.setColor(new Color(30, 201, 139));
-        g2d.setStroke(new BasicStroke(2.0f));
-        g2d.drawPolygon(ivXPoints, ivYPoints, sides);
-    }
-    
-
-    private void openMovesPanel(Pokemon pokemon) {
-        // Create a dialog to show the moves
-        JDialog movesDialog = new JDialog(menuDialog, "Moves - " + pokemon.getName(), true);
-        movesDialog.setSize(400, 300);
-        movesDialog.setLocationRelativeTo(menuDialog);
-        
-        // Create the main panel for the moves
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        // Create a panel for the Pokémon info at the top
-        JPanel pokemonInfoPanel = new JPanel(new BorderLayout());
-        
-        // Show Pokémon name and image
-        JLabel nameLabel = new JLabel(pokemon.getName(), JLabel.CENTER);
-        nameLabel.setFont(new Font("Lato", Font.BOLD, 18));
-        
-        // Create a panel for the Pokémon image
-        JPanel imagePanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                PokemonView pokemonView = new PokemonView(pokemon);
-                pokemonView.draw(g, this, 0, 0, getWidth(), getHeight(), false, pokemon.getIsShiny());
-            }
-        };
-        imagePanel.setPreferredSize(new Dimension(80, 80));
-        
-        pokemonInfoPanel.add(imagePanel, BorderLayout.WEST);
-        pokemonInfoPanel.add(nameLabel, BorderLayout.CENTER);
-        
-        // Create a panel for the moves list
-        JPanel movesPanel = new JPanel(new GridLayout(0, 1, 5, 5));
-        movesPanel.setBorder(BorderFactory.createTitledBorder("Moves"));
-        
-        // Add each move to the panel
-        List<Move> moves = pokemon.getMoves();
-        if (moves != null && !moves.isEmpty()) {
-            for (Move move : moves) {
-                JPanel movePanel = new JPanel(new BorderLayout(5, 0));
-                movePanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(Color.LIGHT_GRAY),
-                    BorderFactory.createEmptyBorder(5, 5, 5, 5)
-                ));
-                
-                // Move name with type color indicator
-                JLabel moveNameLabel = new JLabel(move.getName());
-                moveNameLabel.setFont(new Font("Lato", Font.BOLD, 14));
-                
-                // Move type with background color
-                JLabel typeLabel = new JLabel(move.getType().toString());
-                typeLabel.setOpaque(true);
-                typeLabel.setBackground(getColorForType(move.getType()));
-                typeLabel.setForeground(Color.WHITE);
-                typeLabel.setBorder(BorderFactory.createEmptyBorder(2, 5, 2, 5));
-                
-                // Move details (power, accuracy, PP)
-                JPanel detailsPanel = new JPanel(new GridLayout(1, 3, 5, 0));
-                detailsPanel.add(new JLabel("Power: " + move.getPower()));
-                detailsPanel.add(new JLabel("Acc: " + move.getAccuracy() + "%"));
-                detailsPanel.add(new JLabel("PP: " + move.getCurrentPP() + "/" + move.getMaxPP()));
-                
-                // Add components to the move panel
-                JPanel leftPanel = new JPanel(new BorderLayout(5, 0));
-                leftPanel.add(moveNameLabel, BorderLayout.CENTER);
-                leftPanel.add(typeLabel, BorderLayout.EAST);
-                
-                movePanel.add(leftPanel, BorderLayout.WEST);
-                movePanel.add(detailsPanel, BorderLayout.EAST);
-                
-                movesPanel.add(movePanel);
-            }
-        } else {
-            movesPanel.add(new JLabel("No moves learned", JLabel.CENTER));
-        }
-        
-        // Add scroll capability for many moves
-        JScrollPane scrollPane = new JScrollPane(movesPanel);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        
-        // Create close button at bottom right
-        JPanel buttonPanel = new JPanel(new BorderLayout());
-        JButton closeButton = new JButton("Close");
-        closeButton.addActionListener(e -> movesDialog.dispose());
-        buttonPanel.add(closeButton, BorderLayout.LINE_END);
-        
-        // Add all components to the main panel
-        mainPanel.add(pokemonInfoPanel, BorderLayout.NORTH);
-        mainPanel.add(scrollPane, BorderLayout.CENTER);
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        // Set up and show the dialog
-        movesDialog.add(mainPanel);
-        movesDialog.setVisible(true);
-    }
-
-    // Helper method to normalize stat values to 0.0-1.0 scale
-    private double normalizeStatValue(int statValue, int maxPossibleValue) {
-        return Math.min(1.0, Math.max(0.0, (double)statValue / maxPossibleValue));
-    }
-
-    // Helper method to get color based on Pokémon type
-    private Color getColorForType(PokemonType type) {
-        // You'll need to implement this method with appropriate colors for each type
-        switch (type) {
-            case NORMAL: return new Color(168, 168, 120);
-            case FIRE: return new Color(240, 128, 48);
-            case WATER: return new Color(104, 144, 240);
-            case GRASS: return new Color(120, 200, 80);
-            case ELECTRIC: return new Color(248, 208, 48);
-            case ICE: return new Color(152, 216, 216);
-            case FIGHTING: return new Color(192, 48, 40);
-            case POISON: return new Color(160, 64, 160);
-            case GROUND: return new Color(224, 192, 104);
-            case FLYING: return new Color(168, 144, 240);
-            case PSYCHIC: return new Color(248, 88, 136);
-            case BUG: return new Color(168, 184, 32);
-            case ROCK: return new Color(184, 160, 56);
-            case GHOST: return new Color(112, 88, 152);
-            case DRAGON: return new Color(112, 56, 248);
-            default: return Color.GRAY;
-        }
-    }
     
     private JComponent createInventoryPanel() {
         // Check if player is available
@@ -885,7 +308,7 @@ public class Menu {
         
         // Sort items by their types
         for (Item item : inventory) {
-            String type = getItemType(item);
+            String type = itemManager.getItemType(item);
             if (!itemsByType.containsKey(type)) {
                 itemsByType.put(type, new ArrayList<>());
             }
@@ -910,19 +333,6 @@ public class Menu {
         return itemCategories;
     }
     
-    private String getItemType(Item item) {
-        if (item instanceof Medicine) {
-            return "Medicine";
-        } else if (item instanceof Pokeball) {
-            return "Poké Balls";
-        } else if (item instanceof KeyItem) {
-            return "Key Items";
-        } else {
-            // For any other item types that might be added later
-            return "Other Items";
-        }
-    }
-    
     private JPanel createItemTypePanel(List<Item> items, String itemType) {
         // Main panel with BorderLayout
         JPanel panel = new JPanel(new BorderLayout(10, 0));
@@ -930,7 +340,6 @@ public class Menu {
         // Left side - scrollable item grid
         JPanel leftPanel = new JPanel(new BorderLayout());
         
-        // Create a panel with grid layout for the items
         // Create a panel with FlowLayout instead of GridLayout
         JPanel itemsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         itemsPanel.setBorder(BorderFactory.createEmptyBorder(10, 4, 10, 10));
@@ -994,34 +403,28 @@ public class Menu {
                     }
                 };
                 
-                // Set fixed size for the item squares - make them larger with padding
                 // Set larger fixed size for the item squares
                 itemPanel.setPreferredSize(new Dimension(60, 60));
                 itemPanel.setMinimumSize(new Dimension(60, 60));
-
                 
                 itemPanel.setToolTipText(item.getName());
                 
                 // Add click listener to show item info
-                // In createItemTypePanel method, modify the mouseClicked event handler:
                 itemPanel.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
                         // Update info panel with selected item details
-                        updateItemInfoPanel(item, itemNameLabel, itemDescLabel, itemImagePanel, infoPanel);
+                        itemManager.updateItemInfoPanel(item, itemNameLabel, itemDescLabel, itemImagePanel, infoPanel);
                         
                         if (e.getClickCount() == 2) {
                             // Get a fresh reference to the item from inventory
                             Item currentItem = null;
-                            // When selecting an item in inventory
                             for (Item inventoryItem : player.getInventory()) {
                                 if (inventoryItem.equals(item)) {
-                                    // Use the fresh reference
                                     currentItem = inventoryItem;
                                     break;
                                 }
                             }
-
                             
                             // Use the fresh reference instead of the potentially stale one
                             if (currentItem != null) {
@@ -1040,7 +443,7 @@ public class Menu {
             }
             
             // Display the first item's info by default
-            updateItemInfoPanel(items.get(0), itemNameLabel, itemDescLabel, itemImagePanel, infoPanel);
+            itemManager.updateItemInfoPanel(items.get(0), itemNameLabel, itemDescLabel, itemImagePanel, infoPanel);
         }
         
         scrollPane.setViewportView(itemsPanel);
@@ -1052,261 +455,6 @@ public class Menu {
         
         return panel;
     }
-
-    // TODO: Something very wrong in the item selection when giving/taking an item from a pokemon
-    
-    // Helper method to update the item info panel
-    private void updateItemInfoPanel(Item item, JLabel nameLabel, JLabel descLabel, JPanel imagePanel, JPanel infoPanel) {
-        // Update name with quantity if stackable
-        nameLabel.setText(item.getName() + (item.isStackable() ? " (x" + item.getQuantity() + ")" : ""));
-        
-        // Update description
-        descLabel.setText("<html>" + item.getDescription() + "</html>");
-        
-        // Update image panel
-        imagePanel.removeAll();
-        
-        // Create a custom panel to draw the image with proper scaling
-        if (item.getImage() != null) {
-            final Image itemImage = item.getImage();
-            
-            JPanel scaledImagePanel = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    
-                    int imgWidth = itemImage.getWidth(this);
-                    int imgHeight = itemImage.getHeight(this);
-                    
-                    // Calculate scaling factor to maintain aspect ratio
-                    double scale = Math.min(
-                        (double)getWidth() / imgWidth,
-                        (double)getHeight() / imgHeight
-                    );
-                    
-                    // Calculate new dimensions
-                    int scaledWidth = (int)(imgWidth * scale);
-                    int scaledHeight = (int)(imgHeight * scale);
-                    
-                    // Calculate position to center the image
-                    int x = (getWidth() - scaledWidth) / 2;
-                    int y = (getHeight() - scaledHeight) / 2;
-                    
-                    // Draw the scaled image
-                    g.drawImage(itemImage, x, y, scaledWidth, scaledHeight, this);
-                }
-            };
-            
-            imagePanel.setLayout(new BorderLayout());
-            imagePanel.add(scaledImagePanel, BorderLayout.CENTER);
-        }
-        
-        // Only show the button for medicine and key items
-        for (Component comp : infoPanel.getComponents()) {
-            if (comp instanceof JPanel && comp == infoPanel.getComponent(infoPanel.getComponentCount() - 1)) {
-                infoPanel.remove(comp);
-                break;
-            }
-        }
-    
-        // Only add Use button for medicine or key items
-        if (item instanceof Medicine || item instanceof KeyItem) {
-            // Create a new button panel and button each time
-            JPanel buttonPanel = new JPanel();
-            JButton useButton = new JButton("Use");
-            useButton.setBackground(new Color(30, 201, 139));
-            useButton.setForeground(Color.WHITE);
-            
-            // Set specific action listener based on item type
-            if (item instanceof Medicine) {
-                useButton.addActionListener(e -> openMedicineSelectionDialog((Medicine)item));
-            } else if (item instanceof KeyItem) {
-                useButton.addActionListener(e -> {
-                    boolean used = item.use(player);
-                    if (used && item.getQuantity() <= 0) {
-                        player.removeItem(item);
-                        menuDialog.dispose();
-                        openPlayerMenu((JPanel)menuButton.getParent());
-                    }
-                });
-            }
-            
-            buttonPanel.add(useButton);
-            infoPanel.add(buttonPanel, BorderLayout.PAGE_END);
-        }
-        
-        infoPanel.revalidate();
-        infoPanel.repaint();
-    }
-
-    private JPanel createPokemonSelectionPanel(Pokemon pokemon, boolean enabled) {
-        JPanel panel = new JPanel(new BorderLayout(5, 0));
-        panel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-        
-        // Create a panel for the Pokémon sprite
-        JPanel spritePanel = new JPanel() {
-            @Override
-            protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                PokemonView pokemonView = new PokemonView(pokemon);
-                pokemonView.draw(g, this, 5, 5, getWidth() - 10, getHeight() - 10, false, pokemon.getIsShiny());
-            }
-        };
-        spritePanel.setPreferredSize(new Dimension(50, 50));
-        
-        // Create info panel with name and HP
-        JPanel infoPanel = new JPanel(new BorderLayout());
-        infoPanel.add(new JLabel(pokemon.getName()), BorderLayout.NORTH);
-        
-        JProgressBar hpBar = new JProgressBar(0, pokemon.getStats().getMaxHp());
-        hpBar.setValue(pokemon.getStats().getCurrentHp());
-        hpBar.setForeground(new Color(30, 201, 139));
-        hpBar.setStringPainted(true);
-        hpBar.setString(pokemon.getStats().getCurrentHp() + "/" + pokemon.getStats().getMaxHp());
-        infoPanel.add(hpBar, BorderLayout.SOUTH);
-        
-        panel.add(spritePanel, BorderLayout.WEST);
-        panel.add(infoPanel, BorderLayout.CENTER);
-        
-        // Gray out the panel if the item can't be used on this Pokémon
-        if (!enabled) {
-            panel.setEnabled(false);
-            panel.setBackground(Color.LIGHT_GRAY);
-            infoPanel.setBackground(Color.LIGHT_GRAY);
-            spritePanel.setBackground(Color.LIGHT_GRAY);
-        } else {
-            panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        }
-        
-        return panel;
-    }
-    
-    private void openMedicineSelectionDialog(Medicine medicine) {
-        // Get a fresh reference to the medicine item
-        Medicine currentMedicine = null;
-        for (Item item : player.getInventory()) {
-            if (item.equals(medicine) && item instanceof Medicine) {
-                currentMedicine = (Medicine) item;
-                break;
-            }
-        }
-        
-        // If the item is no longer in inventory, return
-        if (currentMedicine == null) return;
-        
-        // Create dialog to select which Pokémon to use the item on
-        JDialog selectDialog = new JDialog(menuDialog, "Use " + currentMedicine.getName(), true);
-        selectDialog.setSize(400, 300);
-        selectDialog.setLocationRelativeTo(menuDialog);
-        
-        JPanel dialogMainPanel = new JPanel(new BorderLayout(10, 10));
-        dialogMainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        // Create a panel to display Pokémon list
-        JPanel pokemonListPanel = new JPanel(new GridLayout(0, 1, 5, 5));
-        pokemonListPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        
-        boolean anyValidTarget = false;
-        final Medicine finalMedicine = currentMedicine; // For use in lambda
-        
-        // Add each Pokémon to the list
-        for (Pokemon pokemon : player.getTeam()) {
-            boolean canUseItem = false;
-            
-            // Check if the item can be used on this Pokémon
-            if (finalMedicine.getType() == Medicine.MedicineType.REVIVE || 
-                finalMedicine.getType() == Medicine.MedicineType.MAX_REVIVE) {
-                // Revives can only be used on fainted Pokémon
-                canUseItem = pokemon.getStats().hasFainted();
-            } else {
-                // Healing items can only be used on non-fainted Pokémon that aren't at full health
-                canUseItem = !pokemon.getStats().hasFainted() && 
-                             pokemon.getStats().getCurrentHp() < pokemon.getStats().getMaxHp();
-            }
-            
-            JPanel pokemonPanel = createPokemonSelectionPanel(pokemon, canUseItem);
-            
-            if (canUseItem) {
-                anyValidTarget = true;
-                // Add click listener to use item on this Pokémon
-                pokemonPanel.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        // Apply medicine and close dialog before refreshing
-                        applyMedicineEffect(finalMedicine, pokemon);
-                        selectDialog.dispose();
-                        
-                        if (finalMedicine.getQuantity() <= 0) {
-                            player.removeItem(finalMedicine);
-                        }
-                        
-                        // Refresh both panels
-                        refreshInventoryPanel();
-                        refreshPokemonPanel();
-                    }
-                });
-            }
-            
-            pokemonListPanel.add(pokemonPanel);
-        }
-        
-        JScrollPane scrollPane = new JScrollPane(pokemonListPanel);
-        dialogMainPanel.add(scrollPane, BorderLayout.CENTER);
-        
-        // Add cancel button
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> selectDialog.dispose());
-        
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(cancelButton);
-        dialogMainPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        // If no valid targets, show message and return
-        if (!anyValidTarget) {
-            JOptionPane.showMessageDialog(menuDialog, 
-                "Cannot use " + finalMedicine.getName() + " on any Pokémon in your team.", 
-                "Cannot Use Item", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        
-        selectDialog.add(dialogMainPanel);
-        selectDialog.setVisible(true);
-    }
-
-    private void applyMedicineEffect(Medicine medicine, Pokemon pokemon) {
-        switch (medicine.getType()) {
-            case REVIVE:
-                if (pokemon.getStats().hasFainted()) {
-                    int halfHp = pokemon.getStats().getMaxHp() / 2;
-                    pokemon.getStats().setCurrentHp(halfHp);
-                }
-                break;
-            case MAX_REVIVE:
-                if (pokemon.getStats().hasFainted()) {
-                    pokemon.getStats().setCurrentHp(pokemon.getStats().getMaxHp());
-                }
-                break;
-            case MAX_POTION:
-                if (!pokemon.getStats().hasFainted()) {
-                    pokemon.getStats().setCurrentHp(pokemon.getStats().getMaxHp());
-                }
-                break;
-            default:
-                // Regular healing items
-                if (!pokemon.getStats().hasFainted()) {
-                    int newHp = pokemon.getStats().getCurrentHp() + medicine.getHealAmount();
-                    pokemon.getStats().setCurrentHp(newHp);
-                }
-                break;
-        }
-        
-        // Reduce quantity after successful use
-        medicine.reduceQuantity(1);
-        
-        // Refresh the Pokémon panel to show updated HP
-        refreshPokemonPanel();
-    }
-    
     
     private JPanel createBadgesPanel() {
         JPanel panel = new JPanel(new GridLayout(2, 4, 15, 15));
