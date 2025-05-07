@@ -91,6 +91,7 @@ public class Menu {
         tabbedPane.addTab("Inventory", createInventoryPanel());
         tabbedPane.addTab("Gym Badges", createBadgesPanel());
         tabbedPane.addTab("Trainer Card", createTrainerPanel());
+        tabbedPane.addTab("Map", createMapPanel());
         
         // Add close button
         JButton closeButton = new JButton("Close Menu");
@@ -500,6 +501,13 @@ public class Menu {
         panel.add(nameLabel, BorderLayout.NORTH);
         panel.add(statsPanel, BorderLayout.CENTER);
         
+        return panel;
+    }
+
+    public Component createMapPanel() {
+        JPanel panel = new JPanel(new BorderLayout(20, 20));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
         return panel;
     }
 }

@@ -21,18 +21,26 @@ public class Player extends Trainer {
     private int trainerId;
 
     private boolean inBattle;
+    
+    // World position in pixels (for camera tracking)
+    @SuppressWarnings("unused")
+    private int worldX;
+    @SuppressWarnings("unused")
+    private int worldY;
+    private int tileSize;
 
     public Player(String name) {
         super(name);
         facingFront = "/resources/player_sprites/s_facing_front";
         setSprite(facingFront);
-        pos = new Point(0, 0);
+        pos = new Point(60, 60);
         width = 50;
         height = 50;
         inventory = new HashSet<>();
         money = 0;
         trainerId = (int)(Math.random() * 100000);
         inBattle = false;
+        tileSize = 5; // Default tile size
     }
 
     public void setAnimationFrame(int frame) {
@@ -42,9 +50,26 @@ public class Player extends Trainer {
     public Point getPosition() {
         return pos;
     }
+    
+    // Get world position in pixels for camera
+    public int getWorldX() {
+        return pos.x * tileSize;
+    }
+    
+    public int getWorldY() {
+        return pos.y * tileSize;
+    }
+    
+    // Set tile size for coordinate conversion
+    public void setTileSize(int size) {
+        this.tileSize = size;
+    }
 
     public void move(int dx, int dy) {
         pos.translate(dx, dy);
+        // Update world coordinates
+        worldX = pos.x * tileSize;
+        worldY = pos.y * tileSize;
     }
 
     public void setSpriteSize(int width, int height) {
@@ -64,6 +89,10 @@ public class Player extends Trainer {
         else if (pos.x >= maxCols) pos.x = maxCols - 1;
         if (pos.y < 0) pos.y = 0;
         else if (pos.y >= maxRows) pos.y = maxRows - 1;
+        
+        // Update world coordinates
+        worldX = pos.x * tileSize;
+        worldY = pos.y * tileSize;
     }
 
     public void setDirection(Direction dir) {
@@ -132,6 +161,7 @@ public class Player extends Trainer {
         }
         inventory.add(newItem);
     }
+    
     public void addToInventory(Item item) {
         // For stackable items, check if we already have this item
         if (item.isStackable()) {
@@ -150,5 +180,12 @@ public class Player extends Trainer {
         if (inventory.contains(item)) {
             inventory.remove(item);
         }
+    }
+
+    public void setPosition(Point point) {
+        this.pos = point;
+        // Update world coordinates
+        worldX = pos.x * tileSize;
+        worldY = pos.y * tileSize;
     }
 }

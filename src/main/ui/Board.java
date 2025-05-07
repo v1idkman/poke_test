@@ -24,9 +24,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private PlayerView playerView;
 
     private boolean upPressed, downPressed, leftPressed, rightPressed;
+    private int lastKeyPressed;
     
     private int animationCounter = 0;
     private static final int ANIMATION_DELAY = 5;
+
+    private Camera camera;
 
     public Board(Player player) {
         objects = new ArrayList<>();
@@ -48,42 +51,69 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         menu.setPlayer(player);
         menu.setGameTimer(timer);
         menu.initializeMenuButton(this, TILE_SIZE, COLUMNS, ROWS);
+
+        camera = new Camera(
+            TILE_SIZE * COLUMNS, 
+            TILE_SIZE * ROWS,
+            TILE_SIZE * COLUMNS * 2, // World is twice the screen size
+            TILE_SIZE * ROWS * 2
+        );
+        
+        // Center player initially
+        player.setPosition(new Point(COLUMNS/2, ROWS/2));
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        drawBackground(g);
-
+        
+        // Create a translated graphics context
+        Graphics2D g2d = (Graphics2D) g.create();
+        g2d.translate(-camera.getX(), -camera.getY());
+        
+        // Draw background with camera offset
+        drawBackground(g2d);
+        
+        // Draw world objects with camera offset
         for (WorldObject obj : objects) {
-            obj.draw(g, this, TILE_SIZE);
+            obj.draw(g2d, this, TILE_SIZE);
         }
-
-        playerView.draw(g, this, TILE_SIZE);
-        drawDebugBounds(g);
+        
+        // Draw player with camera offset
+        playerView.draw(g2d, this, TILE_SIZE);
+        
+        // Draw debug bounds if needed
+        drawDebugBounds(g2d);
+        
+        g2d.dispose();
     }
     
     @Override
     public void actionPerformed(ActionEvent e) {
         boolean isMoving = false;
-        if (upPressed && canMove(0, -1)) {
+        if (lastKeyPressed == KeyEvent.VK_UP && upPressed && canMove(0, -1)) {
             player.move(0, -1);
+            player.setDirection(Player.Direction.FRONT);
             isMoving = true;
-        }
-        if (downPressed && canMove(0, 1)) {
+        } 
+        else if (lastKeyPressed == KeyEvent.VK_DOWN && downPressed && canMove(0, 1)) {
             player.move(0, 1);
+            player.setDirection(Player.Direction.BACK);
             isMoving = true;
-        }
-        if (leftPressed && canMove(-1, 0)) {
+        } 
+        else if (lastKeyPressed == KeyEvent.VK_LEFT && leftPressed && canMove(-1, 0)) {
             player.move(-1, 0);
+            player.setDirection(Player.Direction.LEFT);
             isMoving = true;
-        }
-        if (rightPressed && canMove(1, 0)) {
+        } 
+        else if (lastKeyPressed == KeyEvent.VK_RIGHT && rightPressed && canMove(1, 0)) {
             player.move(1, 0);
+            player.setDirection(Player.Direction.RIGHT);
             isMoving = true;
         }
+        
         player.setMoving(isMoving);
-    
+
         if (isMoving) {
             animationCounter++;
             if (animationCounter >= ANIMATION_DELAY) {
@@ -92,14 +122,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 animationCounter = 0;
             }
         } else {
-            // Optionally reset animation frame to standing
             player.setAnimationFrame(0);
             playerView.loadImage();
         }
-    
-        player.tick(COLUMNS, ROWS);
+        
+        // Update camera position based on player position
+        camera.update(player.getWorldX(), player.getWorldY());
+        
+        player.tick(COLUMNS * 2, ROWS * 2); // Use larger world bounds
         repaint();
     }
+    // camera.update(player.getPosition().x * TILE_SIZE, player.getPosition().y * TILE_SIZE);
     
     public boolean canMove(int dx, int dy) {
         Rectangle nextBounds = new Rectangle(
@@ -110,10 +143,33 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         );
         for (WorldObject obj : objects) {
             if (nextBounds.intersects(obj.getBounds(TILE_SIZE))) {
-                return false; // Collision detected
+                return false;
             }
         }
-        return true; // No collision
+        return true;
+    }
+    
+    private void drawBackground(Graphics g) {
+        // Calculate visible area
+        int startCol = camera.getX() / TILE_SIZE;
+        int startRow = camera.getY() / TILE_SIZE;
+        int endCol = startCol + COLUMNS + 1;
+        int endRow = startRow + ROWS + 1;
+        
+        // Limit to world bounds
+        startCol = Math.max(0, startCol);
+        startRow = Math.max(0, startRow);
+        endCol = Math.min(COLUMNS * 2, endCol);
+        endRow = Math.min(ROWS * 2, endRow);
+        
+        g.setColor(new Color(214, 214, 214));
+        for (int row = startRow; row < endRow; row++) {
+            for (int col = startCol; col < endCol; col++) {
+                if ((row + col) % 2 == 1) {
+                    g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                }
+            }
+        }
     }
 
     public void addObject(String path, int x, int y) {
@@ -140,6 +196,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
+        lastKeyPressed = key;
         if (key == KeyEvent.VK_UP) {
             upPressed = true;
             player.setDirection(Player.Direction.FRONT);
@@ -172,17 +229,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             player.setMoving(false);
             player.setAnimationFrame(0); // Reset to standing frame
             playerView.loadImage();
-        }
-    }
-
-    private void drawBackground(Graphics g) {
-        g.setColor(new Color(214, 214, 214));
-        for (int row = 0; row < ROWS; row++) {
-            for (int col = 0; col < COLUMNS; col++) {
-                if ((row + col) % 2 == 1) {
-                    g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                }
-            }
         }
     }
 }
