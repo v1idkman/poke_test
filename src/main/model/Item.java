@@ -87,4 +87,18 @@ public abstract class Item {
     public String toString() {
         return name;
     }
+
+    // compare only by name, since name duplicates should never happen
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Item obj = (Item) o;
+        return name.equals(obj.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return name.hashCode() ;
+    }
 }

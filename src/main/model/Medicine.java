@@ -2,6 +2,8 @@ package model;
 
 import javax.swing.ImageIcon;
 
+import pokes.Pokemon;
+
 public class Medicine extends Item {
     private int healAmount;
     private MedicineType type;
@@ -63,13 +65,40 @@ public class Medicine extends Item {
     }
     
     
+    // Apply medicine effects to a Pokémon
+    public boolean applyTo(Pokemon pokemon) {
+        if (type == MedicineType.REVIVE || type == MedicineType.MAX_REVIVE) {
+            // Revives can only be used on fainted Pokémon
+            if (!pokemon.getStats().hasFainted()) {
+                return false;
+            }
+            
+            int newHp = (type == MedicineType.REVIVE) ? 
+                pokemon.getStats().getMaxHp() / 2 : 
+                pokemon.getStats().getMaxHp();
+            
+            pokemon.getStats().setCurrentHp(newHp);
+            return true;
+        } else {
+            // Healing items can only be used on non-fainted Pokémon that aren't at full health
+            if (pokemon.getStats().hasFainted() || 
+                pokemon.getStats().getCurrentHp() >= pokemon.getStats().getMaxHp()) {
+                return false;
+            }
+            
+            // Apply healing
+            int currentHp = pokemon.getStats().getCurrentHp();
+            int newHp = Math.min(currentHp + healAmount, pokemon.getStats().getMaxHp());
+            pokemon.getStats().setCurrentHp(newHp);
+            return true;
+        }
+    }
+    
     @Override
     public boolean use(Player player) {
-        // Implementation for using medicine on a Pokémon
-        System.out.println("Using " + name + " to heal " + healAmount + " HP");
-        
-        // Reduce quantity when used
-        return reduceQuantity(1);
+        // This method now just signals that the item should be used
+        // The actual application is handled in the UI layer
+        return true;
     }
     
     public int getHealAmount() {
@@ -78,5 +107,9 @@ public class Medicine extends Item {
     
     public MedicineType getType() {
         return type;
+    }
+
+    public boolean isRevive() {
+        return type == MedicineType.REVIVE || type == MedicineType.MAX_REVIVE;
     }
 }

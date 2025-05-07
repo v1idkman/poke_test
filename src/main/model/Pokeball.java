@@ -1,6 +1,7 @@
 package model;
 
 import javax.swing.ImageIcon;
+import javax.swing.JOptionPane;
 
 public class Pokeball extends Item {
     private double catchRate;
@@ -70,13 +71,21 @@ public class Pokeball extends Item {
     
     @Override
     public boolean use(Player player) {
+        // Check if player is in battle
+        if (!player.isInBattle()) {
+            JOptionPane.showMessageDialog(null, 
+                "You can't use a " + name + " outside of battle!", 
+                "Cannot Use Item", JOptionPane.INFORMATION_MESSAGE);
+            return false;
+        }
+        
         // Implementation for using a Poké Ball in battle
-        // This would be connected to the battle system
         System.out.println("Using " + name + " with catch rate: " + catchRate);
         
         // Reduce quantity when used
         return reduceQuantity(1);
     }
+
     
     public double getCatchRate() {
         return catchRate;

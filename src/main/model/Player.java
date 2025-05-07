@@ -20,6 +20,8 @@ public class Player extends Trainer {
     private int money;
     private int trainerId;
 
+    private boolean inBattle;
+
     public Player(String name) {
         super(name);
         facingFront = "/resources/player_sprites/s_facing_front";
@@ -30,6 +32,7 @@ public class Player extends Trainer {
         inventory = new HashSet<>();
         money = 0;
         trainerId = (int)(Math.random() * 100000);
+        inBattle = false;
     }
 
     public void setAnimationFrame(int frame) {
@@ -107,6 +110,14 @@ public class Player extends Trainer {
         return trainerId;
     }
 
+    public boolean isInBattle() {
+        return inBattle;
+    }
+
+    public void setInBattle(boolean inBattle) {
+        this.inBattle = inBattle;
+    }
+
     public void addToInventory(String itemName) {
         Item newItem = ItemFactory.createItem(itemName);
         if (newItem == null) return;
@@ -120,6 +131,19 @@ public class Player extends Trainer {
             }
         }
         inventory.add(newItem);
+    }
+    public void addToInventory(Item item) {
+        // For stackable items, check if we already have this item
+        if (item.isStackable()) {
+            for (Item existingItem : inventory) {
+                if (existingItem.getName().equals(item.getName())) {
+                    existingItem.addQuantity(item.getQuantity());
+                    return;
+                }
+            }
+        }
+        // If not stackable or not found, add as new item
+        inventory.add(item);
     }
 
     public void removeItem(Item item) {

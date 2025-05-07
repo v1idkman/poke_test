@@ -199,7 +199,7 @@ public class Menu {
                 itemLabel = new JLabel() {
                     @Override
                     public Dimension getPreferredSize() {
-                        return new Dimension(40, 40);
+                        return new Dimension(30, 30);
                     }
                     
                     @Override
@@ -322,14 +322,43 @@ public class Menu {
         gbc.gridx = 1;
         basicInfoPanel.add(typePanel, gbc);
 
-        // held item
+        // In the updatePokemonDetailsPanel method, modify the held item section:
         gbc.gridx = 0; gbc.gridy = 3;
         basicInfoPanel.add(new JLabel("Held Item:"), gbc);
         gbc.gridx = 1;
-        basicInfoPanel.add(new JLabel(String.valueOf(pokemon.holdsItem() ? pokemon.getHeldItem() : " nothing")), gbc);
-        
 
-        
+        // Create a panel to hold both the item label and the button
+        JPanel heldItemPanel = new JPanel(new BorderLayout(5, 0));
+        JLabel itemLabel = new JLabel(pokemon.holdsItem() ? pokemon.getHeldItem().getName() : "Nothing");
+        heldItemPanel.add(itemLabel, BorderLayout.CENTER);
+
+        // Create the button based on whether the Pokémon is holding an item
+        JButton itemButton = new JButton(pokemon.holdsItem() ? "Take" : "Give");
+        itemButton.setFont(new Font("Lato", Font.PLAIN, 10));
+        itemButton.setMargin(new Insets(1, 3, 1, 3));
+        itemButton.addActionListener(e -> {
+            if (pokemon.holdsItem()) {
+                Item takenItem = pokemon.getHeldItem();
+                pokemon.holdItem(null);
+                player.addToInventory(takenItem); // Direct transfer
+                
+                // Update UI elements
+                itemLabel.setText("Nothing");
+                itemButton.setText("Give");
+                
+                // Refresh both panels
+                refreshPokemonPanel();
+                refreshInventoryPanel();
+            } else {
+                // Show dialog to select an item to give
+                showItemSelectionDialog(pokemon);
+            }
+        });        
+
+        heldItemPanel.add(itemButton, BorderLayout.EAST);
+        basicInfoPanel.add(heldItemPanel, gbc);
+
+                
         // Add HP and basic info to the stats panel
         JPanel topStatsPanel = new JPanel(new BorderLayout(0, 10));
         topStatsPanel.add(hpPanel, BorderLayout.NORTH);
@@ -374,6 +403,126 @@ public class Menu {
             // Force the panel to refresh
             detailsPanel.revalidate();
             detailsPanel.repaint();
+        }
+    }
+
+    private void refreshPokemonPanel() {
+        // Get the current tab index
+        int currentTab = 0;
+        Container contentPane = menuDialog.getContentPane();
+        if (contentPane.getComponent(0) instanceof JPanel) {
+            JPanel mainPanel = (JPanel) contentPane.getComponent(0);
+            if (mainPanel.getComponent(0) instanceof JTabbedPane) {
+                JTabbedPane tabbedPane = (JTabbedPane) mainPanel.getComponent(0);
+                currentTab = tabbedPane.getSelectedIndex();
+                
+                // Replace the Pokémon panel with a fresh one
+                tabbedPane.setComponentAt(0, createPokemonPanel());
+                
+                // Restore the selected tab
+                tabbedPane.setSelectedIndex(currentTab);
+            }
+        }
+    }    
+
+    private void showItemSelectionDialog(Pokemon pokemon) {
+        // Create dialog for selecting an item
+        JDialog itemDialog = new JDialog(menuDialog, "Select Item", true);
+        itemDialog.setSize(300, 400);
+        itemDialog.setLocationRelativeTo(menuDialog);
+        
+        JPanel dialogMainPanel = new JPanel(new BorderLayout(10, 10));
+        dialogMainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Get all items from player's inventory
+        Set<Item> inventory = player.getInventory();
+        
+        // Create a panel for the items list
+        JPanel itemsPanel = new JPanel(new GridLayout(0, 1, 5, 5));
+        
+        // Add each item to the list
+        for (Item item : inventory) {
+            if (!(item instanceof KeyItem)) {
+                JPanel itemPanel = new JPanel(new BorderLayout(5, 0));
+            itemPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+            
+            // Create a panel for the item image
+            JPanel imagePanel = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    if (item.getImage() != null) {
+                        g.drawImage(item.getImage(), 5, 5, 30, 30, this);
+                    }
+                }
+            };
+            imagePanel.setPreferredSize(new Dimension(40, 40));
+            
+            JLabel nameLabel = new JLabel(item.getName());
+            
+            itemPanel.add(imagePanel, BorderLayout.WEST);
+            itemPanel.add(nameLabel, BorderLayout.CENTER);
+            
+            itemPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    // Give the item to the Pokémon
+                    pokemon.holdItem(item);
+                    player.removeItem(item);
+                    
+                    // Close dialog before refreshing
+                    itemDialog.dispose();
+                    
+                    // Refresh panels
+                    refreshInventoryPanel();
+                    refreshPokemonPanel();
+                }
+            });
+            
+            itemsPanel.add(itemPanel);
+            }
+        }
+        
+        JScrollPane scrollPane = new JScrollPane(itemsPanel);
+        
+        // Add cancel button
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> itemDialog.dispose());
+        
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(cancelButton);
+        
+        dialogMainPanel.add(scrollPane, BorderLayout.CENTER);
+        dialogMainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        itemDialog.add(dialogMainPanel);
+        itemDialog.setVisible(true);
+    }
+    
+    
+    private void refreshInventoryPanel() {
+        if (menuDialog != null && menuDialog.isVisible()) {
+            // Get the tabbed pane
+            Container contentPane = menuDialog.getContentPane();
+            if (contentPane.getComponentCount() > 0 && contentPane.getComponent(0) instanceof JPanel) {
+                JPanel mainPanel = (JPanel) contentPane.getComponent(0);
+                if (mainPanel.getComponentCount() > 0 && mainPanel.getComponent(0) instanceof JTabbedPane) {
+                    JTabbedPane tabbedPane = (JTabbedPane) mainPanel.getComponent(0);
+                    
+                    // Get the current selected tab index
+                    int selectedIndex = tabbedPane.getSelectedIndex();
+                    
+                    // Replace the inventory tab with a fresh one
+                    tabbedPane.setComponentAt(1, createInventoryPanel());
+                    
+                    // Restore the selected tab
+                    tabbedPane.setSelectedIndex(selectedIndex);
+                    
+                    // Force repaint
+                    tabbedPane.revalidate();
+                    tabbedPane.repaint();
+                }
+            }
         }
     }
 
@@ -854,18 +1003,34 @@ public class Menu {
                 itemPanel.setToolTipText(item.getName());
                 
                 // Add click listener to show item info
+                // In createItemTypePanel method, modify the mouseClicked event handler:
                 itemPanel.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
-                        updateItemInfoPanel(item, itemNameLabel, itemDescLabel, itemImagePanel);
+                        // Update info panel with selected item details
+                        updateItemInfoPanel(item, itemNameLabel, itemDescLabel, itemImagePanel, infoPanel);
                         
                         if (e.getClickCount() == 2) {
-                            // Double-click to use item
-                            boolean used = item.use(player);
-                            if (used && item.getQuantity() <= 0) {
-                                player.removeItem(item);
-                                menuDialog.dispose();
-                                openPlayerMenu((JPanel)menuButton.getParent());
+                            // Get a fresh reference to the item from inventory
+                            Item currentItem = null;
+                            // When selecting an item in inventory
+                            for (Item inventoryItem : player.getInventory()) {
+                                if (inventoryItem.equals(item)) {
+                                    // Use the fresh reference
+                                    currentItem = inventoryItem;
+                                    break;
+                                }
+                            }
+
+                            
+                            // Use the fresh reference instead of the potentially stale one
+                            if (currentItem != null) {
+                                boolean used = currentItem.use(player);
+                                if (used && currentItem.getQuantity() <= 0) {
+                                    player.removeItem(currentItem);
+                                    menuDialog.dispose();
+                                    openPlayerMenu((JPanel)menuButton.getParent());
+                                }
                             }
                         }
                     }
@@ -875,7 +1040,7 @@ public class Menu {
             }
             
             // Display the first item's info by default
-            updateItemInfoPanel(items.get(0), itemNameLabel, itemDescLabel, itemImagePanel);
+            updateItemInfoPanel(items.get(0), itemNameLabel, itemDescLabel, itemImagePanel, infoPanel);
         }
         
         scrollPane.setViewportView(itemsPanel);
@@ -887,9 +1052,11 @@ public class Menu {
         
         return panel;
     }
+
+    // TODO: Something very wrong in the item selection when giving/taking an item from a pokemon
     
     // Helper method to update the item info panel
-    private void updateItemInfoPanel(Item item, JLabel nameLabel, JLabel descLabel, JPanel imagePanel) {
+    private void updateItemInfoPanel(Item item, JLabel nameLabel, JLabel descLabel, JPanel imagePanel, JPanel infoPanel) {
         // Update name with quantity if stackable
         nameLabel.setText(item.getName() + (item.isStackable() ? " (x" + item.getQuantity() + ")" : ""));
         
@@ -934,9 +1101,212 @@ public class Menu {
             imagePanel.add(scaledImagePanel, BorderLayout.CENTER);
         }
         
-        imagePanel.revalidate();
-        imagePanel.repaint();
+        // Only show the button for medicine and key items
+        for (Component comp : infoPanel.getComponents()) {
+            if (comp instanceof JPanel && comp == infoPanel.getComponent(infoPanel.getComponentCount() - 1)) {
+                infoPanel.remove(comp);
+                break;
+            }
+        }
+    
+        // Only add Use button for medicine or key items
+        if (item instanceof Medicine || item instanceof KeyItem) {
+            // Create a new button panel and button each time
+            JPanel buttonPanel = new JPanel();
+            JButton useButton = new JButton("Use");
+            useButton.setBackground(new Color(30, 201, 139));
+            useButton.setForeground(Color.WHITE);
+            
+            // Set specific action listener based on item type
+            if (item instanceof Medicine) {
+                useButton.addActionListener(e -> openMedicineSelectionDialog((Medicine)item));
+            } else if (item instanceof KeyItem) {
+                useButton.addActionListener(e -> {
+                    boolean used = item.use(player);
+                    if (used && item.getQuantity() <= 0) {
+                        player.removeItem(item);
+                        menuDialog.dispose();
+                        openPlayerMenu((JPanel)menuButton.getParent());
+                    }
+                });
+            }
+            
+            buttonPanel.add(useButton);
+            infoPanel.add(buttonPanel, BorderLayout.PAGE_END);
+        }
+        
+        infoPanel.revalidate();
+        infoPanel.repaint();
     }
+
+    private JPanel createPokemonSelectionPanel(Pokemon pokemon, boolean enabled) {
+        JPanel panel = new JPanel(new BorderLayout(5, 0));
+        panel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+        
+        // Create a panel for the Pokémon sprite
+        JPanel spritePanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                PokemonView pokemonView = new PokemonView(pokemon);
+                pokemonView.draw(g, this, 5, 5, getWidth() - 10, getHeight() - 10, false, pokemon.getIsShiny());
+            }
+        };
+        spritePanel.setPreferredSize(new Dimension(50, 50));
+        
+        // Create info panel with name and HP
+        JPanel infoPanel = new JPanel(new BorderLayout());
+        infoPanel.add(new JLabel(pokemon.getName()), BorderLayout.NORTH);
+        
+        JProgressBar hpBar = new JProgressBar(0, pokemon.getStats().getMaxHp());
+        hpBar.setValue(pokemon.getStats().getCurrentHp());
+        hpBar.setForeground(new Color(30, 201, 139));
+        hpBar.setStringPainted(true);
+        hpBar.setString(pokemon.getStats().getCurrentHp() + "/" + pokemon.getStats().getMaxHp());
+        infoPanel.add(hpBar, BorderLayout.SOUTH);
+        
+        panel.add(spritePanel, BorderLayout.WEST);
+        panel.add(infoPanel, BorderLayout.CENTER);
+        
+        // Gray out the panel if the item can't be used on this Pokémon
+        if (!enabled) {
+            panel.setEnabled(false);
+            panel.setBackground(Color.LIGHT_GRAY);
+            infoPanel.setBackground(Color.LIGHT_GRAY);
+            spritePanel.setBackground(Color.LIGHT_GRAY);
+        } else {
+            panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        }
+        
+        return panel;
+    }
+    
+    private void openMedicineSelectionDialog(Medicine medicine) {
+        // Get a fresh reference to the medicine item
+        Medicine currentMedicine = null;
+        for (Item item : player.getInventory()) {
+            if (item.equals(medicine) && item instanceof Medicine) {
+                currentMedicine = (Medicine) item;
+                break;
+            }
+        }
+        
+        // If the item is no longer in inventory, return
+        if (currentMedicine == null) return;
+        
+        // Create dialog to select which Pokémon to use the item on
+        JDialog selectDialog = new JDialog(menuDialog, "Use " + currentMedicine.getName(), true);
+        selectDialog.setSize(400, 300);
+        selectDialog.setLocationRelativeTo(menuDialog);
+        
+        JPanel dialogMainPanel = new JPanel(new BorderLayout(10, 10));
+        dialogMainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Create a panel to display Pokémon list
+        JPanel pokemonListPanel = new JPanel(new GridLayout(0, 1, 5, 5));
+        pokemonListPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        
+        boolean anyValidTarget = false;
+        final Medicine finalMedicine = currentMedicine; // For use in lambda
+        
+        // Add each Pokémon to the list
+        for (Pokemon pokemon : player.getTeam()) {
+            boolean canUseItem = false;
+            
+            // Check if the item can be used on this Pokémon
+            if (finalMedicine.getType() == Medicine.MedicineType.REVIVE || 
+                finalMedicine.getType() == Medicine.MedicineType.MAX_REVIVE) {
+                // Revives can only be used on fainted Pokémon
+                canUseItem = pokemon.getStats().hasFainted();
+            } else {
+                // Healing items can only be used on non-fainted Pokémon that aren't at full health
+                canUseItem = !pokemon.getStats().hasFainted() && 
+                             pokemon.getStats().getCurrentHp() < pokemon.getStats().getMaxHp();
+            }
+            
+            JPanel pokemonPanel = createPokemonSelectionPanel(pokemon, canUseItem);
+            
+            if (canUseItem) {
+                anyValidTarget = true;
+                // Add click listener to use item on this Pokémon
+                pokemonPanel.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        // Apply medicine and close dialog before refreshing
+                        applyMedicineEffect(finalMedicine, pokemon);
+                        selectDialog.dispose();
+                        
+                        if (finalMedicine.getQuantity() <= 0) {
+                            player.removeItem(finalMedicine);
+                        }
+                        
+                        // Refresh both panels
+                        refreshInventoryPanel();
+                        refreshPokemonPanel();
+                    }
+                });
+            }
+            
+            pokemonListPanel.add(pokemonPanel);
+        }
+        
+        JScrollPane scrollPane = new JScrollPane(pokemonListPanel);
+        dialogMainPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Add cancel button
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> selectDialog.dispose());
+        
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(cancelButton);
+        dialogMainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        // If no valid targets, show message and return
+        if (!anyValidTarget) {
+            JOptionPane.showMessageDialog(menuDialog, 
+                "Cannot use " + finalMedicine.getName() + " on any Pokémon in your team.", 
+                "Cannot Use Item", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        selectDialog.add(dialogMainPanel);
+        selectDialog.setVisible(true);
+    }
+
+    private void applyMedicineEffect(Medicine medicine, Pokemon pokemon) {
+        switch (medicine.getType()) {
+            case REVIVE:
+                if (pokemon.getStats().hasFainted()) {
+                    int halfHp = pokemon.getStats().getMaxHp() / 2;
+                    pokemon.getStats().setCurrentHp(halfHp);
+                }
+                break;
+            case MAX_REVIVE:
+                if (pokemon.getStats().hasFainted()) {
+                    pokemon.getStats().setCurrentHp(pokemon.getStats().getMaxHp());
+                }
+                break;
+            case MAX_POTION:
+                if (!pokemon.getStats().hasFainted()) {
+                    pokemon.getStats().setCurrentHp(pokemon.getStats().getMaxHp());
+                }
+                break;
+            default:
+                // Regular healing items
+                if (!pokemon.getStats().hasFainted()) {
+                    int newHp = pokemon.getStats().getCurrentHp() + medicine.getHealAmount();
+                    pokemon.getStats().setCurrentHp(newHp);
+                }
+                break;
+        }
+        
+        // Reduce quantity after successful use
+        medicine.reduceQuantity(1);
+        
+        // Refresh the Pokémon panel to show updated HP
+        refreshPokemonPanel();
+    }
+    
     
     private JPanel createBadgesPanel() {
         JPanel panel = new JPanel(new GridLayout(2, 4, 15, 15));

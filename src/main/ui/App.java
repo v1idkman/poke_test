@@ -35,6 +35,7 @@ public class App {
         player.addToInventory("dusk ball");
         player.addToInventory("luxury ball");
         player.addToInventory("good Rod");
+        player.addToInventory("super potion");
         Board initialBoard = new Board(player);
         window.add(initialBoard);
         window.addKeyListener(initialBoard);
@@ -49,6 +50,7 @@ public class App {
         Pokemon charizard = PokemonFactory.createPokemon(6, 36, "Charizard");
         Pokemon charizard2 = PokemonFactory.createPokemon(6, 40,  "Charizard");
         Pokemon blastoise = PokemonFactory.createPokemon(9, 45, "Blastoise");
+        blastoise.damage(30);
         blastoise.holdItem(ItemFactory.createItem("max revive"));
         charizard.getStats().addEVs(100, 140, 80, 0, 100, 0);
         charizard.holdItem(ItemFactory.createItem("great ball"));

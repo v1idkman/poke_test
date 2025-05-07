@@ -102,6 +102,10 @@ public abstract class Pokemon {
         }
     }
 
+    public void damage(int amount) {
+        stats.setCurrentHp(stats.getCurrentHp() - amount);
+    }
+
     /**
      * Applies a status condition to this Pokémon
      * @param statusEffect The status condition to apply
