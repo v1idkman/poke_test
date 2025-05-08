@@ -5,46 +5,46 @@ import java.awt.event.*;
 import javax.swing.*;
 
 import model.Building;
+import model.Door;
 import model.Player;
+import model.Player.Direction;
 import model.WorldObject;
 
 import java.util.List;
 import java.util.ArrayList;
 
 public class Board extends JPanel implements ActionListener, KeyListener {
-    private final int DELAY = 25;
+    private final int DELAY = 50;
     public static final int TILE_SIZE = 5;
     public static final int ROWS = 120;
     public static final int COLUMNS = 180;
-    private static final int PLAYER_HEIGHT_COLLISION = 30;
     private List<WorldObject> objects;
 
     private Timer timer;
     private Player player;
     private PlayerView playerView;
 
-    private boolean upPressed, downPressed, leftPressed, rightPressed;
-    private int lastKeyPressed;
-    
-    private int animationCounter = 0;
-    private static final int ANIMATION_DELAY = 5;
+    private boolean upPressed, downPressed, leftPressed, rightPressed, interactionKeyPressed;
 
     private Camera camera;
 
-    public Board(Player player) {
-        objects = new ArrayList<>();
+    private List<Door> doors;
+    private String worldName;
+    private WorldManager worldManager;
+
+    public Board(Player player, String worldName) {
         setPreferredSize(new Dimension(TILE_SIZE * COLUMNS, TILE_SIZE * ROWS));
         setBackground(new Color(232, 232, 232));
         this.player = player;
+        this.worldName = worldName;
+        this.doors = new ArrayList<>();
+        objects = new ArrayList<>();
         playerView = new PlayerView(player);
         timer = new Timer(DELAY, this);
         timer.start();
         setFocusable(true);
         requestFocusInWindow();
         addKeyListener(this);
-        addObject("/resources/buildings/red_house.png", 40, 40);
-        addObject("/resources/buildings/red_house.png", 60, 80);
-        addObject("/resources/buildings/red_house.png", 20, 20);
         
         // Initialize the menu singleton with this board's information
         Menu menu = Menu.getInstance();
@@ -61,6 +61,28 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         // Center player initially
         player.setPosition(new Point(COLUMNS/2, ROWS/2));
+
+        if (worldName.equals("outside")) {
+            addObject("/resources/buildings/red_house.png", 40, 40);
+            addObject("/resources/buildings/red_house.png", 140, 40);
+            // Add more outside objects...
+        } else if (worldName.equals("house_interior")) {
+            // Add house interior objects
+            // Like furniture, etc.
+        }
+    }
+
+    public void setWorldManager(WorldManager manager) {
+        this.worldManager = manager;
+    }
+    
+    public void addDoor(Door door) {
+        doors.add(door);
+        objects.add(door); // Add to general objects for rendering
+    }
+    
+    public Player getPlayer() {
+        return player;
     }
 
     @Override
@@ -71,18 +93,14 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         Graphics2D g2d = (Graphics2D) g.create();
         g2d.translate(-camera.getX(), -camera.getY());
         
-        // Draw background with camera offset
         drawBackground(g2d);
         
-        // Draw world objects with camera offset
         for (WorldObject obj : objects) {
             obj.draw(g2d, this, TILE_SIZE);
         }
         
-        // Draw player with camera offset
         playerView.draw(g2d, this, TILE_SIZE);
         
-        // Draw debug bounds if needed
         drawDebugBounds(g2d);
         
         g2d.dispose();
@@ -90,63 +108,60 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     
     @Override
     public void actionPerformed(ActionEvent e) {
-        boolean isMoving = false;
-        if (lastKeyPressed == KeyEvent.VK_UP && upPressed && canMove(0, -1)) {
-            player.move(0, -1);
-            player.setDirection(Player.Direction.FRONT);
-            isMoving = true;
-        } 
-        else if (lastKeyPressed == KeyEvent.VK_DOWN && downPressed && canMove(0, 1)) {
-            player.move(0, 1);
-            player.setDirection(Player.Direction.BACK);
-            isMoving = true;
-        } 
-        else if (lastKeyPressed == KeyEvent.VK_LEFT && leftPressed && canMove(-1, 0)) {
-            player.move(-1, 0);
-            player.setDirection(Player.Direction.LEFT);
-            isMoving = true;
-        } 
-        else if (lastKeyPressed == KeyEvent.VK_RIGHT && rightPressed && canMove(1, 0)) {
-            player.move(1, 0);
-            player.setDirection(Player.Direction.RIGHT);
-            isMoving = true;
-        }
+        // Clear previous movement
+        boolean[] directions = {upPressed, downPressed, leftPressed, rightPressed};
+        int activeDirections = 0;
+        for(boolean dir : directions) if(dir) activeDirections++;
         
-        player.setMoving(isMoving);
-
-        if (isMoving) {
-            animationCounter++;
-            if (animationCounter >= ANIMATION_DELAY) {
-                player.nextAnimationFrame();
-                playerView.loadImage();
-                animationCounter = 0;
+        // Allow only single direction
+        if(activeDirections == 1) {
+            if (upPressed && canMove(0, -1)) {
+                handleMovement(0, -1, Direction.FRONT);
+            } else if (downPressed && canMove(0, 1)) {
+                handleMovement(0, 1, Direction.BACK);
+            } else if (leftPressed && canMove(-1, 0)) {
+                handleMovement(-1, 0, Direction.LEFT);
+            } else if (rightPressed && canMove(1, 0)) {
+                handleMovement(1, 0, Direction.RIGHT);
             }
-        } else {
-            player.setAnimationFrame(0);
-            playerView.loadImage();
         }
+    }
+
+    private void handleMovement(int dx, int dy, Direction dir) {
+        player.setDirection(dir);
+        player.move(dx, dy);
+        player.setMoving(true);
+        player.tick(COLUMNS * 2, ROWS * 2);
         
-        // Update camera position based on player position
+        playerView.loadImage();
+        
+        checkDoorInteraction();
+        resolveCollisions();
+        
         camera.update(player.getWorldX(), player.getWorldY());
         
-        player.tick(COLUMNS * 2, ROWS * 2); // Use larger world bounds
         repaint();
     }
-    // camera.update(player.getPosition().x * TILE_SIZE, player.getPosition().y * TILE_SIZE);
-    
+
     public boolean canMove(int dx, int dy) {
+        // Calculate the next position in world coordinates
+        int nextX = player.getWorldX() + (dx * TILE_SIZE);
+        int nextY = player.getWorldY() + (dy * TILE_SIZE);
+        
+        // Create a rectangle representing where the player would be
         Rectangle nextBounds = new Rectangle(
-            (player.getPosition().x + dx) * TILE_SIZE,
-            ((player.getPosition().y + dy) * TILE_SIZE) + PLAYER_HEIGHT_COLLISION,
+            nextX,
+            nextY,
             player.getWidth(),
-            player.getHeight() - PLAYER_HEIGHT_COLLISION
+            player.getHeight()
         );
+        
         for (WorldObject obj : objects) {
             if (nextBounds.intersects(obj.getBounds(TILE_SIZE))) {
-                return false;
+                return false; // Collision detected
             }
         }
-        return true;
+        return true; // No collision
     }
     
     private void drawBackground(Graphics g) {
@@ -178,9 +193,10 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     private void drawDebugBounds(Graphics g) {
         g.setColor(Color.RED);
-        // Draw player bounds
-        g.drawRect((player.getPosition().x) * TILE_SIZE, ((player.getPosition().y) * TILE_SIZE) + PLAYER_HEIGHT_COLLISION, 
-        player.getWidth(), player.getHeight() - PLAYER_HEIGHT_COLLISION);
+        // Draw player bounds using actual position and dimensions
+        int x = player.getWorldX();
+        int y = player.getWorldY();
+        g.drawRect(x, y, player.getWidth(), player.getHeight());
         
         // Draw object bounds
         g.setColor(Color.BLUE);
@@ -196,7 +212,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
-        lastKeyPressed = key;
         if (key == KeyEvent.VK_UP) {
             upPressed = true;
             player.setDirection(Player.Direction.FRONT);
@@ -227,8 +242,72 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         // If no movement keys are pressed, stop animation
         if (!upPressed && !downPressed && !leftPressed && !rightPressed) {
             player.setMoving(false);
-            player.setAnimationFrame(0); // Reset to standing frame
             playerView.loadImage();
+        }
+
+        repaint();
+
+        // Handle interaction key (e.g., "E")
+        if (key == KeyEvent.VK_E) {
+            interactionKeyPressed = true;
+            // Handle interaction logic here
+        } else {
+            interactionKeyPressed = false;
+        }
+    }
+
+    private void checkDoorInteraction() {
+        Rectangle playerBounds = player.getBounds(TILE_SIZE);
+        
+        for (Door door : doors) {
+            if (playerBounds.intersects(door.getBounds(TILE_SIZE))) {
+                // Check if player is pressing the interaction key (e.g., UP arrow)
+                if (interactionKeyPressed) {
+                    if (worldManager != null) {
+                        worldManager.switchWorld(door.getTargetWorld(), door.getSpawnPoint());
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    // Add this method to the Board class
+    private void resolveCollisions() {
+        Rectangle playerBounds = player.getBounds(TILE_SIZE);
+        
+        for (WorldObject obj : objects) {
+            Rectangle objBounds = obj.getBounds(TILE_SIZE);
+            
+            if (playerBounds.intersects(objBounds)) {
+                // Calculate overlap
+                int overlapLeft = objBounds.x + objBounds.width - playerBounds.x;
+                int overlapRight = playerBounds.x + playerBounds.width - objBounds.x;
+                int overlapTop = objBounds.y + objBounds.height - playerBounds.y;
+                int overlapBottom = playerBounds.y + playerBounds.height - objBounds.y;
+                
+                // Find minimum overlap
+                int minOverlap = Math.min(Math.min(overlapLeft, overlapRight), 
+                                        Math.min(overlapTop, overlapBottom));
+                
+                // Push player in direction of minimum overlap
+                if (minOverlap == overlapLeft) {
+                    player.setPosition(new Point(player.getPosition().x + (overlapLeft / TILE_SIZE) + 1, 
+                                                player.getPosition().y));
+                } else if (minOverlap == overlapRight) {
+                    player.setPosition(new Point(player.getPosition().x - (overlapRight / TILE_SIZE) - 1, 
+                                                player.getPosition().y));
+                } else if (minOverlap == overlapTop) {
+                    player.setPosition(new Point(player.getPosition().x, 
+                                                player.getPosition().y + (overlapTop / TILE_SIZE) + 1));
+                } else if (minOverlap == overlapBottom) {
+                    player.setPosition(new Point(player.getPosition().x, 
+                                                player.getPosition().y - (overlapBottom / TILE_SIZE) - 1));
+                }
+                
+                // Update player's exact coordinates
+                player.updateExactCoordinates();
+            }
         }
     }
 }

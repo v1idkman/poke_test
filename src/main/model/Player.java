@@ -14,7 +14,19 @@ public class Player extends Trainer {
     private Direction direction = Direction.BACK;
     private boolean moving = false;
     private int animationFrame = 0;
-    private static final int NUM_FRAMES = 2;
+    
+    // Animation constants
+    private static final int NUM_FRAMES = 2; 
+    private static final int ANIMATION_DELAY = 5;
+    
+    // Animation state
+    private int animationCounter = 0;
+    
+    // Movement state
+    private float exactX, exactY;
+    private float moveSpeed = 2.0f;
+    private int targetX, targetY;
+    private boolean hasTarget = false;
 
     private Set<Item> inventory;
     private int money;
@@ -22,11 +34,6 @@ public class Player extends Trainer {
 
     private boolean inBattle;
     
-    // World position in pixels (for camera tracking)
-    @SuppressWarnings("unused")
-    private int worldX;
-    @SuppressWarnings("unused")
-    private int worldY;
     private int tileSize;
 
     public Player(String name) {
@@ -34,8 +41,8 @@ public class Player extends Trainer {
         facingFront = "/resources/player_sprites/s_facing_front";
         setSprite(facingFront);
         pos = new Point(60, 60);
-        width = 50;
-        height = 50;
+        exactX = pos.x;
+        exactY = pos.y;
         inventory = new HashSet<>();
         money = 0;
         trainerId = (int)(Math.random() * 100000);
@@ -53,11 +60,11 @@ public class Player extends Trainer {
     
     // Get world position in pixels for camera
     public int getWorldX() {
-        return pos.x * tileSize;
+        return (int)(exactX * tileSize);
     }
     
     public int getWorldY() {
-        return pos.y * tileSize;
+        return (int)(exactY * tileSize);
     }
     
     // Set tile size for coordinate conversion
@@ -65,35 +72,98 @@ public class Player extends Trainer {
         this.tileSize = size;
     }
 
+    public void updateAnimation() {
+        if (isMoving()) {
+            animationCounter++;
+            if (animationCounter >= ANIMATION_DELAY) {
+                nextAnimationFrame();
+                animationCounter = 0;
+            }
+        } else {
+            animationFrame = 0;
+            animationCounter = 0;
+        }
+    }
+    
+    // Update movement logic
     public void move(int dx, int dy) {
-        pos.translate(dx, dy);
-        // Update world coordinates
-        worldX = pos.x * tileSize;
-        worldY = pos.y * tileSize;
+        if ((dx != 0 && dy != 0)) return;
+        targetX = pos.x + dx;
+        targetY = pos.y + dy;
+        hasTarget = true;
+    }
+    
+    public void updatePosition() {
+        if (!hasTarget) return;
+        
+        boolean reachedX = false;
+        boolean reachedY = false;
+        
+        // Move towards target X with increased speed
+        if (exactX < targetX) {
+            exactX = Math.min(exactX + moveSpeed, targetX);
+            reachedX = exactX == targetX;
+        } else if (exactX > targetX) {
+            exactX = Math.max(exactX - moveSpeed, targetX);
+            reachedX = exactX == targetX;
+        } else {
+            reachedX = true;
+        }
+        
+        // Move towards target Y with increased speed
+        if (exactY < targetY) {
+            exactY = Math.min(exactY + moveSpeed, targetY);
+            reachedY = exactY == targetY;
+        } else if (exactY > targetY) {
+            exactY = Math.max(exactY - moveSpeed, targetY);
+            reachedY = exactY == targetY;
+        } else {
+            reachedY = true;
+        }
+        
+        // Update integer position for collision detection
+        pos.x = Math.round(exactX);
+        pos.y = Math.round(exactY);
+        
+        // If reached target, clear target
+        if (reachedX && reachedY) {
+            hasTarget = false;
+            if (!moving) {
+                animationCounter = 0; // Reset animation when stopped
+            }
+        }
+    }
+    
+    public void tick(int maxCols, int maxRows) {
+        updatePosition();
+        updateAnimation();
+        
+        // Boundary checks
+        if (exactX < 0) exactX = 0;
+        else if (exactX >= maxCols) exactX = maxCols - 1;
+        if (exactY < 0) exactY = 0;
+        else if (exactY >= maxRows) exactY = maxRows - 1;
+        
+        pos.x = Math.round(exactX);
+        pos.y = Math.round(exactY);
     }
 
-    public void setSpriteSize(int width, int height) {
+        public void setSpriteSize(int width, int height) {
         this.width = width;
         this.height = height;   
     }
 
     public Rectangle getBounds(int tileSize) {
-        // The position where the sprite is drawn
         int x = pos.x * tileSize;
         int y = pos.y * tileSize;
         return new Rectangle(x, y, width, height);
-    }   
-
-    public void tick(int maxCols, int maxRows) {
-        if (pos.x < 0) pos.x = 0;
-        else if (pos.x >= maxCols) pos.x = maxCols - 1;
-        if (pos.y < 0) pos.y = 0;
-        else if (pos.y >= maxRows) pos.y = maxRows - 1;
-        
-        // Update world coordinates
-        worldX = pos.x * tileSize;
-        worldY = pos.y * tileSize;
     }
+
+    public void updateExactCoordinates() {
+        exactX = pos.x;
+        exactY = pos.y;
+    }
+    
 
     public void setDirection(Direction dir) {
         direction = dir;
@@ -105,10 +175,14 @@ public class Player extends Trainer {
     
     public void setMoving(boolean moving) {
         this.moving = moving;
+        if (!moving) {
+            animationFrame = 0;
+            animationCounter = 0;
+        }
     }
     
     public boolean isMoving() {
-        return moving;
+        return moving || hasTarget;
     }
     
     public void nextAnimationFrame() {
@@ -184,8 +258,15 @@ public class Player extends Trainer {
 
     public void setPosition(Point point) {
         this.pos = point;
-        // Update world coordinates
-        worldX = pos.x * tileSize;
-        worldY = pos.y * tileSize;
+        this.exactX = point.x;
+        this.exactY = point.y;
+    }
+    
+    public boolean isAtTarget() {
+        return !hasTarget;
+    }
+    
+    public void setMoveSpeed(float speed) {
+        this.moveSpeed = speed;
     }
 }

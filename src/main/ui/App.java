@@ -36,9 +36,17 @@ public class App {
         player.addToInventory("luxury ball");
         player.addToInventory("good Rod");
         player.addToInventory("super potion");
-        Board initialBoard = new Board(player);
-        window.add(initialBoard);
-        window.addKeyListener(initialBoard);
+        // Create world manager instead of a single board
+        WorldManager worldManager = new WorldManager(window, player);
+        
+        // Set the world manager reference in all boards
+        for (Board board : worldManager.getWorlds().values()) {
+            board.setWorldManager(worldManager);
+        }
+        
+        // Add the initial board to the window
+        window.add(worldManager.getCurrentWorld());
+        window.addKeyListener(worldManager.getCurrentWorld());
         window.setResizable(false);
         window.pack();
         window.setLocationRelativeTo(null);
