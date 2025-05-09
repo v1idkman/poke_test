@@ -300,6 +300,7 @@ public class Move {
     
     @Override
     public String toString() {
-        return name + " (" + type + ", " + power + " power, " + accuracy + "% accuracy, " + currentPP + "/" + maxPP + " PP)";
+        return name + " (" + type + ", " + power + " power, " + 
+                accuracy + "% accuracy, " + currentPP + "/" + maxPP + " PP)";
     }
 }

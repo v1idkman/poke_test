@@ -27,16 +27,6 @@ public class App {
         JFrame window = new JFrame("Poke test");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         
-        player.addToInventory("potion");
-        player.addToInventory("master ball");
-        player.addToInventory("poke ball");
-        player.addToInventory("great ball");
-        player.addToInventory("ultra ball");
-        player.addToInventory("dusk ball");
-        player.addToInventory("luxury ball");
-        player.addToInventory("good Rod");
-        player.addToInventory("super potion");
-        
         WorldManager worldManager = new WorldManager(window, player);
         
         // Set the world manager reference in all boards
@@ -73,8 +63,21 @@ public class App {
 
     }
 
+    public static void initItems() {
+        player.addToInventory("potion");
+        player.addToInventory("master ball");
+        player.addToInventory("poke ball");
+        player.addToInventory("great ball");
+        player.addToInventory("ultra ball");
+        player.addToInventory("dusk ball");
+        player.addToInventory("luxury ball");
+        player.addToInventory("good Rod");
+        player.addToInventory("super potion");
+    }
+
     public static void main(String[] args) {
         player = new Player("sarp");
+        initItems();
         initPokemonData();
         initPokemon();
         SwingUtilities.invokeLater(new Runnable() {

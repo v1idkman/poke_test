@@ -7,8 +7,8 @@ public class Door extends WorldObject {
     private String targetWorld;
     private Point spawnPoint;
     
-    public Door(Point position, String location, String targetWorld, Point spawnPoint) {
-        super(position, location);
+    public Door(Point position, String spriteLocation, String targetWorld, Point spawnPoint) {
+        super(position, spriteLocation);
         this.targetWorld = targetWorld;
         this.spawnPoint = spawnPoint;
     }
@@ -27,8 +27,8 @@ public class Door extends WorldObject {
         return new Rectangle(
             position.x * tileSize, 
             position.y * tileSize,
-            tileSize, // Door width
-            tileSize  // Door height
+            sprite.getWidth(null),  // Door width
+            sprite.getHeight(null)  // Door height
         );
     }
 

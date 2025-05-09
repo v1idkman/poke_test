@@ -66,6 +66,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         if (worldName.equals("outside")) {
             addObject("/resources/buildings/red_house.png", 40, 40);
             addObject("/resources/buildings/red_house.png", 140, 40);
+            addDoor(new Door(new Point(80, 40), "/resources/player_sprites/s_facing_front.png", "house_interior", getLocation()));
             // Add more outside objects...
         } else if (worldName.equals("house_interior")) {
             // Add house interior objects
@@ -140,12 +141,11 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         // Move player
         player.move(dx, dy);
         player.setMoving(true);
-        player.setSprintKeyPressed(shiftPressed);  // Update sprint state
+        player.setSprintKeyPressed(shiftPressed);
         player.tick(COLUMNS * 2, ROWS * 2);
         
         playerView.loadImage();
         
-        checkDoorInteraction();
         resolveCollisions();
         
         camera.update(player.getWorldX(), player.getWorldY());
@@ -155,19 +155,20 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     public boolean canMove(int dx, int dy) {
         // Calculate the next position in world coordinates
-        int nextX = player.getWorldX() + (dx * TILE_SIZE);
-        int nextY = player.getWorldY() + (dy * TILE_SIZE);
+        Rectangle playerBounds = player.getBounds(TILE_SIZE);
         
         // Create a rectangle representing where the player would be
         Rectangle nextBounds = new Rectangle(
-            nextX,
-            nextY,
-            player.getWidth(),
-            player.getHeight()
+            playerBounds.x + (dx * TILE_SIZE),
+            playerBounds.y + (dy * TILE_SIZE),
+            playerBounds.width,
+            playerBounds.height
         );
         
         for (WorldObject obj : objects) {
-            if (nextBounds.intersects(obj.getBounds(TILE_SIZE))) {
+            if (obj.getClass() == Door.class) {
+                continue; // Skip doors for collision detection
+            } else if (nextBounds.intersects(obj.getBounds(TILE_SIZE))) {
                 return false; // Collision detected
             }
         }
@@ -202,17 +203,33 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     }
 
     private void drawDebugBounds(Graphics g) {
+        // RED: player bounds
         g.setColor(Color.RED);
-        // Draw player bounds using actual position and dimensions
-        int x = player.getWorldX();
-        int y = player.getWorldY();
-        g.drawRect(x, y, player.getWidth(), player.getHeight());
+        Rectangle playerBounds = player.getBounds(TILE_SIZE);
+        g.drawRect(playerBounds.x, playerBounds.y, playerBounds.width, playerBounds.height);
         
-        // Draw object bounds
+        // BLUE: object bounds
         g.setColor(Color.BLUE);
         for (WorldObject obj : objects) {
             Rectangle bounds = obj.getBounds(TILE_SIZE);
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+        }
+
+        // GREEN: door bounds
+        g.setColor(Color.GREEN);
+        for (Door door : doors) {
+            Rectangle bounds = door.getBounds(TILE_SIZE);
+            g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+            
+            // Draw interaction area
+            Rectangle interactionArea = new Rectangle(
+                bounds.x - TILE_SIZE, 
+                bounds.y - TILE_SIZE,
+                bounds.width + TILE_SIZE * 2, 
+                bounds.height + TILE_SIZE * 2
+            );
+            g.drawRect(interactionArea.x, interactionArea.y, 
+                    interactionArea.width, interactionArea.height);
         }
     }
 
@@ -268,7 +285,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
         if (key == KeyEvent.VK_E) {
             interactionKeyPressed = true;
-            // Handle interaction logic here
+            checkDoorInteraction(); 
         } else {
             interactionKeyPressed = false;
         }
@@ -278,19 +295,39 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         Rectangle playerBounds = player.getBounds(TILE_SIZE);
         
         for (Door door : doors) {
-            if (playerBounds.intersects(door.getBounds(TILE_SIZE))) {
-                // Check if player is pressing the interaction key (e.g., UP arrow)
-                if (interactionKeyPressed) {
-                    if (worldManager != null) {
-                        worldManager.switchWorld(door.getTargetWorld(), door.getSpawnPoint());
-                    }
+            Rectangle doorBounds = door.getBounds(TILE_SIZE);
+            // Create a slightly larger interaction area around the door
+            Rectangle interactionArea = new Rectangle(
+                doorBounds.x - TILE_SIZE, 
+                doorBounds.y - TILE_SIZE,
+                doorBounds.width + TILE_SIZE * 2, 
+                doorBounds.height + TILE_SIZE * 2
+            );
+            
+            if (playerBounds.intersects(interactionArea)) {
+                if (interactionKeyPressed && worldManager != null) {
+                    resetKeyStates();
+                    worldManager.switchWorld(door.getTargetWorld(), door.getSpawnPoint());
                     break;
                 }
             }
         }
     }
+    
 
-    // Add this method to the Board class
+    private void resetKeyStates() {
+        upPressed = false;
+        downPressed = false;
+        leftPressed = false;
+        rightPressed = false;
+        interactionKeyPressed = false;
+        shiftPressed = false;
+        
+        player.setMoving(false);
+        player.setSprintKeyPressed(false);
+        playerView.loadImage();
+    }
+
     private void resolveCollisions() {
         Rectangle playerBounds = player.getBounds(TILE_SIZE);
         

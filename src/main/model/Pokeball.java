@@ -74,8 +74,8 @@ public class Pokeball extends Item {
         // Check if player is in battle
         if (!player.isInBattle()) {
             JOptionPane.showMessageDialog(null, 
-                "You can't use a " + name + " outside of battle!", 
-                "Cannot Use Item", JOptionPane.INFORMATION_MESSAGE);
+                    "You can't use a " + name + " outside of battle!", 
+                    "Cannot Use Item", JOptionPane.INFORMATION_MESSAGE);
             return false;
         }
         

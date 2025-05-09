@@ -75,7 +75,8 @@ public class Stats {
     }
     
     // Calculate all stats based on base values, IVs, and level
-    private void calculateStats(int baseHp, int baseAttack, int baseDefense, int baseSpeed, int baseSpecialAtk, int baseSpecialDef) {
+    private void calculateStats(int baseHp, int baseAttack, int baseDefense, 
+                    int baseSpeed, int baseSpecialAtk, int baseSpecialDef) {
         // HP calculation with EVs
         int oldHp = getCurrentHp();
         this.maxHp = calculateHp(baseHp, hpEV);
@@ -93,7 +94,7 @@ public class Stats {
     
     private int calculateHp(int baseHp, int ev) {
         // Modern formula would include EVs
-        return ((2 * baseHp + hpIV + ev/4) * level / 100) + level + 10;
+        return ((2 * baseHp + hpIV + ev / 4) * level / 100) + level + 10;
     }
 
     public void setHp(int newHp) {
@@ -105,7 +106,7 @@ public class Stats {
     // Stat calculation formula for Attack, Defense, Speed, Special (based on Gen 1)
     private int calculateStat(int baseStat, int iv, int ev) {
         // Modern formula: ((2 * Base + IV + EV/4) * Level / 100) + 5
-        return ((2 * baseStat + iv + ev/4) * level / 100) + 5;
+        return ((2 * baseStat + iv + ev / 4) * level / 100) + 5;
     }
     
     
@@ -388,14 +389,14 @@ public class Stats {
     
     @Override
     public String toString() {
-        return "Stats{" +
-                "HP=" + currentHp + "/" + maxHp +
-                ", Attack=" + attack + (attackModifier != 0 ? " (" + attackModifier + ")" : "") +
-                ", Defense=" + defense + (defenseModifier != 0 ? " (" + defenseModifier + ")" : "") +
-                ", Speed=" + speed + (speedModifier != 0 ? " (" + speedModifier + ")" : "") +
-                ", Sp.Atk=" + specialAtk + (spAttModifier != 0 ? " (" + spAttModifier + ")" : "") +
-                ", Sp.Def=" + specialDef + (spDefModifier != 0 ? " (" + spDefModifier + ")" : "") +
-                ", Level=" + level +
-                '}';
+        return "Stats{" 
+                + "HP=" + currentHp + "/" + maxHp
+                + ", Attack=" + attack + (attackModifier != 0 ? " (" + attackModifier + ")" : "")
+                + ", Defense=" + defense + (defenseModifier != 0 ? " (" + defenseModifier + ")" : "")
+                + ", Speed=" + speed + (speedModifier != 0 ? " (" + speedModifier + ")" : "")
+                + ", Sp.Atk=" + specialAtk + (spAttModifier != 0 ? " (" + spAttModifier + ")" : "")
+                + ", Sp.Def=" + specialDef + (spDefModifier != 0 ? " (" + spDefModifier + ")" : "")
+                + ", Level=" + level
+                + "}";
     }
 }

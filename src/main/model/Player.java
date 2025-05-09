@@ -9,7 +9,7 @@ public class Player extends Trainer {
     protected Point pos;
     protected String facingFront;
 
-    public enum Direction {FRONT, BACK, LEFT, RIGHT}
+    public enum Direction { FRONT, BACK, LEFT, RIGHT }
 
     private Direction direction = Direction.BACK;
     private boolean moving, running = false;
@@ -87,14 +87,6 @@ public class Player extends Trainer {
         }
     }
     
-    // Update movement logic
-    public void move(int dx, int dy) {
-        if ((dx != 0 && dy != 0)) return;
-        targetX = pos.x + dx;
-        targetY = pos.y + dy;
-        hasTarget = true;
-    }
-    
     public void updatePosition() {
         if (!hasTarget) return;
         
@@ -158,7 +150,7 @@ public class Player extends Trainer {
     public Rectangle getBounds(int tileSize) {
         int x = pos.x * tileSize;
         int y = pos.y * tileSize;
-        return new Rectangle(x, y, width, height);
+        return new Rectangle(x, y + (height / 2), width, height / 2);
     }
 
     public void updateExactCoordinates() {
@@ -297,6 +289,14 @@ public class Player extends Trainer {
         } else {
             moveSpeed = 3.0f;
         }
+    }
+
+    // Update movement logic
+    public void move(int dx, int dy) {
+        if ((dx != 0 && dy != 0)) return;
+        targetX = pos.x + dx;
+        targetY = pos.y + dy;
+        hasTarget = true;
     }
 
     public void move(Direction dir) {

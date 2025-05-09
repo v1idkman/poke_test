@@ -73,9 +73,9 @@ public class Medicine extends Item {
                 return false;
             }
             
-            int newHp = (type == MedicineType.REVIVE) ? 
-                pokemon.getStats().getMaxHp() / 2 : 
-                pokemon.getStats().getMaxHp();
+            int newHp = (type == MedicineType.REVIVE) 
+            ? pokemon.getStats().getMaxHp() / 2 : 
+            pokemon.getStats().getMaxHp();
             
             pokemon.getStats().setCurrentHp(newHp);
             return true;
