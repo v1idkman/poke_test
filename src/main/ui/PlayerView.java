@@ -1,5 +1,6 @@
 package ui;
 
+import model.Drawable;
 import model.Player;
 import model.Player.Direction;
 
@@ -10,7 +11,7 @@ import javax.imageio.ImageIO;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PlayerView {
+public class PlayerView implements Drawable {
     private final Player player;
     private Image currentImage;
     
@@ -22,7 +23,7 @@ public class PlayerView {
         // Preload all animation images
         preloadImages();
         loadImage();
-        
+
         player.setSpriteSize(currentImage.getWidth(null), currentImage.getHeight(null));
     }
     

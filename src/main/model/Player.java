@@ -12,19 +12,21 @@ public class Player extends Trainer {
     public enum Direction {FRONT, BACK, LEFT, RIGHT}
 
     private Direction direction = Direction.BACK;
-    private boolean moving = false;
+    private boolean moving, running = false;
     private int animationFrame = 0;
     
     // Animation constants
     private static final int NUM_FRAMES = 2; 
-    private static final int ANIMATION_DELAY = 5;
+    private static final int ANIMATION_DELAY = 3;
+    private static final float RUN_SPEED = 2.5f;
     
     // Animation state
     private int animationCounter = 0;
+    private boolean sprintKeyPressed = false;
     
     // Movement state
     private float exactX, exactY;
-    private float moveSpeed = 2.0f;
+    private float moveSpeed = 3.0f;
     private int targetX, targetY;
     private boolean hasTarget = false;
 
@@ -205,6 +207,23 @@ public class Player extends Trainer {
         return inventory;
     }
 
+    public void setMoney(int money) {
+        this.money = money;
+    }
+
+    public boolean removeMoney(int amount) {
+        if (this.money >= amount) {
+            this.money -= amount;
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    public void addMoney(int amount) {
+        this.money += amount;
+    }
+
     public int getMoney() {
         return money;
     }
@@ -262,11 +281,40 @@ public class Player extends Trainer {
         this.exactY = point.y;
     }
     
-    public boolean isAtTarget() {
-        return !hasTarget;
-    }
-    
     public void setMoveSpeed(float speed) {
         this.moveSpeed = speed;
+    }
+
+    public void setSprintKeyPressed(boolean pressed) {
+        this.sprintKeyPressed = pressed;
+        updateRunningState();
+    }
+
+    private void updateRunningState() {
+        running = moving && sprintKeyPressed;
+        if (running) {
+            moveSpeed = RUN_SPEED;
+        } else {
+            moveSpeed = 3.0f;
+        }
+    }
+
+    public void move(Direction dir) {
+        direction = dir;
+        moving = true;
+        updateRunningState();
+    }
+
+    public void stopMoving() {
+        moving = false;
+        running = false;
+    }
+
+    public boolean isRunning() {
+        return running;
+    }
+
+    public float getMoveSpeed() {
+        return moveSpeed;
     }
 }

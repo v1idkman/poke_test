@@ -24,7 +24,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private Player player;
     private PlayerView playerView;
 
-    private boolean upPressed, downPressed, leftPressed, rightPressed, interactionKeyPressed;
+    private boolean upPressed, downPressed, leftPressed, rightPressed, 
+            interactionKeyPressed, shiftPressed;
 
     private Camera camera;
 
@@ -129,8 +130,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     private void handleMovement(int dx, int dy, Direction dir) {
         player.setDirection(dir);
+        
+        // Apply speed multiplier if running
+        if (shiftPressed) {
+            dx *= player.getMoveSpeed();
+            dy *= player.getMoveSpeed();
+        }
+        
+        // Move player
         player.move(dx, dy);
         player.setMoving(true);
+        player.setSprintKeyPressed(shiftPressed);  // Update sprint state
         player.tick(COLUMNS * 2, ROWS * 2);
         
         playerView.loadImage();
@@ -212,6 +222,11 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         int key = e.getKeyCode();
+        if (key == KeyEvent.VK_SHIFT) {
+            shiftPressed = true;
+            player.setSprintKeyPressed(true);
+            player.setMoving(true);
+        }
         if (key == KeyEvent.VK_UP) {
             upPressed = true;
             player.setDirection(Player.Direction.FRONT);
@@ -234,6 +249,10 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     @Override
     public void keyReleased(KeyEvent e) {
         int key = e.getKeyCode();
+        if (key == KeyEvent.VK_SHIFT) {
+            shiftPressed = false;
+            player.setSprintKeyPressed(false);
+        }
         if (key == KeyEvent.VK_UP) upPressed = false;
         if (key == KeyEvent.VK_DOWN) downPressed = false;
         if (key == KeyEvent.VK_LEFT) leftPressed = false;
@@ -247,7 +266,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
         repaint();
 
-        // Handle interaction key (e.g., "E")
         if (key == KeyEvent.VK_E) {
             interactionKeyPressed = true;
             // Handle interaction logic here
@@ -309,5 +327,13 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 player.updateExactCoordinates();
             }
         }
+    }
+
+    public void setWorldName(String worldName) {
+        this.worldName = worldName;
+    }
+
+    public String getWorldName() {
+        return worldName;
     }
 }

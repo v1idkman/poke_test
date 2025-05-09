@@ -36,7 +36,7 @@ public class App {
         player.addToInventory("luxury ball");
         player.addToInventory("good Rod");
         player.addToInventory("super potion");
-        // Create world manager instead of a single board
+        
         WorldManager worldManager = new WorldManager(window, player);
         
         // Set the world manager reference in all boards
