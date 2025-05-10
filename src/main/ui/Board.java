@@ -4,6 +4,7 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
+import exceptions.NoSuchWorldException;
 import model.Building;
 import model.Door;
 import model.Player;
@@ -16,8 +17,8 @@ import java.util.ArrayList;
 public class Board extends JPanel implements ActionListener, KeyListener {
     private final int DELAY = 50;
     public static final int TILE_SIZE = 5;
-    public static final int ROWS = 120;
-    public static final int COLUMNS = 180;
+    public int rows;
+    public int columns;
     private List<WorldObject> objects;
 
     private Timer timer;
@@ -30,14 +31,18 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private Camera camera;
 
     private List<Door> doors;
+    private Point defaultSpawnPoint;
     private String worldName;
     private WorldManager worldManager;
 
-    public Board(Player player, String worldName) {
-        setPreferredSize(new Dimension(TILE_SIZE * COLUMNS, TILE_SIZE * ROWS));
+    public Board(Player player, String worldName, int rows, int columns) {
+        this.rows = rows;
+        this.columns = columns;
+        setPreferredSize(new Dimension(TILE_SIZE * columns, TILE_SIZE * rows));
         setBackground(new Color(232, 232, 232));
         this.player = player;
         this.worldName = worldName;
+        defaultSpawnPoint = new Point(columns / 2, rows / 2);
         this.doors = new ArrayList<>();
         objects = new ArrayList<>();
         playerView = new PlayerView(player);
@@ -51,17 +56,23 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         Menu menu = Menu.getInstance();
         menu.setPlayer(player);
         menu.setGameTimer(timer);
-        menu.initializeMenuButton(this, TILE_SIZE, COLUMNS, ROWS);
+        menu.initializeMenuButton(this, TILE_SIZE, columns, rows);
 
-        camera = new Camera(
-            TILE_SIZE * COLUMNS, 
-            TILE_SIZE * ROWS,
-            TILE_SIZE * COLUMNS * 2, // World is twice the screen size
-            TILE_SIZE * ROWS * 2
-        );
+        // Only use camera for large boards
+        if (rows >= 120 || columns >= 120) {
+            camera = new Camera(
+                TILE_SIZE * columns, 
+                TILE_SIZE * rows,
+                TILE_SIZE * columns * 2, // World is twice the screen size
+                TILE_SIZE * rows * 2
+            );
+        } else {
+            // For small boards, create a fixed camera that doesn't move
+            camera = new Camera(0, 0, TILE_SIZE * columns, TILE_SIZE * rows);
+        }
         
         // Center player initially CHANGE when world is full.
-        player.setPosition(new Point(COLUMNS/2, ROWS/2));
+        player.setPosition(new Point(columns/2, rows/2));
     }
 
     public void setWorldManager(WorldManager manager) {
@@ -81,9 +92,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         
-        // Create a translated graphics context
         Graphics2D g2d = (Graphics2D) g.create();
-        g2d.translate(-camera.getX(), -camera.getY());
+        
+        // Only translate for large boards
+        if (rows > 50 || columns > 50) {
+            g2d.translate(-camera.getX(), -camera.getY());
+        }
         
         drawBackground(g2d);
         
@@ -97,6 +111,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         g2d.dispose();
     }
+
     
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -132,7 +147,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         player.move(dx, dy);
         player.setMoving(true);
         player.setSprintKeyPressed(shiftPressed);
-        player.tick(COLUMNS * 2, ROWS * 2);
+        player.tick(columns * 2, rows * 2);
         
         playerView.loadImage();
         
@@ -155,6 +170,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             playerBounds.height
         );
         
+        // Check world boundaries - restrict to actual board size
+        if (nextBounds.x < 0 || nextBounds.y < 0 || 
+        (rows > 50 || columns > 50 ? 
+            (nextBounds.x + nextBounds.width > columns * TILE_SIZE * 2 || 
+            nextBounds.y + nextBounds.height > rows * TILE_SIZE * 2) :
+            (nextBounds.x + nextBounds.width > columns * TILE_SIZE || 
+            nextBounds.y + nextBounds.height > rows * TILE_SIZE))) {
+        return false;
+        }
+                
+        // Check object collisions
         for (WorldObject obj : objects) {
             if (obj.getClass() == Door.class) {
                 continue; // Skip doors for collision detection
@@ -166,27 +192,39 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     }
     
     private void drawBackground(Graphics g) {
-        // Calculate visible area
-        int startCol = camera.getX() / TILE_SIZE;
-        int startRow = camera.getY() / TILE_SIZE;
-        int endCol = startCol + COLUMNS + 1;
-        int endRow = startRow + ROWS + 1;
-        
-        // Limit to world bounds
-        startCol = Math.max(0, startCol);
-        startRow = Math.max(0, startRow);
-        endCol = Math.min(COLUMNS * 2, endCol);
-        endRow = Math.min(ROWS * 2, endRow);
-        
-        g.setColor(new Color(214, 214, 214));
-        for (int row = startRow; row < endRow; row++) {
-            for (int col = startCol; col < endCol; col++) {
-                if ((row + col) % 2 == 1) {
-                    g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+        // For small boards, draw the entire background without camera offset
+        if (rows < 120 && columns < 180) {
+            g.setColor(new Color(214, 214, 214));
+            for (int row = 0; row < rows; row++) {
+                for (int col = 0; col < columns; col++) {
+                    if ((row + col) % 2 == 1) {
+                        g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+        } else {
+            // Original code for large boards with camera
+            int startCol = camera.getX() / TILE_SIZE;
+            int startRow = camera.getY() / TILE_SIZE;
+            int endCol = startCol + columns + 1;
+            int endRow = startRow + rows + 1;
+            
+            // Limit to world bounds (doubled for large worlds)
+            startCol = Math.max(0, startCol);
+            startRow = Math.max(0, startRow);
+            endCol = Math.min(columns * 2, endCol);
+            endRow = Math.min(rows * 2, endRow);
+            
+            g.setColor(new Color(214, 214, 214));
+            for (int row = startRow; row < endRow; row++) {
+                for (int col = startCol; col < endCol; col++) {
+                    if ((row + col) % 2 == 1) {
+                        g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
                 }
             }
         }
-    }
+    }    
 
     public void addObject(String path, int x, int y) {
         objects.add(new Building(new Point(x, y), path));
@@ -297,13 +335,19 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             if (playerBounds.intersects(interactionArea)) {
                 if (interactionKeyPressed && worldManager != null) {
                     resetKeyStates();
-                    worldManager.switchWorld(door.getTargetWorld(), door.getSpawnPoint());
-                    break;
+                    try {
+                        // Get the door's spawn point for the target world
+                        Point spawnPoint = door.getSpawnPoint();
+                        worldManager.switchWorld(door.getTargetWorld(), spawnPoint);
+                        break;
+                    } catch (NoSuchWorldException e) {
+                        // Handle exception
+                        System.err.println("Could not find world: " + door.getTargetWorld());
+                    }
                 }
             }
         }
     }
-    
 
     private void resetKeyStates() {
         upPressed = false;
@@ -362,5 +406,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     public String getWorldName() {
         return worldName;
+    }
+
+    public Camera getCamera() {
+        return camera;
+    }
+
+    public Point getDefaultSpawnPoint() {
+        return defaultSpawnPoint;
+    }
+    
+    public void setDefaultSpawnPoint(Point point) {
+        this.defaultSpawnPoint = point;
     }
 }

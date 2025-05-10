@@ -42,17 +42,14 @@ public class Menu {
         menuButton.setForeground(Color.WHITE);
         menuButton.setFocusPainted(false);
         menuButton.setBorder(BorderFactory.createRaisedBevelBorder());
-        
-        // Position the button in the bottom-right corner
-        menuButton.setBounds(tileSize * columns - 100, tileSize * rows - 40, 80, 30);
+        menuButton.setPreferredSize(new Dimension(60, 30));
         
         // Add action listener to open menu
         menuButton.addActionListener(e -> openPlayerMenu(board));
         
-        // Add button to the panel
-        board.setLayout(null); // Use absolute positioning
-        board.add(menuButton);
+        // Don't add to board or position it here - that will be done by WorldManager
     }
+    
     
     // Set the current player for the menu
     public void setPlayer(Player player) {
@@ -504,10 +501,38 @@ public class Menu {
         return panel;
     }
 
+    public void positionMenuButtonForWindow(JLayeredPane layeredPane, int windowWidth, int windowHeight) {
+        if (menuButton != null) {
+            // Remove button from its current parent if it exists
+            Container parent = menuButton.getParent();
+            if (parent != null) {
+                parent.remove(menuButton);
+            }
+            
+            // Position button at bottom right of window
+            int buttonWidth = menuButton.getPreferredSize().width;
+            int buttonHeight = menuButton.getPreferredSize().height;
+            menuButton.setBounds(windowWidth - buttonWidth - 10, 
+                                windowHeight - buttonHeight - 10,
+                                buttonWidth, buttonHeight);
+            
+            // Add to layered pane with higher layer value to ensure visibility
+            layeredPane.add(menuButton, JLayeredPane.PALETTE_LAYER);
+            layeredPane.setLayer(menuButton, JLayeredPane.PALETTE_LAYER);
+            layeredPane.revalidate();
+            layeredPane.repaint();
+        }
+    }
+    
+
     public Component createMapPanel() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         return panel;
+    }
+
+    public JButton getMenuButton() {
+        return menuButton;
     }
 }

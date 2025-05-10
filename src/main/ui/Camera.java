@@ -4,8 +4,6 @@ public class Camera {
     private int x, y;
     private int width, height;
     private int worldWidth, worldHeight;
-    private float horizontalThreshold = 0.4f; // 40% of screen width
-    private float verticalThreshold = 0.4f;   // 40% of screen height
     
     public Camera(int width, int height, int worldWidth, int worldHeight) {
         this.width = width;
@@ -15,31 +13,26 @@ public class Camera {
     }
     
     public void update(int playerX, int playerY) {
-        // Calculate thresholds in pixels
-        int horizontalBoundary = (int)(width * horizontalThreshold);
-        int verticalBoundary = (int)(height * verticalThreshold);
+        // Get player's dimensions (assuming the player sprite is 16x16 pixels)
+        int playerWidth = 16 * 5;
+        int playerHeight = 16 * 5;
         
-        // Calculate player position relative to camera
-        int relativeX = playerX - x;
-        int relativeY = playerY - y;
+        // Calculate player's center coordinates
+        int playerCenterX = playerX + (playerWidth / 2);
+        int playerCenterY = playerY + (playerHeight / 2);
         
-        // Update camera position if player crosses threshold
-        if (relativeX > width - horizontalBoundary) {
-            x = playerX - (width - horizontalBoundary);
-        } else if (relativeX < horizontalBoundary) {
-            x = playerX - horizontalBoundary;
-        }
+        // Center camera on player's center point
+        int halfWidth = width / 2;
+        int halfHeight = height / 2;
         
-        if (relativeY > height - verticalBoundary) {
-            y = playerY - (height - verticalBoundary);
-        } else if (relativeY < verticalBoundary) {
-            y = playerY - verticalBoundary;
-        }
+        // Set camera position to center on player
+        x = playerCenterX - halfWidth;
+        y = playerCenterY - halfHeight;
         
-        // Ensure camera doesn't go out of world bounds
+        // Clamp camera position within world boundaries
         x = Math.max(0, Math.min(x, worldWidth - width));
         y = Math.max(0, Math.min(y, worldHeight - height));
-    }
+    }    
     
     public int getX() { return x; }
     public int getY() { return y; }
