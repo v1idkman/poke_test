@@ -60,18 +60,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             TILE_SIZE * ROWS * 2
         );
         
-        // Center player initially
+        // Center player initially CHANGE when world is full.
         player.setPosition(new Point(COLUMNS/2, ROWS/2));
-
-        if (worldName.equals("outside")) {
-            addObject("/resources/buildings/red_house.png", 40, 40);
-            addObject("/resources/buildings/red_house.png", 140, 40);
-            addDoor(new Door(new Point(80, 40), "/resources/player_sprites/s_facing_front.png", "house_interior", getLocation()));
-            // Add more outside objects...
-        } else if (worldName.equals("house_interior")) {
-            // Add house interior objects
-            // Like furniture, etc.
-        }
     }
 
     public void setWorldManager(WorldManager manager) {

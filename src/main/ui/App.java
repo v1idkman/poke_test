@@ -1,5 +1,7 @@
 package ui;
 
+import java.awt.Point;
+
 import javax.swing.*;
 
 import model.Move;
@@ -9,32 +11,49 @@ import pokes.Pokemon;
 import pokes.Pokemon.PokemonType;
 import pokes.PokemonFactory;
 import pokes.PokemonStatsLoader;
+import model.Door;
 import model.ItemFactory;
 
 
 public class App {
-    private static Player player;
-    private static PokemonStatsLoader statsLoader;
+    private static Player player = new Player("sarp");
+    private static JFrame window = new JFrame("Poke test");
+    private static WorldManager worldManager = new WorldManager(window, player);
 
     // Add this method
     private static void initPokemonData() {
-        statsLoader = PokemonStatsLoader.getInstance();
+        PokemonStatsLoader statsLoader = PokemonStatsLoader.getInstance();
         statsLoader.loadFromCSV("src/main/resources/pokemon_info.csv");
     }
 
+    public static void initWorlds() {
+        // initialize all boards
+        Board outsideBoard = new Board(player, "outside");
+        Board inside1 = new Board(player, "house_interior");
+
+        // add all boards to the world manager and set the current world
+        worldManager.addBoard(outsideBoard);
+        worldManager.addBoard(inside1);
+        worldManager.setCurrentWorld("outside");
+
+        // add objects to boards (maybe make method for more objects)
+        outsideBoard.addObject("/resources/buildings/red_house.png", 40, 40);
+        outsideBoard.addObject("/resources/buildings/red_house.png", 140, 40);
+        outsideBoard.addDoor(new Door(new Point(80, 40), "/resources/player_sprites/s_facing_front.png", 
+                            "house_interior", outsideBoard.getLocation()));
+
+        inside1.addObject("/resources/buildings/red_house.png", 80, 80);
+        inside1.addDoor(new Door(new Point(42, 41), "/resources/player_sprites/s_facing_back.png", 
+                            "outside", new Point(40, 100)));
+    }
+
     private static void initWindow() {
-        // create a window frame and set the title in the toolbar
-        JFrame window = new JFrame("Poke test");
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        
-        WorldManager worldManager = new WorldManager(window, player);
-        
-        // Set the world manager reference in all boards
+
         for (Board board : worldManager.getWorlds().values()) {
             board.setWorldManager(worldManager);
         }
         
-        // Add the initial board to the window
         window.add(worldManager.getCurrentWorld());
         window.addKeyListener(worldManager.getCurrentWorld());
         window.setResizable(false);
@@ -76,10 +95,10 @@ public class App {
     }
 
     public static void main(String[] args) {
-        player = new Player("sarp");
         initItems();
         initPokemonData();
         initPokemon();
+        initWorlds();
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 initWindow();

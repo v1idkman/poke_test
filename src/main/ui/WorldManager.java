@@ -5,41 +5,23 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.swing.JFrame;
-import javax.swing.JPanel;
 
-import model.Door;
 import model.Player;
 
 public class WorldManager {
     private Map<String, Board> worlds = new HashMap<>();
     private String currentWorld;
     private JFrame window;
-    private JPanel mainPanel;
     private Player player;
     
     public WorldManager(JFrame window, Player player) {
         this.window = window;
         this.player = player;
-        
-        // Create the outside world
-        Board outsideWorld = new Board(player, "outside");
-        worlds.put("outside", outsideWorld);
-        
-        // Create house interior
-        Board houseInterior = new Board(player, "house_interior");
-        Point exitDoorPos = new Point(40, 40);
-        Door exitDoor = new Door(exitDoorPos, "/resources/player_sprites/s_facing_back.png", 
-                            "outside", new Point(80, 80));
-        houseInterior.addDoor(exitDoor);
-        worlds.put("house_interior", houseInterior);
-        
-        // Set initial world
-        currentWorld = "outside";
     }
 
-    public void addBoard(Board board, String name) {
-        if (!worlds.containsKey(name)) {
-            worlds.put(name, board);
+    public void addBoard(Board board) {
+        if (!worlds.containsKey(board.getWorldName())) {
+            worlds.put(board.getWorldName(), board);
         }
     }
 
@@ -73,7 +55,7 @@ public class WorldManager {
         // Load world data from files or create dynamically
         Board newWorld = new Board(player, worldName);
         worlds.put(worldName, newWorld);
-        mainPanel.add(newWorld, worldName);
+        window.add(newWorld, worldName);
     }
     
     public Board getCurrentWorld() {
@@ -82,5 +64,11 @@ public class WorldManager {
 
     public Map<String, Board> getWorlds() {
         return worlds;
+    }
+
+    public void setCurrentWorld(String worldName) {
+        if (worlds.containsKey(worldName)) {
+            currentWorld = worldName;
+        }
     }
 }
