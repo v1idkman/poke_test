@@ -76,7 +76,7 @@ public class WorldManager {
         
         // Position menu button consistently at bottom right of window
         Menu menu = Menu.getInstance();
-        menu.positionMenuButtonForWindow(layeredPane, window.getWidth(), window.getHeight());
+        menu.positionMenuButtonForWindow(layeredPane, window.getWidth() - 40, window.getHeight() - 40);
         
         window.add(layeredPane);
         window.addKeyListener(targetBoard);
