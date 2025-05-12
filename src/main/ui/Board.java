@@ -10,13 +10,14 @@ import model.Door;
 import model.Player;
 import model.Player.Direction;
 import model.WorldObject;
+import tiles.TileManager;
 
 import java.util.List;
 import java.util.ArrayList;
 
 public class Board extends JPanel implements ActionListener, KeyListener {
     private final int DELAY = 50;
-    public static final int TILE_SIZE = 5;
+    public static final int TILE_SIZE = 32;
     public int rows;
     public int columns;
     private List<WorldObject> objects;
@@ -34,6 +35,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private Point defaultSpawnPoint;
     private String worldName;
     private WorldManager worldManager;
+    private TileManager tileManager;
 
     public Board(Player player, String worldName, int rows, int columns) {
         this.rows = rows;
@@ -42,6 +44,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         setBackground(new Color(232, 232, 232));
         this.player = player;
         this.worldName = worldName;
+        tileManager = new TileManager(this, worldName);
         defaultSpawnPoint = new Point(columns / 2, rows / 2);
         this.doors = new ArrayList<>();
         objects = new ArrayList<>();
@@ -58,18 +61,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         menu.setGameTimer(timer);
         menu.initializeMenuButton(this, TILE_SIZE, columns, rows);
 
-        // Only use camera for large boards
-        if (rows >= 120 || columns >= 120) {
-            camera = new Camera(
-                TILE_SIZE * columns, 
-                TILE_SIZE * rows,
-                TILE_SIZE * columns * 2, // World is twice the screen size
-                TILE_SIZE * rows * 2
-            );
-        } else {
-            // For small boards, create a fixed camera that doesn't move
-            camera = new Camera(0, 0, TILE_SIZE * columns, TILE_SIZE * rows);
-        }
+        camera = new Camera(this);
         
         // Center player initially CHANGE when world is full.
         player.setPosition(new Point(columns/2, rows/2));
@@ -94,19 +86,21 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         Graphics2D g2d = (Graphics2D) g.create();
         
-        // Only translate for large boards
-        if (rows > 50 || columns > 50) {
-            g2d.translate(-camera.getX(), -camera.getY());
-        }
+        // Always apply camera translation for all boards
+        g2d.translate(-camera.getX(), -camera.getY());
         
-        drawBackground(g2d);
+        // Draw tiles first
+        tileManager.draw(g2d);
         
+        // Then draw objects
         for (WorldObject obj : objects) {
             obj.draw(g2d, this, TILE_SIZE);
         }
         
+        // Draw player
         playerView.draw(g2d, this, TILE_SIZE);
         
+        // Debug bounds if needed
         drawDebugBounds(g2d);
         
         g2d.dispose();
@@ -115,6 +109,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     
     @Override
     public void actionPerformed(ActionEvent e) {
+        // Update player animation
+        player.updateAnimation();
+        
         // Clear previous movement
         boolean[] directions = {upPressed, downPressed, leftPressed, rightPressed};
         int activeDirections = 0;
@@ -122,62 +119,68 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         // Allow only single direction
         if(activeDirections == 1) {
-            if (upPressed && canMove(0, -1)) {
+            int moveSpeed = 4;
+            if (shiftPressed) {
+                moveSpeed = moveSpeed * Math.round(player.getMoveSpeed());
+            }
+            
+            if (upPressed && canMove(0, -moveSpeed)) {
                 handleMovement(0, -1, Direction.FRONT);
-            } else if (downPressed && canMove(0, 1)) {
+            } else if (downPressed && canMove(0, moveSpeed)) {
                 handleMovement(0, 1, Direction.BACK);
-            } else if (leftPressed && canMove(-1, 0)) {
+            } else if (leftPressed && canMove(-moveSpeed, 0)) {
                 handleMovement(-1, 0, Direction.LEFT);
-            } else if (rightPressed && canMove(1, 0)) {
+            } else if (rightPressed && canMove(moveSpeed, 0)) {
                 handleMovement(1, 0, Direction.RIGHT);
+            } else {
+                // If we can't move in the desired direction, stop the player
+                player.setMoving(false);
+                playerView.loadImage();
             }
         }
+        
+        // Always repaint to ensure animations are smooth
+        repaint();
     }
 
     private void handleMovement(int dx, int dy, Direction dir) {
         player.setDirection(dir);
         
         // Apply speed multiplier if running
+        int moveSpeed = 4; // Base movement speed in pixels
         if (shiftPressed) {
-            dx *= player.getMoveSpeed();
-            dy *= player.getMoveSpeed();
+            moveSpeed = moveSpeed * Math.round(player.getMoveSpeed());
         }
         
-        // Move player
-        player.move(dx, dy);
+        // Move player by pixels
+        player.move(dx * moveSpeed, dy * moveSpeed);
         player.setMoving(true);
         player.setSprintKeyPressed(shiftPressed);
-        player.tick(columns * 2, rows * 2);
         
         playerView.loadImage();
         
-        resolveCollisions();
-        
+        // Update camera with pixel coordinates - this is crucial
         camera.update(player.getWorldX(), player.getWorldY());
         
         repaint();
-    }
+    }      
 
     public boolean canMove(int dx, int dy) {
         // Calculate the next position in world coordinates
         Rectangle playerBounds = player.getBounds(TILE_SIZE);
-        
-        // Create a rectangle representing where the player would be
+    
         Rectangle nextBounds = new Rectangle(
-            playerBounds.x + (dx * TILE_SIZE),
-            playerBounds.y + (dy * TILE_SIZE),
+            playerBounds.x + dx,
+            playerBounds.y + dy,
             playerBounds.width,
             playerBounds.height
         );
         
         // Check world boundaries - restrict to actual board size
         if (nextBounds.x < 0 || nextBounds.y < 0 || 
-        (rows > 50 || columns > 50 ? 
-            (nextBounds.x + nextBounds.width > columns * TILE_SIZE * 2 || 
-            nextBounds.y + nextBounds.height > rows * TILE_SIZE * 2) :
-            (nextBounds.x + nextBounds.width > columns * TILE_SIZE || 
-            nextBounds.y + nextBounds.height > rows * TILE_SIZE))) {
-        return false;
+            nextBounds.x + nextBounds.width > columns * TILE_SIZE || 
+            nextBounds.y + nextBounds.height > rows * TILE_SIZE) {
+            return false;
         }
                 
         // Check object collisions
@@ -190,41 +193,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
         return true; // No collision
     }
-    
-    private void drawBackground(Graphics g) {
-        // For small boards, draw the entire background without camera offset
-        if (rows < 120 && columns < 180) {
-            g.setColor(new Color(214, 214, 214));
-            for (int row = 0; row < rows; row++) {
-                for (int col = 0; col < columns; col++) {
-                    if ((row + col) % 2 == 1) {
-                        g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    }
-                }
-            }
-        } else {
-            // Original code for large boards with camera
-            int startCol = camera.getX() / TILE_SIZE;
-            int startRow = camera.getY() / TILE_SIZE;
-            int endCol = startCol + columns + 1;
-            int endRow = startRow + rows + 1;
-            
-            // Limit to world bounds (doubled for large worlds)
-            startCol = Math.max(0, startCol);
-            startRow = Math.max(0, startRow);
-            endCol = Math.min(columns * 2, endCol);
-            endRow = Math.min(rows * 2, endRow);
-            
-            g.setColor(new Color(214, 214, 214));
-            for (int row = startRow; row < endRow; row++) {
-                for (int col = startCol; col < endCol; col++) {
-                    if ((row + col) % 2 == 1) {
-                        g.fillRect(col * TILE_SIZE, row * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-                    }
-                }
-            }
-        }
-    }    
 
     public void addObject(String path, int x, int y) {
         objects.add(new Building(new Point(x, y), path));
@@ -360,44 +328,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         player.setMoving(false);
         player.setSprintKeyPressed(false);
         playerView.loadImage();
-    }
-
-    private void resolveCollisions() {
-        Rectangle playerBounds = player.getBounds(TILE_SIZE);
-        
-        for (WorldObject obj : objects) {
-            Rectangle objBounds = obj.getBounds(TILE_SIZE);
-            
-            if (playerBounds.intersects(objBounds)) {
-                // Calculate overlap
-                int overlapLeft = objBounds.x + objBounds.width - playerBounds.x;
-                int overlapRight = playerBounds.x + playerBounds.width - objBounds.x;
-                int overlapTop = objBounds.y + objBounds.height - playerBounds.y;
-                int overlapBottom = playerBounds.y + playerBounds.height - objBounds.y;
-                
-                // Find minimum overlap
-                int minOverlap = Math.min(Math.min(overlapLeft, overlapRight), 
-                                        Math.min(overlapTop, overlapBottom));
-                
-                // Push player in direction of minimum overlap
-                if (minOverlap == overlapLeft) {
-                    player.setPosition(new Point(player.getPosition().x + (overlapLeft / TILE_SIZE) + 1, 
-                                                player.getPosition().y));
-                } else if (minOverlap == overlapRight) {
-                    player.setPosition(new Point(player.getPosition().x - (overlapRight / TILE_SIZE) - 1, 
-                                                player.getPosition().y));
-                } else if (minOverlap == overlapTop) {
-                    player.setPosition(new Point(player.getPosition().x, 
-                                                player.getPosition().y + (overlapTop / TILE_SIZE) + 1));
-                } else if (minOverlap == overlapBottom) {
-                    player.setPosition(new Point(player.getPosition().x, 
-                                                player.getPosition().y - (overlapBottom / TILE_SIZE) - 1));
-                }
-                
-                // Update player's exact coordinates
-                player.updateExactCoordinates();
-            }
-        }
     }
 
     public void setWorldName(String worldName) {

@@ -31,8 +31,8 @@ public class App {
 
     public static void initWorlds() {
         // initialize all boards
-        Board outsideBoard = new Board(player, "outside", 120, 180);
-        Board inside1 = new Board(player, "house_interior", 50, 50);
+        Board outsideBoard = new Board(player, "outside", 20, 30);
+        Board inside1 = new Board(player, "house_interior", 10, 15);
 
         // add all boards to the world manager and set the current world
         worldManager.addBoard(outsideBoard);
@@ -40,14 +40,14 @@ public class App {
         worldManager.setCurrentWorld("outside");
 
         // add objects to boards (maybe make method for more objects)
-        outsideBoard.addObject("/resources/buildings/red_house.png", 40, 40);
+        outsideBoard.addObject("/resources/buildings/red_house.png", 2, 4);
         outsideBoard.addObject("/resources/buildings/red_house.png", 140, 40);
-        outsideBoard.addDoor(new Door(new Point(80, 40), "/resources/player_sprites/s_facing_front.png", 
+        outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
                             "house_interior", outsideBoard.getLocation()));
 
         inside1.addObject("/resources/buildings/red_house.png", 80, 80);
-        inside1.addDoor(new Door(new Point(42, 41), "/resources/player_sprites/s_facing_back.png", 
-                            "outside", new Point(60, 100)));
+        inside1.addDoor(new Door(new Point(5, 5), "/resources/player_sprites/s_facing_back.png", 
+                            "outside", new Point(10, 15)));
     }
 
     private static void initWindow() {
@@ -98,7 +98,6 @@ public class App {
         window.setVisible(true);
     }
     
-
     private static void initPokemon() {
         Pokemon bulbasaur = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
         Pokemon charizard = PokemonFactory.createPokemon(6, 36, "Charizard");

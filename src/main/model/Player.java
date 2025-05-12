@@ -17,8 +17,9 @@ public class Player extends Trainer {
     
     // Animation constants
     private static final int NUM_FRAMES = 2; 
-    private static final int ANIMATION_DELAY = 3;
+    private static final int ANIMATION_DELAY = 12; // Increased from 3 to 12
     private static final float RUN_SPEED = 2.5f;
+    private static final int TILE_SIZE = 32;
     
     // Animation state
     private int animationCounter = 0;
@@ -35,8 +36,6 @@ public class Player extends Trainer {
     private int trainerId;
 
     private boolean inBattle;
-    
-    private int tileSize;
 
     public Player(String name) {
         super(name);
@@ -49,7 +48,6 @@ public class Player extends Trainer {
         money = 0;
         trainerId = (int)(Math.random() * 100000);
         inBattle = false;
-        tileSize = 5; // Default tile size
     }
 
     public void setAnimationFrame(int frame) {
@@ -60,18 +58,12 @@ public class Player extends Trainer {
         return pos;
     }
     
-    // Get world position in pixels for camera
     public int getWorldX() {
-        return (int)(exactX * tileSize);
+        return Math.round(exactX * TILE_SIZE);
     }
     
     public int getWorldY() {
-        return (int)(exactY * tileSize);
-    }
-    
-    // Set tile size for coordinate conversion
-    public void setTileSize(int size) {
-        this.tileSize = size;
+        return Math.round(exactY * TILE_SIZE);
     }
 
     public void updateAnimation() {
@@ -147,17 +139,20 @@ public class Player extends Trainer {
         this.height = height;   
     }
 
+    // use slightly smaller bounds so that the when the player is next to a building it looks better
     public Rectangle getBounds(int tileSize) {
-        int x = pos.x * tileSize;
-        int y = pos.y * tileSize;
-        return new Rectangle(x, y + (height / 2), width, height / 2);
+        return new Rectangle(
+            getWorldX(),                 // Use pixel coordinates directly
+            getWorldY() + (height / 4),  // Adjust Y to match visual position
+            tileSize - 4,                // Slightly smaller for better feel
+            tileSize - 4
+        );
     }
-
+    
     public void updateExactCoordinates() {
         exactX = pos.x;
         exactY = pos.y;
-    }
-    
+    }    
 
     public void setDirection(Direction dir) {
         direction = dir;
@@ -291,13 +286,16 @@ public class Player extends Trainer {
         }
     }
 
-    // Update movement logic
     public void move(int dx, int dy) {
-        if ((dx != 0 && dy != 0)) return;
-        targetX = pos.x + dx;
-        targetY = pos.y + dy;
-        hasTarget = true;
+        // Update exact coordinates (in tile units)
+        exactX += dx / (float)TILE_SIZE;
+        exactY += dy / (float)TILE_SIZE;
+        
+        // Update tile position
+        pos.x = Math.round(exactX);
+        pos.y = Math.round(exactY);
     }
+    
 
     public void move(Direction dir) {
         direction = dir;
