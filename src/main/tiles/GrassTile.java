@@ -11,7 +11,7 @@ public class GrassTile extends Tile {
     
     private static BufferedImage loadGrassImage() {
         try {
-            return ImageIO.read(GrassTile.class.getResourceAsStream("/resources/tiles/grass.png"));
+            return ImageIO.read(GrassTile.class.getResourceAsStream("/resources/tiles/grass_tile.png"));
         } catch (IOException e) {
             e.printStackTrace();
             return null;

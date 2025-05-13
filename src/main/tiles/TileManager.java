@@ -15,7 +15,7 @@ public class TileManager {
     
     public TileManager(Board board, String boardName) {
         this.board = board;
-        tiles = new Tile[10]; // Support up to 10 different tile types
+        tiles = new Tile[30]; // Support up to 10 different tile types
         mapTileNum = new int[board.columns][board.rows];
         loadTiles();
         loadMap(boardName); // Pass just the board name
@@ -23,10 +23,12 @@ public class TileManager {
     
     
     public void loadTiles() {
-        // Load different tile types
-        tiles[0] = new GrassTile(); // Index 0 is grass
-        tiles[1] = new WaterTile(); // Index 1 is water
-        // Add more tile types as needed
+        tiles[0] = new GrassTile();
+        tiles[1] = new WaterTile();
+        tiles[2] = new DirtTile();
+        tiles[3] = new IceTile();
+        tiles[4] = new HouseTileGold();
+        // add more tiles as needed
     }
     
     public void loadMap(String boardName) {

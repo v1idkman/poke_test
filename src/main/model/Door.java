@@ -27,8 +27,8 @@ public class Door extends WorldObject {
         return new Rectangle(
             position.x * tileSize, 
             position.y * tileSize,
-            sprite.getWidth(null),  // Door width
-            sprite.getHeight(null)  // Door height
+            sprite.getWidth(null),
+            sprite.getHeight(null)
         );
     }
 

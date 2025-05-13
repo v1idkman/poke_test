@@ -47,7 +47,7 @@ public class App {
         outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
                             "house_interior", outsideBoard.getLocation()));
 
-        inside1.addObject("/resources/buildings/red_house.png", 80, 80);
+        inside1.addObject("/resources/buildings/marroon_single_bed.png", 10, 0);
         inside1.addDoor(new Door(new Point(5, 5), "/resources/player_sprites/s_facing_back.png", 
                             "outside", new Point(10, 15)));
     }
@@ -60,8 +60,6 @@ public class App {
         }
         
         Board currentBoard = worldManager.getCurrentWorld();
-        
-        // Initialize camera for the current world
         Camera camera = Camera.getInstance();
         camera.setWorldDimensions(
             currentBoard.columns * Board.TILE_SIZE,
@@ -70,7 +68,6 @@ public class App {
         camera.setActive(currentBoard.isLarge());
         camera.update(player);
         
-        // Set window size based on board type
         Dimension windowSize;
         if (currentBoard.isLarge()) {
             windowSize = new Dimension(FIXED_WIDTH, FIXED_HEIGHT);

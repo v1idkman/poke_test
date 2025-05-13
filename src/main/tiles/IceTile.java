@@ -4,14 +4,14 @@ import java.awt.image.BufferedImage;
 import javax.imageio.ImageIO;
 import java.io.IOException;
 
-public class WaterTile extends Tile {
-    public WaterTile() {
+public class IceTile extends Tile {
+    public IceTile() {
         super(loadGrassImage(), false);
     }
     
     private static BufferedImage loadGrassImage() {
         try {
-            return ImageIO.read(WaterTile.class.getResourceAsStream("/resources/tiles/water_tile.png"));
+            return ImageIO.read(IceTile.class.getResourceAsStream("/resources/tiles/ice_tile.png"));
         } catch (IOException e) {
             e.printStackTrace();
             return null;

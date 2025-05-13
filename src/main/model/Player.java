@@ -142,10 +142,10 @@ public class Player extends Trainer {
     // use slightly smaller bounds so that the when the player is next to a building it looks better
     public Rectangle getBounds(int tileSize) {
         return new Rectangle(
-            getWorldX(),                 // Use pixel coordinates directly
-            getWorldY() + (height / 4),  // Adjust Y to match visual position
-            tileSize - 4,                // Slightly smaller for better feel
-            tileSize - 4
+            getWorldX(),
+            getWorldY() + (height / 2),
+            width,
+            height - (height / 2)
         );
     }
     
