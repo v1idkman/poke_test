@@ -29,10 +29,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private boolean upPressed, downPressed, leftPressed, rightPressed, 
             interactionKeyPressed, shiftPressed;
 
-    private Camera camera;
+    private static final int RUN_SPEED = 4; 
 
     private List<Door> doors;
-    private Point defaultSpawnPoint;
     private String worldName;
     private WorldManager worldManager;
     private TileManager tileManager;
@@ -40,12 +39,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     public Board(Player player, String worldName, int rows, int columns) {
         this.rows = rows;
         this.columns = columns;
+
         setPreferredSize(new Dimension(TILE_SIZE * columns, TILE_SIZE * rows));
         setBackground(new Color(232, 232, 232));
         this.player = player;
         this.worldName = worldName;
         tileManager = new TileManager(this, worldName);
-        defaultSpawnPoint = new Point(columns / 2, rows / 2);
         this.doors = new ArrayList<>();
         objects = new ArrayList<>();
         playerView = new PlayerView(player);
@@ -61,10 +60,11 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         menu.setGameTimer(timer);
         menu.initializeMenuButton(this, TILE_SIZE, columns, rows);
 
-        camera = new Camera(this);
-        
-        // Center player initially CHANGE when world is full.
-        player.setPosition(new Point(columns/2, rows/2));
+        player.setPosition(new Point(columns, rows));
+        Camera camera = Camera.getInstance();
+        if (isLarge()) {
+            camera.update(player);
+        }
     }
 
     public void setWorldManager(WorldManager manager) {
@@ -86,8 +86,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         Graphics2D g2d = (Graphics2D) g.create();
         
-        // Always apply camera translation for all boards
-        g2d.translate(-camera.getX(), -camera.getY());
+        Camera camera = worldManager.getCamera();
+        
+        // Apply camera translation if active
+        if (camera != null && camera.isActive()) {
+            g2d.translate(-camera.getX(), -camera.getY());
+        }
         
         // Draw tiles first
         tileManager.draw(g2d);
@@ -106,11 +110,14 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         g2d.dispose();
     }
 
-    
     @Override
     public void actionPerformed(ActionEvent e) {
         // Update player animation
         player.updateAnimation();
+
+        if (worldManager != null) {
+            worldManager.getCamera().update(player);
+        }
         
         // Clear previous movement
         boolean[] directions = {upPressed, downPressed, leftPressed, rightPressed};
@@ -138,16 +145,19 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 playerView.loadImage();
             }
         }
+
+        if (worldManager != null) {
+            Camera camera = worldManager.getCamera();
+            camera.update(player);
+        }
         
-        // Always repaint to ensure animations are smooth
         repaint();
     }
 
     private void handleMovement(int dx, int dy, Direction dir) {
         player.setDirection(dir);
         
-        // Apply speed multiplier if running
-        int moveSpeed = 4; // Base movement speed in pixels
+        int moveSpeed = RUN_SPEED;
         if (shiftPressed) {
             moveSpeed = moveSpeed * Math.round(player.getMoveSpeed());
         }
@@ -159,11 +169,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         playerView.loadImage();
         
-        // Update camera with pixel coordinates - this is crucial
-        camera.update(player.getWorldX(), player.getWorldY());
+        // Update camera with pixel coordinates
+        Camera camera = worldManager.getCamera();
+        camera.update(player);
         
         repaint();
-    }      
+    }    
 
     public boolean canMove(int dx, int dy) {
         // Calculate the next position in world coordinates
@@ -338,15 +349,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         return worldName;
     }
 
-    public Camera getCamera() {
-        return camera;
-    }
-
-    public Point getDefaultSpawnPoint() {
-        return defaultSpawnPoint;
-    }
-    
-    public void setDefaultSpawnPoint(Point point) {
-        this.defaultSpawnPoint = point;
+    public boolean isLarge() {
+        return rows >= 20 || columns >= 30;
     }
 }

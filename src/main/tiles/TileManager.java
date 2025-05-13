@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 
 import ui.Board;
+import ui.Camera;
 
 public class TileManager {
     private Board board;
@@ -118,8 +119,8 @@ public class TileManager {
         int tileSize = Board.TILE_SIZE;
         
         // Calculate which tiles are visible based on camera position
-        int startCol = Math.max(0, board.getCamera().getX() / tileSize);
-        int startRow = Math.max(0, board.getCamera().getY() / tileSize);
+        int startCol = Math.max(0, Camera.getInstance().getX() / tileSize);
+        int startRow = Math.max(0, Camera.getInstance().getY() / tileSize);
         
         // Calculate how many tiles to draw (viewport width/height in tiles + buffer)
         int tilesInViewportX = (board.getWidth() / tileSize) + 2;

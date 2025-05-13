@@ -22,6 +22,8 @@ public class App {
     private static Player player = new Player("sarp");
     private static JFrame window = new JFrame("Poke test");
     private static WorldManager worldManager = new WorldManager(window);
+    static final int FIXED_HEIGHT = 640;
+    static final int FIXED_WIDTH = 960;
 
     // Add this method
     private static void initPokemonData() {
@@ -31,7 +33,7 @@ public class App {
 
     public static void initWorlds() {
         // initialize all boards
-        Board outsideBoard = new Board(player, "outside", 20, 30);
+        Board outsideBoard = new Board(player, "outside", 30, 46);
         Board inside1 = new Board(player, "house_interior", 10, 15);
 
         // add all boards to the world manager and set the current world
@@ -52,26 +54,38 @@ public class App {
 
     private static void initWindow() {
         window.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    
+
         for (Board board : worldManager.getWorlds().values()) {
             board.setWorldManager(worldManager);
         }
         
         Board currentBoard = worldManager.getCurrentWorld();
-        Dimension boardSize = currentBoard.getPreferredSize();
         
-        // Set initial window size based on the outside world
-        window.setSize(boardSize.width, boardSize.height);
+        // Initialize camera for the current world
+        Camera camera = Camera.getInstance();
+        camera.setWorldDimensions(
+            currentBoard.columns * Board.TILE_SIZE,
+            currentBoard.rows * Board.TILE_SIZE
+        );
+        camera.setActive(currentBoard.isLarge());
+        camera.update(player);
+        
+        // Set window size based on board type
+        Dimension windowSize;
+        if (currentBoard.isLarge()) {
+            windowSize = new Dimension(FIXED_WIDTH, FIXED_HEIGHT);
+        } else {
+            windowSize = currentBoard.getPreferredSize();
+        }
+        
+        window.setSize(windowSize);
         
         // Create a layered pane to hold both the game board and menu button
         JLayeredPane layeredPane = new JLayeredPane();
         layeredPane.setPreferredSize(new Dimension(window.getWidth(), window.getHeight()));
         layeredPane.setBounds(0, 0, window.getWidth(), window.getHeight());
         
-        // Check if this is a "small" board based on row and column count
-        boolean isSmallBoard = currentBoard.rows < 120 && currentBoard.columns < 180;
-        
-        if (isSmallBoard) {
+        if (!currentBoard.isLarge()) {
             // This is a small board - center it in black background
             JPanel centeringPanel = new JPanel(new GridBagLayout());
             centeringPanel.setBackground(Color.BLACK);
@@ -80,14 +94,12 @@ public class App {
             
             layeredPane.add(centeringPanel, JLayeredPane.DEFAULT_LAYER);
         } else {
-            // This is a large board - fill the window
-            currentBoard.setBounds(0, 0, currentBoard.getPreferredSize().width, 
-                                currentBoard.getPreferredSize().height);
+            // This is a large board - fit it to the fixed dimensions
+            currentBoard.setBounds(0, 0, FIXED_WIDTH, FIXED_HEIGHT);
             layeredPane.add(currentBoard, JLayeredPane.DEFAULT_LAYER);
         }
         
-        // Position menu button consistently at bottom right of window 90 and 40 come from menu size
-        // 80 and 30 with 10 pixel padding
+        // Position menu button consistently at bottom right of window
         Menu menu = Menu.getInstance();
         menu.positionMenuButtonForWindow(layeredPane, window.getWidth() - 40, window.getHeight() - 40);
         
@@ -96,7 +108,7 @@ public class App {
         window.setResizable(false);
         window.setLocationRelativeTo(null);
         window.setVisible(true);
-    }
+    }    
     
     private static void initPokemon() {
         Pokemon bulbasaur = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
