@@ -161,11 +161,19 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         if (shiftPressed) {
             moveSpeed = moveSpeed * Math.round(player.getMoveSpeed());
         }
-        
-        // Move player by pixels
-        player.move(dx * moveSpeed, dy * moveSpeed);
-        player.setMoving(true);
-        player.setSprintKeyPressed(shiftPressed);
+    
+        player.setDirection(dir);
+    
+        // Check for tile collisions
+        if (checkTileCollision(dx, dy)) {
+            // If there's a collision, don't move the player
+            player.setMoving(false);
+        } else {
+            // Move player if no collision
+            player.move(dx * moveSpeed, dy * moveSpeed);
+            player.setMoving(true);
+            player.setSprintKeyPressed(shiftPressed);
+        }
         
         playerView.loadImage();
         
@@ -174,12 +182,26 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         camera.update(player);
         
         repaint();
-    }    
+    }
+
+    private boolean checkTileCollision(int dx, int dy) {
+        // Get player's current bounds
+        Rectangle playerBounds = player.getBounds(TILE_SIZE);
+        
+        // Calculate the position after movement
+        int moveAmount = Math.round(player.getMoveSpeed());
+        Rectangle nextBounds = new Rectangle(
+            playerBounds.x + dx * moveAmount,
+            playerBounds.y + dy * moveAmount,
+            playerBounds.width,
+            playerBounds.height
+        );
+        
+        return checkTileBoundsCollision(nextBounds);
+    }
 
     public boolean canMove(int dx, int dy) {
-        // Calculate the next position in world coordinates
         Rectangle playerBounds = player.getBounds(TILE_SIZE);
-    
         Rectangle nextBounds = new Rectangle(
             playerBounds.x + dx,
             playerBounds.y + dy,
@@ -187,14 +209,14 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             playerBounds.height
         );
         
-        // Check world boundaries - restrict to actual board size
+        // Check world boundaries
         if (nextBounds.x < 0 || nextBounds.y < 0 || 
             nextBounds.x + nextBounds.width > columns * TILE_SIZE || 
             nextBounds.y + nextBounds.height > rows * TILE_SIZE) {
             return false;
         }
-                
-        // Check object collisions
+        
+        // Check object collisions (keep this part)
         for (WorldObject obj : objects) {
             if (obj.getClass() == Door.class) {
                 continue; // Skip doors for collision detection
@@ -202,8 +224,30 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 return false; // Collision detected
             }
         }
-        return true; // No collision
+        
+        // Check tile collisions using the bounds
+        return !checkTileBoundsCollision(nextBounds);
+    } 
+    
+    private boolean checkTileBoundsCollision(Rectangle bounds) {
+        // Convert pixel coordinates to tile coordinates
+        int startTileX = bounds.x / TILE_SIZE;
+        int startTileY = bounds.y / TILE_SIZE;
+        int endTileX = (bounds.x + bounds.width - 1) / TILE_SIZE;
+        int endTileY = (bounds.y + bounds.height - 1) / TILE_SIZE;
+        
+        // Check all tiles that the bounds intersect with
+        for (int tileY = startTileY; tileY <= endTileY; tileY++) {
+            for (int tileX = startTileX; tileX <= endTileX; tileX++) {
+                if (tileManager.isTileCollision(tileX, tileY)) {
+                    return true; // Collision found
+                }
+            }
+        }
+        return false; // No collision
     }
+    
+
 
     public void addObject(String path, int x, int y) {
         objects.add(new Building(new Point(x, y), path));
@@ -326,8 +370,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 }
             }
         }
-    }
-
+    } 
+    
     private void resetKeyStates() {
         upPressed = false;
         downPressed = false;

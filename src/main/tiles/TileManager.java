@@ -10,51 +10,31 @@ import ui.Camera;
 
 public class TileManager {
     private Board board;
-    private Tile[] tiles;
     private int[][] mapTileNum;
+    private TileFactory tileFactory;
     
     public TileManager(Board board, String boardName) {
         this.board = board;
-        tiles = new Tile[30]; // Support up to 10 different tile types
-        mapTileNum = new int[board.columns][board.rows];
-        loadTiles();
-        loadMap(boardName); // Pass just the board name
-    }
-    
-    
-    public void loadTiles() {
-        tiles[0] = new GrassTile();
-        tiles[1] = new WaterTile();
-        tiles[2] = new DirtTile();
-        tiles[3] = new IceTile();
-        tiles[4] = new HouseTileGold();
-        // add more tiles as needed
+        this.tileFactory = TileFactory.getInstance();
+        this.mapTileNum = new int[board.columns][board.rows];
+        loadMap(boardName);
     }
     
     public void loadMap(String boardName) {
         // Try these different path formats until one works
-        String[] pathFormats = {
-            "maps/" + boardName + ".txt",              // Option 1
-            "/maps/" + boardName + ".txt",             // Option 2
-            "resources/maps/" + boardName + ".txt",    // Option 3
-            "/resources/maps/" + boardName + ".txt"    // Option 4
-        };
-        
+        String pathName = "/resources/maps/" + boardName + ".txt";
         InputStream is = null;
-        for (String path : pathFormats) {
-            // Try with ClassLoader first (usually works best)
-            is = getClass().getClassLoader().getResourceAsStream(path);
-            if (is != null) {
-                System.out.println("Found resource at: " + path);
-                break;
-            }
-            
-            // Try with Class.getResourceAsStream as fallback
-            is = getClass().getResourceAsStream(path);
-            if (is != null) {
-                System.out.println("Found resource at: " + path);
-                break;
-            }
+
+        
+        is = getClass().getClassLoader().getResourceAsStream(pathName);
+        if (is != null) {
+            System.out.println("Found resource at: " + pathName);
+        }
+        
+        // Try with Class.getResourceAsStream as fallback
+        is = getClass().getResourceAsStream(pathName);
+        if (is != null) {
+            System.out.println("Found resource at: " + pathName);
         }
         
         if (is == null) {
@@ -112,7 +92,7 @@ public class TileManager {
     private void fillWithDefaultTiles() {
         for (int i = 0; i < board.columns; i++) {
             for (int j = 0; j < board.rows; j++) {
-                mapTileNum[i][j] = 0; // Default to grass
+                mapTileNum[i][j] = TileFactory.GRASS; // Default to grass
             }
         }
     }
@@ -121,8 +101,9 @@ public class TileManager {
         int tileSize = Board.TILE_SIZE;
         
         // Calculate which tiles are visible based on camera position
-        int startCol = Math.max(0, Camera.getInstance().getX() / tileSize);
-        int startRow = Math.max(0, Camera.getInstance().getY() / tileSize);
+        Camera camera = Camera.getInstance();
+        int startCol = Math.max(0, camera.getX() / tileSize);
+        int startRow = Math.max(0, camera.getY() / tileSize);
         
         // Calculate how many tiles to draw (viewport width/height in tiles + buffer)
         int tilesInViewportX = (board.getWidth() / tileSize) + 2;
@@ -136,8 +117,11 @@ public class TileManager {
             for (int col = startCol; col < endCol; col++) {
                 int tileNum = mapTileNum[col][row];
                 
-                if (tileNum >= 0 && tileNum < tiles.length && tiles[tileNum] != null) {
-                    g2d.drawImage(tiles[tileNum].getImage(), 
+                // Get the tile from the factory
+                Tile tile = tileFactory.getTile(tileNum);
+                
+                if (tile != null) {
+                    g2d.drawImage(tile.getImage(), 
                                   col * tileSize, 
                                   row * tileSize, 
                                   tileSize, tileSize, null);
@@ -152,6 +136,7 @@ public class TileManager {
         }
         
         int tileNum = mapTileNum[col][row];
-        return tiles[tileNum].hasCollision();
+        Tile tile = tileFactory.getTile(tileNum);
+        return tile.hasCollision();
     }
 }

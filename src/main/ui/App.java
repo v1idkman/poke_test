@@ -43,7 +43,7 @@ public class App {
 
         // add objects to boards (maybe make method for more objects)
         outsideBoard.addObject("/resources/buildings/red_house.png", 2, 4);
-        outsideBoard.addObject("/resources/buildings/red_house.png", 140, 40);
+        outsideBoard.addObject("/resources/buildings/green_spruce.png", 8, 5);
         outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
                             "house_interior", outsideBoard.getLocation()));
 
