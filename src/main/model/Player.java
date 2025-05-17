@@ -148,6 +148,15 @@ public class Player extends Trainer {
             height - (height / 2)
         );
     }
+
+    public Rectangle getFullBounds(int tileSize) {
+        return new Rectangle(
+            getWorldX(),
+            getWorldY(),
+            width,
+            height
+        );
+    }
     
     public void updateExactCoordinates() {
         exactX = pos.x;

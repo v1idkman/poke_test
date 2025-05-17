@@ -208,11 +208,19 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             playerBounds.width,
             playerBounds.height
         );
+
+        Rectangle fullPixelRectangle = player.getFullBounds(TILE_SIZE);
+        Rectangle nextFullPixelRectangle = new Rectangle(
+            fullPixelRectangle.x + dx,
+            fullPixelRectangle.y + dy,
+            fullPixelRectangle.width,
+            fullPixelRectangle.height
+        );
         
         // Check world boundaries
-        if (nextBounds.x < 0 || nextBounds.y < 0 || 
-            nextBounds.x + nextBounds.width > columns * TILE_SIZE || 
-            nextBounds.y + nextBounds.height > rows * TILE_SIZE) {
+        if (nextFullPixelRectangle.x < 0 || nextFullPixelRectangle.y < 0 || 
+            nextFullPixelRectangle.x + nextFullPixelRectangle.width > columns * TILE_SIZE || 
+            nextFullPixelRectangle.y + nextFullPixelRectangle.height > rows * TILE_SIZE) {
             return false;
         }
         
