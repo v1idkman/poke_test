@@ -139,4 +139,9 @@ public class TileManager {
         Tile tile = tileFactory.getTile(tileNum);
         return tile.hasCollision();
     }
+
+    public void update() {
+        // Update all animated tiles
+        tileFactory.updateAnimations();
+    }
 }

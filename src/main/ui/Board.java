@@ -150,6 +150,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             Camera camera = worldManager.getCamera();
             camera.update(player);
         }
+
+        tileManager.update();
         
         repaint();
     }

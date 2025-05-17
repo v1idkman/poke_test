@@ -10,6 +10,7 @@ import javax.imageio.ImageIO;
 public class TileFactory {
     private static TileFactory instance;
     private Map<Integer, Tile> tileCache = new HashMap<>();
+    private int animationCounter;
     
     // Tile IDs as constants for easy reference
     public static final int GRASS = 0;
@@ -21,7 +22,7 @@ public class TileFactory {
     // Add more tile constants as needed
     
     private TileFactory() {
-        // Private constructor for singleton
+        animationCounter = 0;
     }
     
     public static TileFactory getInstance() {
@@ -39,7 +40,7 @@ public class TileFactory {
             return tileCache.get(id);
         }
         
-        Tile newTile = createTile(id);
+        Tile newTile = createTile(id, animationCounter);
         if (newTile != null) {
             tileCache.put(id, newTile);
         }
@@ -49,19 +50,22 @@ public class TileFactory {
     /**
      * Create a new tile based on ID
      */
-    private Tile createTile(int id) {
+    private Tile createTile(int id, int animationCounter) {
         switch (id) {
             case GRASS:
                 return new Tile(GRASS, "Grass", loadImage("/resources/tiles/grass_tile.png"), false, 
                             false, false);
             case WATER:
-                return new Tile(WATER, "Water", loadImage("/resources/tiles/water_tile.png"), true, 
-                            true, true);
+                // Create an animated water tile with 4 frames
+                BufferedImage[] waterFrames = loadAnimationFrames(
+                    "/resources/tiles/water_tile_{frame}.png", 8);
+                return new AnimatedTile(WATER, "Water", waterFrames, 
+                    true, true, true, 300); // 500ms delay between frames
             case DIRT:
-                return new Tile(DIRT, "Dirt", loadImage("/resources/tiles/dirt_tile.png"), false, 
+                return new Tile(DIRT, "Dirt", loadImage("/resources/tiles/dirt_tile_.png"), false, 
                             false, false);
             case ICE:
-                return new Tile(ICE, "Ice", loadImage("/resources/tiles/ice_tile.png"), false, 
+                return new Tile(ICE, "Ice", loadImage("/resources/tiles/ice_tile_.png"), false, 
                             false, false);
             case HOUSE_GOLD:
                 return new Tile(HOUSE_GOLD, "House Gold", loadImage("/resources/tiles/house_tile_golden.png"), false, 
@@ -106,6 +110,23 @@ public class TileFactory {
                 }
             }
             return fallback;
+        }
+    }
+
+    private BufferedImage[] loadAnimationFrames(String basePath, int frameCount) {
+        BufferedImage[] frames = new BufferedImage[frameCount];
+        for (int i = 0; i < frameCount; i++) {
+            String path = basePath.replace("{frame}", String.valueOf(i));
+            frames[i] = loadImage(path);
+        }
+        return frames;
+    }
+
+    public void updateAnimations() {
+        for (Tile tile : tileCache.values()) {
+            if (tile instanceof AnimatedTile) {
+                ((AnimatedTile) tile).update();
+            }
         }
     }
     
