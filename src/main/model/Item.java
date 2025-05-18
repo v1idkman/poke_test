@@ -101,4 +101,10 @@ public abstract class Item {
     public int hashCode() {
         return name.hashCode() ;
     }
+
+    public void decreaseQuantity() {
+        if (quantity > 0) {
+            quantity--;
+        }
+    }
 }
