@@ -9,20 +9,29 @@ import javax.imageio.ImageIO;
 
 public class TileFactory {
     private static TileFactory instance;
-    private Map<Integer, Tile> tileCache = new HashMap<>();
-    private int animationCounter;
+    private Map<Integer, Tile> tileCache;
+    private Map<Integer, String> tiles;
     
     // Tile IDs as constants for easy reference
-    public static final int GRASS = 0;
-    public static final int WATER = 1;
-    public static final int DIRT = 2;
-    public static final int ICE = 3;
-    public static final int HOUSE_GOLD = 4;
-    public static final int WATER_TO_GRASS_LEFT = 5;
+    public static final int GRASS = 00;
+    public static final int GRASS_PATH_TOP = 01;
+    public static final int GRASS_PATH_BOTTOM = 02;
+    public static final int GRASS_PATCH = 03;
+
+    public static final int WATER = 10;
+    public static final int WAVY_WATER = 11;
+    public static final int WATER_TO_GRASS_LEFT = 12;
+
+    public static final int DIRT = 20;
+    public static final int ICE = 30;
+    public static final int HOUSE_GOLD = 40;
+    
     // Add more tile constants as needed
     
     private TileFactory() {
-        animationCounter = 0;
+        tileCache = new HashMap<>();
+        tiles = new HashMap<>();
+        addTiles();
     }
     
     public static TileFactory getInstance() {
@@ -30,6 +39,19 @@ public class TileFactory {
             instance = new TileFactory();
         }
         return instance;
+    }
+
+    public void addTiles() {
+        tiles.put(GRASS, "grass_tile");
+        tiles.put(GRASS_PATH_TOP, "grass_path_top");
+        tiles.put(GRASS_PATH_BOTTOM, "grass_path_bottom");
+        tiles.put(GRASS_PATCH, "grass_patch");
+        tiles.put(WATER, "water_tile_0");
+        tiles.put(WAVY_WATER, "wavy_water");
+        tiles.put(DIRT, "dirt_tile");
+        tiles.put(ICE, "ice_tile");
+        tiles.put(HOUSE_GOLD, "house_tile_golden");
+        tiles.put(WATER_TO_GRASS_LEFT, "water_to_grass_left");
     }
     
     /**
@@ -40,7 +62,7 @@ public class TileFactory {
             return tileCache.get(id);
         }
         
-        Tile newTile = createTile(id, animationCounter);
+        Tile newTile = createTile(id);
         if (newTile != null) {
             tileCache.put(id, newTile);
         }
@@ -50,33 +72,20 @@ public class TileFactory {
     /**
      * Create a new tile based on ID
      */
-    private Tile createTile(int id, int animationCounter) {
-        switch (id) {
-            case GRASS:
-                return new Tile(GRASS, "Grass", loadImage("/resources/tiles/grass_tile.png"), false, 
-                            false, false);
-            case WATER:
-                // Create an animated water tile with 4 frames
-                BufferedImage[] waterFrames = loadAnimationFrames(
-                    "/resources/tiles/water_tile_{frame}.png", 8);
-                return new AnimatedTile(WATER, "Water", waterFrames, 
-                    true, true, true, 300); // 500ms delay between frames
-            case DIRT:
-                return new Tile(DIRT, "Dirt", loadImage("/resources/tiles/dirt_tile_.png"), false, 
-                            false, false);
-            case ICE:
-                return new Tile(ICE, "Ice", loadImage("/resources/tiles/ice_tile_.png"), false, 
-                            false, false);
-            case HOUSE_GOLD:
-                return new Tile(HOUSE_GOLD, "House Gold", loadImage("/resources/tiles/house_tile_golden.png"), false, 
-                            false, false);
-            case WATER_TO_GRASS_LEFT:
-                return new Tile(WATER_TO_GRASS_LEFT, "Water to Grass Side Left", 
-                    loadImage("/resources/tiles/water_to_grass_left.png"), true, true, false);
-            // Add more cases for additional tile types
-            default:
-                System.err.println("Unknown tile ID: " + id);
-                return new Tile(GRASS, "Default Grass", loadImage("/resources/tiles/grass_tile.png"), false, false, false);
+    private Tile createTile(int id) {
+        if (id == WAVY_WATER) { // animations
+            BufferedImage[] waterFrames = loadAnimationFrames(
+                "/resources/tiles/water_tile_{frame}.png", 4);
+            return new AnimatedTile(WAVY_WATER, "Water", waterFrames, 
+                true, true, true, 300);
+        } else if (tiles.containsKey(id)) { // all static tiles
+            String name = tiles.get(id);
+            return new Tile(id, name, loadImage("/resources/tiles/" + name + ".png"), false, 
+                false, false);
+        } else { // unknown tiles
+            System.err.println("Unknown tile ID: " + id);
+            return new Tile(GRASS, "Default Grass", loadImage("/resources/tiles/grass_tile.png"), 
+                false, false, false);
         }
     }
     
@@ -129,20 +138,28 @@ public class TileFactory {
             }
         }
     }
+
+    public boolean isTallGrass(int tileId) {
+        return tileId == GRASS_PATCH;
+    }
     
     /**
      * Get all available tiles
      */
     public Tile[] getAllTiles() {
-        Tile[] tiles = new Tile[30]; // Support up to 30 different tile types
+        Tile[] tiles = new Tile[60];
         
         // Pre-load all known tiles
         tiles[GRASS] = getTile(GRASS);
+        tiles[GRASS_PATH_BOTTOM] = getTile(GRASS_PATH_BOTTOM);
+        tiles[GRASS_PATH_TOP] = getTile(GRASS_PATH_TOP);
+        tiles[GRASS_PATCH] = getTile(GRASS_PATCH);
         tiles[WATER] = getTile(WATER);
         tiles[DIRT] = getTile(DIRT);
         tiles[ICE] = getTile(ICE);
         tiles[HOUSE_GOLD] = getTile(HOUSE_GOLD);
         tiles[WATER_TO_GRASS_LEFT] = getTile(WATER_TO_GRASS_LEFT);
+        tiles[WAVY_WATER] = getTile(WAVY_WATER);
         // Add more tiles as needed
         
         return tiles;

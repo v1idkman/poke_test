@@ -80,6 +80,10 @@ public abstract class Pokemon {
         return moves;
     }
 
+    public int getLevel() {
+        return stats.getLevel();
+    }
+
     public int getDex() {
         return dex;
     }

@@ -1,10 +1,12 @@
 package tiles;
 
 import java.awt.Graphics2D;
+import java.awt.Rectangle;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import model.Player;
 import ui.Board;
 import ui.Camera;
 
@@ -143,5 +145,45 @@ public class TileManager {
     public void update() {
         // Update all animated tiles
         tileFactory.updateAnimations();
+    }
+
+    public boolean isInTallGrass(int col, int row) {
+        if (col < 0 || col >= board.columns || row < 0 || row >= board.rows) {
+            return false;
+        }
+        
+        int tileNum = mapTileNum[col][row];
+        return tileFactory.isTallGrass(tileNum);
+    }
+
+    public boolean isPlayerInTallGrass(Player player) {
+        // Get player's bounds
+        Rectangle playerBounds = player.getBounds(Board.TILE_SIZE);
+        
+        // Convert pixel coordinates to tile coordinates
+        int startTileX = playerBounds.x / Board.TILE_SIZE;
+        int startTileY = playerBounds.y / Board.TILE_SIZE;
+        int endTileX = (playerBounds.x + playerBounds.width - 1) / Board.TILE_SIZE;
+        int endTileY = (playerBounds.y + playerBounds.height - 1) / Board.TILE_SIZE;
+        
+        // Check all tiles that the player's bounds intersect with
+        for (int tileY = startTileY; tileY <= endTileY; tileY++) {
+            for (int tileX = startTileX; tileX <= endTileX; tileX++) {
+                if (isTileGrass(tileX, tileY)) {
+                    return true; // Found grass
+                }
+            }
+        }
+        
+        return false; // No grass found
+    }
+
+    public boolean isTileGrass(int col, int row) {
+        if (col < 0 || col >= board.columns || row < 0 || row >= board.rows) {
+            return false;
+        }
+        
+        int tileNum = mapTileNum[col][row];
+        return tileFactory.isTallGrass(tileNum);
     }
 }
