@@ -324,7 +324,7 @@ public class BattleScreen extends JFrame {
             button.setText(move.getName());
             
             // Set button color based on move type
-            Color typeColor = getTypeColor(move.getType());
+            Color typeColor = UIComponentFactory.getColorForType(move.getType());
             button.setBackground(typeColor);
             button.setForeground(Color.WHITE);
             
@@ -1143,7 +1143,7 @@ public class BattleScreen extends JFrame {
         // Set color based on Pokémon type
         Color mainColor = Color.GRAY;
         if (!pokemon.getTypes().isEmpty()) {
-            mainColor = getTypeColor(pokemon.getTypes().get(0));
+            mainColor = UIComponentFactory.getColorForType(pokemon.getTypes().get(0));
         }
         
         // Draw a simple shape
@@ -1164,27 +1164,5 @@ public class BattleScreen extends JFrame {
         return new ImageIcon(image);
     }
     
-    private Color getTypeColor(Pokemon.PokemonType type) {
-        switch (type) {
-            case NORMAL: return new Color(168, 168, 120);
-            case FIRE: return new Color(240, 128, 48);
-            case WATER: return new Color(104, 144, 240);
-            case GRASS: return new Color(120, 200, 80);
-            case ELECTRIC: return new Color(248, 208, 48);
-            case ICE: return new Color(152, 216, 216);
-            case FIGHTING: return new Color(192, 48, 40);
-            case POISON: return new Color(160, 64, 160);
-            case GROUND: return new Color(224, 192, 104);
-            case FLYING: return new Color(168, 144, 240);
-            case PSYCHIC: return new Color(248, 88, 136);
-            case BUG: return new Color(168, 184, 32);
-            case ROCK: return new Color(184, 160, 56);
-            case GHOST: return new Color(112, 88, 152);
-            case DRAGON: return new Color(112, 56, 248);
-            case DARK: return new Color(112, 88, 72);
-            case STEEL: return new Color(184, 184, 208);
-            case FAIRY: return new Color(238, 153, 172);
-            default: return Color.GRAY;
-        }
-    }
+    
 }

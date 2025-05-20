@@ -73,6 +73,19 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
 
         this.encounterManager = new EncounterManager();
+        // Add this to the Board constructor
+        this.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                // Board has focus now
+            }
+            
+            @Override
+            public void focusLost(FocusEvent e) {
+                resetKeyStates();
+            }
+        });
+
     }
 
     public void setWorldManager(WorldManager manager) {
@@ -135,8 +148,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         if (!player.isInBattle() && !inEncounter && encounterCooldown == 0) {
             boolean isInGrass = tileManager.isPlayerInTallGrass(player);
             boolean isMoving = player.isMoving();
-
-            //System.out.println("Encounter check: isInGrass=" + isInGrass + ", isMoving=" + isMoving);
             
             if (encounterManager.checkEncounter(isInGrass, isMoving)) {
                 startWildEncounter();
@@ -420,7 +431,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
     } 
     
-    private void resetKeyStates() {
+    public void resetKeyStates() {
         upPressed = false;
         downPressed = false;
         leftPressed = false;

@@ -98,8 +98,35 @@ public class Menu {
                 gameTimer.start();
             }
             
+            // Use multiple invokeLater calls to ensure proper sequencing
             SwingUtilities.invokeLater(() -> {
-                parentBoard.requestFocusInWindow();
+                // First invokeLater - give time for dialog disposal to complete
+                SwingUtilities.invokeLater(() -> {
+                    // Second invokeLater - now try to set focus
+                    if (parentBoard instanceof Board) {
+                        Board gameBoard = (Board) parentBoard;
+                        
+                        // Get the top-level window first
+                        Window window = SwingUtilities.getWindowAncestor(gameBoard);
+                        if (window instanceof JFrame) {
+                            JFrame frame = (JFrame) window;
+                            frame.toFront();
+                            frame.requestFocus();
+                            
+                            // Now request focus on the board
+                            gameBoard.resetKeyStates();
+                            boolean success = gameBoard.requestFocusInWindow();
+                            // System.out.println("Focus requested for game board: " + success);
+                            
+                            // If still failing, try one more time
+                            if (!success) {
+                                SwingUtilities.invokeLater(() -> {
+                                    gameBoard.requestFocusInWindow();
+                                });
+                            }
+                        }
+                    }
+                });
             });
         });
         
@@ -114,6 +141,33 @@ public class Menu {
         
         menuDialog.add(mainPanel);
         menuDialog.setVisible(true);
+        // Add window listener to handle focus when dialog closes
+        menuDialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                // Use nested invokeLater calls for proper sequencing
+                SwingUtilities.invokeLater(() -> {
+                    SwingUtilities.invokeLater(() -> {
+                        if (parentBoard instanceof Board) {
+                            Board gameBoard = (Board) parentBoard;
+                            
+                            // Get the top-level window first
+                            Window window = SwingUtilities.getWindowAncestor(gameBoard);
+                            if (window instanceof JFrame) {
+                                JFrame frame = (JFrame) window;
+                                frame.toFront();
+                                frame.requestFocus();
+                                
+                                // Now request focus on the board
+                                gameBoard.resetKeyStates();
+                                gameBoard.requestFocusInWindow();
+                            }
+                        }
+                    });
+                });
+            }
+        });
+
     }
     
     private JPanel createPokemonPanel() {

@@ -12,6 +12,7 @@ public abstract class Pokemon {
     protected String name;
     protected int id;
     protected int dex;
+    protected String nature;
     protected List<Move> moves = new ArrayList<>();
     protected List<PokemonType> types = new ArrayList<>();
     protected Stats stats;
@@ -27,11 +28,30 @@ public abstract class Pokemon {
         // Methods for type effectiveness could go here
     }
 
+    public enum PokemonNature {
+        HARDY, LONELY, BRAVE, ADAMANT, NAUGHTY,
+        BOLD, DOCILE, RELAXED, IMPISH, LAX,
+        TIMID, HASTY, SERIOUS, JOLLY, NAIVE,
+        MODEST, MILD, QUIET, BASHFUL, RASH,
+        CALM, GENTLE, SASSY, CAUTIOUS;
+
+        public String getDisplayName() {
+            String name = this.name();
+            if (name == null || name.isEmpty()) {
+                return "";
+            }
+            
+            // Convert to lowercase first, then capitalize first letter
+            return name.substring(0, 1).toUpperCase() + name.toLowerCase().substring(1);
+        }
+    }
+
     protected Pokemon(int dexNumber, String name, int level) {
         this.name = name;
         this.dex = dexNumber;
         this.id = (int)(Math.random() * 100000);
         this.isShiny = Math.random() < 0.0122; // Shiny chance
+        this.nature = PokemonNature.values()[(int)(Math.random() * PokemonNature.values().length)].name();
         
         // Get base stats from the loader using both dex and name
         int[] baseStats = PokemonStatsLoader.getInstance().getBaseStats(dexNumber, name);
@@ -98,6 +118,10 @@ public abstract class Pokemon {
 
     public Stats getStats() {
         return stats;
+    }
+
+    public PokemonNature getNature() {
+        return PokemonNature.valueOf(nature);
     }
 
     public void addMove(Move move) {

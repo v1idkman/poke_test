@@ -81,9 +81,9 @@ public class PokemonPanelManager {
 
         // Dex #
         gbc.gridx = 0; gbc.gridy = 1;
-        basicInfoPanel.add(new JLabel("Dex #:"), gbc);
+        basicInfoPanel.add(new JLabel("Nature:"), gbc);
         gbc.gridx = 1;
-        basicInfoPanel.add(new JLabel(String.valueOf(pokemon.getDex())), gbc);
+        basicInfoPanel.add(new JLabel(String.valueOf(pokemon.getNature().getDisplayName())), gbc);
 
         // Type (label)
         gbc.gridx = 0; gbc.gridy = 2;

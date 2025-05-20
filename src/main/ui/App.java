@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
 import java.awt.Point;
+import java.awt.event.KeyEvent;
 
 import javax.swing.*;
 
@@ -17,6 +18,11 @@ import pokes.PokemonStatsLoader;
 import model.Door;
 import model.ItemFactory;
 
+import java.awt.DefaultFocusTraversalPolicy;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.KeyboardFocusManager;
+import java.awt.KeyEventDispatcher;
 
 public class App {
     private static Player player = new Player("sarp");
@@ -105,12 +111,41 @@ public class App {
         window.setResizable(false);
         window.setLocationRelativeTo(null);
         window.setVisible(true);
+
+        // Set a custom focus traversal policy to prioritize the game board
+        window.setFocusTraversalPolicy(new DefaultFocusTraversalPolicy() {
+            @Override
+            public Component getDefaultComponent(Container container) {
+                Board currentBoard = worldManager.getCurrentWorld();
+                return currentBoard != null ? currentBoard : super.getDefaultComponent(container);
+            }
+        });
+
+
+        // Add this to the initWindow method in App.java
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
+            @Override
+            public boolean dispatchKeyEvent(KeyEvent e) {
+                Board currentBoard = worldManager.getCurrentWorld();
+                if (currentBoard != null && !currentBoard.hasFocus()) {
+                    // Only handle key events if the board doesn't have focus
+                    if (e.getID() == KeyEvent.KEY_PRESSED) {
+                        currentBoard.keyPressed(e);
+                        return true;
+                    } else if (e.getID() == KeyEvent.KEY_RELEASED) {
+                        currentBoard.keyReleased(e);
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+
     }
 
     public static void initMoves() {
         MoveLoader moveLoader = MoveLoader.getInstance();
         moveLoader.loadFromCSV("src/main/resources/pokemon_moves.csv");
-        System.out.println("Loaded Pokemon moves from CSV");
     }
     
     private static void initPokemon() {
@@ -123,11 +158,12 @@ public class App {
         charizard.getStats().addEVs(100, 140, 80, 0, 100, 0);
         charizard.holdItem(ItemFactory.createItem("great ball"));
         Move flamethrower = MoveFactory.createMove("Flamethrower");
-        Move tackle = MoveFactory.createMove("Tackle");
+        Move overheat = MoveFactory.createMove("Overheat");
+        Move vineWhip = MoveFactory.createMove("Vine Whip");
 
         charizard.addMove(flamethrower);
-        charizard.addMove(tackle);
-        bulbasaur.addMove(tackle);
+        charizard.addMove(overheat);
+        bulbasaur.addMove(vineWhip);
         player.addPokemonToCurrentTeam(charizard);
         player.addPokemonToCurrentTeam(bulbasaur);
         player.addPokemonToCurrentTeam(charizard2);
@@ -148,6 +184,8 @@ public class App {
     }
 
     public static void main(String[] args) {
+        // TODO: - standardise pokemon info panel
+        //       - implement type effectiveness
         initItems();
         initPokemonData();
         initMoves();
