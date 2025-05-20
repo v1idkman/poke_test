@@ -95,9 +95,12 @@ public class Menu {
         closeButton.addActionListener(e -> {
             menuDialog.dispose();
             if (gameTimer != null) {
-                gameTimer.start(); // Resume game when menu is closed
+                gameTimer.start();
             }
-            parentBoard.requestFocusInWindow(); // Restore focus to game panel
+            
+            SwingUtilities.invokeLater(() -> {
+                parentBoard.requestFocusInWindow();
+            });
         });
         
         // Layout components

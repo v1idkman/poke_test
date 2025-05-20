@@ -4,12 +4,9 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
-import java.net.URL;
 import java.util.Random;
 import java.util.Set;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.*;
 
@@ -45,6 +42,8 @@ public class BattleScreen extends JFrame {
     private JButton bagButton;
     private JButton pokemonButton;
     private JButton runButton;
+
+    private JLabel ppLabel;
     
     private JButton[] moveButtons = new JButton[4];
     private JButton backButton;
@@ -55,7 +54,6 @@ public class BattleScreen extends JFrame {
     // Battle state
     private boolean playerTurn = true;
     private boolean battleEnded = false;
-    private String battleMessage = "";
     
     public BattleScreen(Player player, Pokemon wildPokemon) {
         this.player = player;
@@ -116,18 +114,18 @@ public class BattleScreen extends JFrame {
     private void createBattlegroundPanel() {
         battlegroundPanel = new JPanel(null); // Using null layout for precise positioning
         battlegroundPanel.setPreferredSize(new Dimension(800, 400));
-        battlegroundPanel.setBackground(new Color(144, 200, 144)); // Light green background like in the image
+        battlegroundPanel.setBackground(new Color(144, 238, 144)); // Light green background like in GBA games
         
         // Create battle platform for wild Pokémon (enemy)
         JPanel enemyPlatform = new JPanel();
-        enemyPlatform.setBounds(450, 150, 250, 40);
-        enemyPlatform.setBackground(new Color(200, 200, 160)); // Beige platform
+        enemyPlatform.setBounds(500, 150, 200, 30);
+        enemyPlatform.setBackground(new Color(210, 180, 140)); // Tan platform
         battlegroundPanel.add(enemyPlatform);
         
         // Create battle platform for player Pokémon
         JPanel playerPlatform = new JPanel();
-        playerPlatform.setBounds(100, 250, 250, 40);
-        playerPlatform.setBackground(new Color(200, 200, 160)); // Beige platform
+        playerPlatform.setBounds(150, 250, 200, 30);
+        playerPlatform.setBackground(new Color(210, 180, 140)); // Tan platform
         battlegroundPanel.add(playerPlatform);
         
         // Wild Pokémon sprite - positioned on top of enemy platform
@@ -142,70 +140,70 @@ public class BattleScreen extends JFrame {
         playerPokemonImage.setIcon(loadPokemonImage(playerPokemon, false));
         battlegroundPanel.add(playerPokemonImage);
         
-        // Wild Pokémon info box
+        // Wild Pokémon info box (like in the image - top left)
         JPanel wildInfoBox = new JPanel(null);
-        wildInfoBox.setBounds(50, 50, 300, 80);
+        wildInfoBox.setBounds(50, 50, 250, 80);
         wildInfoBox.setBackground(new Color(248, 248, 240));
         wildInfoBox.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         
         // Wild Pokémon name and level
-        wildPokemonInfo = new JLabel(wildPokemon.getName() + " L." + wildPokemon.getLevel());
+        wildPokemonInfo = new JLabel(wildPokemon.getName() + " L" + wildPokemon.getLevel());
         wildPokemonInfo.setBounds(20, 10, 200, 30);
         wildPokemonInfo.setFont(new Font("Arial", Font.BOLD, 16));
         wildInfoBox.add(wildPokemonInfo);
         
+        // HP text
+        JLabel wildHpText = new JLabel("HP:");
+        wildHpText.setBounds(20, 40, 30, 15);
+        wildHpText.setFont(new Font("Arial", Font.PLAIN, 12));
+        wildInfoBox.add(wildHpText);
+        
         // Wild Pokémon HP bar
         wildPokemonHP = new JProgressBar(0, wildPokemon.getStats().getMaxHp());
         wildPokemonHP.setValue(wildPokemon.getStats().getCurrentHp());
-        wildPokemonHP.setBounds(20, 45, 200, 15);
+        wildPokemonHP.setBounds(50, 40, 150, 10);
         wildPokemonHP.setForeground(new Color(96, 192, 96)); // Green HP bar
         wildPokemonHP.setBackground(new Color(224, 224, 224));
         wildPokemonHP.setBorderPainted(false);
         wildPokemonHP.setStringPainted(false);
         wildInfoBox.add(wildPokemonHP);
         
-        // HP text
-        JLabel wildHpText = new JLabel("HP:");
-        wildHpText.setBounds(20, 30, 30, 15);
-        wildHpText.setFont(new Font("Arial", Font.PLAIN, 12));
-        wildInfoBox.add(wildHpText);
-        
         battlegroundPanel.add(wildInfoBox);
         
-        // Player Pokémon info box
+        // Player Pokémon info box (like in the image - bottom right)
         JPanel playerInfoBox = new JPanel(null);
-        playerInfoBox.setBounds(450, 250, 300, 80);
+        playerInfoBox.setBounds(500, 250, 250, 80);
         playerInfoBox.setBackground(new Color(248, 248, 240));
         playerInfoBox.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         
         // Player Pokémon name and level
-        playerPokemonInfo = new JLabel(playerPokemon.getName() + " L." + playerPokemon.getLevel());
+        playerPokemonInfo = new JLabel(playerPokemon.getName() + " L" + playerPokemon.getLevel());
         playerPokemonInfo.setBounds(20, 10, 200, 30);
         playerPokemonInfo.setFont(new Font("Arial", Font.BOLD, 16));
         playerInfoBox.add(playerPokemonInfo);
         
+        // HP text
+        JLabel playerHpText = new JLabel("HP:");
+        playerHpText.setBounds(20, 40, 30, 15);
+        playerHpText.setFont(new Font("Arial", Font.PLAIN, 12));
+        playerInfoBox.add(playerHpText);
+        
         // Player Pokémon HP bar
         playerPokemonHP = new JProgressBar(0, playerPokemon.getStats().getMaxHp());
         playerPokemonHP.setValue(playerPokemon.getStats().getCurrentHp());
-        playerPokemonHP.setBounds(20, 45, 200, 15);
+        playerPokemonHP.setBounds(50, 40, 150, 10);
         playerPokemonHP.setForeground(new Color(96, 192, 96)); // Green HP bar
         playerPokemonHP.setBackground(new Color(224, 224, 224));
         playerPokemonHP.setBorderPainted(false);
         playerPokemonHP.setStringPainted(false);
         playerInfoBox.add(playerPokemonHP);
         
-        // HP text and values
-        JLabel playerHpText = new JLabel("HP:");
-        playerHpText.setBounds(20, 30, 30, 15);
-        playerHpText.setFont(new Font("Arial", Font.PLAIN, 12));
-        playerInfoBox.add(playerHpText);
-        
         // Current/Max HP display
-        JLabel hpValues = new JLabel(playerPokemon.getStats().getCurrentHp() + "/" + playerPokemon.getStats().getMaxHp());
-        hpValues.setBounds(220, 45, 60, 15);
-        hpValues.setFont(new Font("Arial", Font.PLAIN, 12));
-        hpValues.setHorizontalAlignment(JLabel.RIGHT);
-        playerInfoBox.add(hpValues);
+        hpValueLabel = new JLabel(playerPokemon.getStats().getCurrentHp() + "/" + playerPokemon.getStats().getMaxHp());
+        hpValueLabel.setBounds(130, 60, 100, 15);
+        hpValueLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        hpValueLabel.setHorizontalAlignment(JLabel.RIGHT);
+        playerInfoBox.add(hpValueLabel);
         
         battlegroundPanel.add(playerInfoBox);
     }
@@ -220,7 +218,7 @@ public class BattleScreen extends JFrame {
         messageBox.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         messageBox.setLayout(new BorderLayout());
         
-        battleMessageLabel = new JLabel("What should " + playerPokemon.getName() + " do?");
+        battleMessageLabel = new JLabel("What will " + playerPokemon.getName() + " do?");
         battleMessageLabel.setFont(new Font("Arial", Font.BOLD, 16));
         battleMessageLabel.setBorder(new EmptyBorder(10, 20, 10, 20));
         messageBox.add(battleMessageLabel, BorderLayout.CENTER);
@@ -261,30 +259,62 @@ public class BattleScreen extends JFrame {
     }
     
     private void createMovePanel() {
-        movePanel = new JPanel(new GridLayout(3, 2, 10, 10));
-        movePanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        movePanel.setPreferredSize(new Dimension(800, 150));
-        movePanel.setBackground(new Color(240, 240, 240));
+        // Create a new panel with GridLayout for the moves
+        JPanel movesGrid = new JPanel(new GridLayout(2, 2, 5, 5));
+        movesGrid.setBackground(new Color(240, 240, 240));
+        
+        // Debug the available moves
+        System.out.println("Creating move panel for " + playerPokemon.getName());
+        System.out.println("Moves available: " + playerPokemon.getMoves().size());
         
         // Create move buttons based on player Pokémon's moves
         for (int i = 0; i < 4; i++) {
-            if (i < playerPokemon.getMoves().size()) {
+            if (i < playerPokemon.getMoves().size() && playerPokemon.getMoves().get(i) != null) {
                 Move move = playerPokemon.getMoves().get(i);
+                System.out.println("Adding move: " + move.getName());
                 moveButtons[i] = createMoveButton(move);
-                moveButtons[i].addActionListener(e -> useMove(move));
+                
+                // Create a final reference to the move for the lambda
+                final Move finalMove = move;
+                moveButtons[i].addActionListener(e -> useMove(finalMove));
             } else {
                 moveButtons[i] = createMoveButton(null);
                 moveButtons[i].setEnabled(false);
             }
-            movePanel.add(moveButtons[i]);
+            movesGrid.add(moveButtons[i]);
         }
         
+        // Create bottom panel for PP display and back button
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.setBackground(new Color(240, 240, 240));
+        
+        // Add PP display
+        JPanel ppPanel = new JPanel(new BorderLayout());
+        ppPanel.setBackground(new Color(240, 240, 240));
+        ppLabel = new JLabel("PP: --/--");
+        ppPanel.add(ppLabel, BorderLayout.WEST);
+        
         // Add back button
+        JPanel backPanel = new JPanel(new BorderLayout());
+        backPanel.setBackground(new Color(240, 240, 240));
         backButton = new JButton("Back");
-        backButton.setFont(new Font("Arial", Font.BOLD, 18));
+        backButton.setFont(new Font("Arial", Font.BOLD, 16));
         backButton.setBackground(new Color(200, 200, 200));
         backButton.addActionListener(e -> showActionPanel());
-        movePanel.add(backButton);
+        backPanel.add(backButton, BorderLayout.EAST);
+        
+        // Add panels to bottom panel
+        bottomPanel.add(ppPanel, BorderLayout.WEST);
+        bottomPanel.add(backPanel, BorderLayout.EAST);
+        
+        // Create a container panel for the entire move panel
+        JPanel container = new JPanel(new BorderLayout());
+        container.setBackground(new Color(240, 240, 240));
+        container.add(movesGrid, BorderLayout.CENTER);
+        container.add(bottomPanel, BorderLayout.SOUTH);
+        
+        // Replace the old movePanel with the new one
+        movePanel = container;
     }
     
     private JButton createMoveButton(Move move) {
@@ -392,6 +422,9 @@ public class BattleScreen extends JFrame {
         
         playerTurn = false;
         
+        // Decrease PP
+        move.decreasePP();
+        
         // Show attack message
         showInfoPanel(playerPokemon.getName() + " used " + move.getName() + "!");
         
@@ -411,7 +444,11 @@ public class BattleScreen extends JFrame {
                         updateWildPokemonHP();
                         
                         // Show damage message
-                        battleMessageLabel.setText("It dealt " + damage + " damage!");
+                        if (damage > 0) {
+                            battleMessageLabel.setText("It dealt " + damage + " damage!");
+                        } else {
+                            battleMessageLabel.setText("It had no effect...");
+                        }
                         break;
                     case 2:
                         // Check if wild Pokémon fainted
@@ -519,6 +556,9 @@ public class BattleScreen extends JFrame {
         }
     }
     
+    // Add this as a class field
+    private JLabel hpValueLabel;
+
     private void updatePlayerPokemonHP() {
         int currentHP = playerPokemon.getStats().getCurrentHp();
         int maxHP = playerPokemon.getStats().getMaxHp();
@@ -528,7 +568,9 @@ public class BattleScreen extends JFrame {
         
         // Update progress bar
         playerPokemonHP.setValue(currentHP);
-        playerPokemonHP.setString("HP: " + currentHP + "/" + maxHP);
+        
+        // Update HP text display
+        hpValueLabel.setText(currentHP + "/" + maxHP);
         
         // Change color based on HP percentage
         float percentage = (float) currentHP / maxHP;
@@ -536,9 +578,11 @@ public class BattleScreen extends JFrame {
             playerPokemonHP.setForeground(Color.RED);
         } else if (percentage < 0.5) {
             playerPokemonHP.setForeground(Color.ORANGE);
+        } else {
+            playerPokemonHP.setForeground(new Color(96, 192, 96));
         }
     }
-    
+
     private int calculateDamage(Pokemon attacker, Pokemon defender, Move move) {
         // This is a simplified damage calculation
         // In a real Pokémon game, this would be much more complex
@@ -955,11 +999,26 @@ public class BattleScreen extends JFrame {
                         
                         // Update the player Pokémon sprite and info
                         playerPokemonImage.setIcon(loadPokemonImage(playerPokemon, false));
-                        playerPokemonInfo.setText(playerPokemon.getName() + " L." + playerPokemon.getLevel());
+                        playerPokemonInfo.setText(playerPokemon.getName() + " L" + playerPokemon.getLevel());
                         
                         // Update HP bar
                         playerPokemonHP.setMaximum(playerPokemon.getStats().getMaxHp());
                         playerPokemonHP.setValue(playerPokemon.getStats().getCurrentHp());
+                        hpValueLabel.setText(playerPokemon.getStats().getCurrentHp() + "/" + playerPokemon.getStats().getMaxHp());
+                        
+                        // Recreate move panel with new Pokémon's moves
+                        createMovePanel();
+                        
+                        // Update color based on HP percentage
+                        float percentage = (float) playerPokemon.getStats().getCurrentHp() / 
+                                          playerPokemon.getStats().getMaxHp();
+                        if (percentage < 0.2) {
+                            playerPokemonHP.setForeground(Color.RED);
+                        } else if (percentage < 0.5) {
+                            playerPokemonHP.setForeground(Color.ORANGE);
+                        } else {
+                            playerPokemonHP.setForeground(new Color(96, 192, 96));
+                        }
                         break;
                     case 2:
                         // Wild Pokémon's turn after switching

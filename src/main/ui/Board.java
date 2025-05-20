@@ -452,6 +452,13 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         // Reset all movement states
         resetKeyStates();
         
+        // Stop the player's movement
+        player.setMoving(false);
+        player.stopMoving();
+        
+        // Pause the game timer to prevent any movement updates
+        timer.stop();
+        
         // Generate a wild Pokémon based on current location
         Pokemon wildPokemon = encounterManager.generateWildPokemon(worldName);
         
@@ -480,6 +487,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         inEncounter = false;
         player.setInBattle(false);
         encounterCooldown = ENCOUNTER_COOLDOWN_TIME;
+        timer.start();
     }
     
     private void playEncounterAnimation(Pokemon wildPokemon) {

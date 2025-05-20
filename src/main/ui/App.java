@@ -9,9 +9,9 @@ import javax.swing.*;
 
 import model.Move;
 import model.Player;
-import model.Move.MoveCategory;
+import model.MoveFactory;
+import model.MoveLoader;
 import pokes.Pokemon;
-import pokes.Pokemon.PokemonType;
 import pokes.PokemonFactory;
 import pokes.PokemonStatsLoader;
 import model.Door;
@@ -105,23 +105,31 @@ public class App {
         window.setResizable(false);
         window.setLocationRelativeTo(null);
         window.setVisible(true);
-    }    
+    }
+
+    public static void initMoves() {
+        MoveLoader moveLoader = MoveLoader.getInstance();
+        moveLoader.loadFromCSV("src/main/resources/pokemon_moves.csv");
+        System.out.println("Loaded Pokemon moves from CSV");
+    }
     
     private static void initPokemon() {
-        Pokemon bulbasaur = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
         Pokemon charizard = PokemonFactory.createPokemon(6, 36, "Charizard");
+        Pokemon bulbasaur = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
         Pokemon charizard2 = PokemonFactory.createPokemon(6, 40,  "Charizard");
         Pokemon blastoise = PokemonFactory.createPokemon(9, 45, "Blastoise");
         blastoise.damage(30);
         blastoise.holdItem(ItemFactory.createItem("max revive"));
         charizard.getStats().addEVs(100, 140, 80, 0, 100, 0);
         charizard.holdItem(ItemFactory.createItem("great ball"));
-        charizard.addMove(new Move("Flamethrower", PokemonType.FIRE, 90, 80, 15, MoveCategory.SPECIAL));
-        charizard.addMove(new Move("Fly", PokemonType.FLYING, 60, 90, 15, MoveCategory.SPECIAL));
-        charizard.addMove(new Move("Flamethrower", PokemonType.FIRE, 90, 80, 15, MoveCategory.SPECIAL));
-        charizard.addMove(new Move("Flamethrower", PokemonType.FIRE, 90, 80, 15, MoveCategory.SPECIAL));
-        player.addPokemonToCurrentTeam(bulbasaur);
+        Move flamethrower = MoveFactory.createMove("Flamethrower");
+        Move tackle = MoveFactory.createMove("Tackle");
+
+        charizard.addMove(flamethrower);
+        charizard.addMove(tackle);
+        bulbasaur.addMove(tackle);
         player.addPokemonToCurrentTeam(charizard);
+        player.addPokemonToCurrentTeam(bulbasaur);
         player.addPokemonToCurrentTeam(charizard2);
         player.addPokemonToCurrentTeam(blastoise);
 
@@ -142,6 +150,7 @@ public class App {
     public static void main(String[] args) {
         initItems();
         initPokemonData();
+        initMoves();
         initPokemon();
         initWorlds();
         SwingUtilities.invokeLater(new Runnable() {

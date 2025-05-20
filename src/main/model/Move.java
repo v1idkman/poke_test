@@ -228,6 +228,12 @@ public class Move {
     public void restorePP(int amount) {
         currentPP = Math.min(currentPP + amount, maxPP);
     }
+
+    public void decreasePP() {
+        if (currentPP > 0) {
+            currentPP--;
+        }
+    }
     
     // Restore all PP
     public void restoreAllPP() {
