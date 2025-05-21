@@ -39,7 +39,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private TileManager tileManager;
 
     private EncounterManager encounterManager;
-    private boolean inEncounter = false;
+    private boolean inBattle = false;
     private int encounterCooldown = 0;
     private static final int ENCOUNTER_COOLDOWN_TIME = 3;
 
@@ -145,7 +145,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
         
         // Check for wild Pokémon encounters if not in battle and cooldown is over
-        if (!player.isInBattle() && !inEncounter && encounterCooldown == 0) {
+        if (!player.isInBattle() && !inBattle && encounterCooldown == 0) {
             boolean isInGrass = tileManager.isPlayerInTallGrass(player);
             boolean isMoving = player.isMoving();
             
@@ -458,7 +458,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     private void startWildEncounter() {
         // Set flags to prevent movement during encounter
-        inEncounter = true;
+        inBattle = true;
         
         // Reset all movement states
         resetKeyStates();
@@ -481,7 +481,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         // Create and show battle screen
         SwingUtilities.invokeLater(() -> {
-            BattleScreen battleScreen = new BattleScreen(player, wildPokemon);
+            BattleScreen battleScreen = new BattleScreen(player, wildPokemon, true, "route");
             battleScreen.setVisible(true);
             
             // When battle ends
@@ -494,16 +494,65 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         });
     }
     
+    // Add method to end wild encounter
     private void endWildEncounter() {
-        inEncounter = false;
+        inBattle = false;
         player.setInBattle(false);
         encounterCooldown = ENCOUNTER_COOLDOWN_TIME;
         timer.start();
+        
+        // Request focus back to the board
+        requestFocusInWindow();
     }
     
+    // Add method for encounter animation
     private void playEncounterAnimation(Pokemon wildPokemon) {
         // This would be where you'd implement a screen flash or transition animation
         // For now, just print to console
         System.out.println("A wild " + wildPokemon.getName() + " appeared!");
+        
+        // You could add a visual effect here like screen flashing
+        // For example:
+        /*
+        JPanel flashPanel = new JPanel();
+        flashPanel.setBackground(Color.BLACK);
+        flashPanel.setBounds(0, 0, getWidth(), getHeight());
+        add(flashPanel, JLayeredPane.POPUP_LAYER);
+        
+        Timer flashTimer = new Timer(100, new ActionListener() {
+            int flashes = 0;
+            
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                flashes++;
+                flashPanel.setVisible(!flashPanel.isVisible());
+                
+                if (flashes >= 6) {
+                    remove(flashPanel);
+                    revalidate();
+                    repaint();
+                    ((Timer)e.getSource()).stop();
+                }
+            }
+        });
+        flashTimer.start();
+        */
+    }
+    
+    // Add this method to Player class if it doesn't exist
+    public void stopMoving() {
+        // Reset any movement-related state
+        player.setMoving(false);
+        player.setSprintKeyPressed(false);
+    }
+    
+    // Add this method to Player class if it doesn't exist
+    public boolean isInBattle() {
+        return inBattle; // You'll need to add this field to Player
+    }
+    
+    // Add this method to Player class if it doesn't exist
+    public void setInBattle(boolean inBattle) {
+        this.inBattle = inBattle;
     }
 }

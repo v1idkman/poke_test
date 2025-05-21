@@ -14,12 +14,24 @@ public class TileManager {
     private Board board;
     private int[][] mapTileNum;
     private TileFactory tileFactory;
+    private boolean[][] grassTiles; // Track grass tiles for encounter optimization
     
     public TileManager(Board board, String boardName) {
         this.board = board;
         this.tileFactory = TileFactory.getInstance();
         this.mapTileNum = new int[board.columns][board.rows];
+        this.grassTiles = new boolean[board.columns][board.rows];
         loadMap(boardName);
+        cacheGrassTiles(); // Pre-cache grass tiles for faster lookup
+    }
+    
+    // Cache which tiles are grass for faster lookup during gameplay
+    private void cacheGrassTiles() {
+        for (int col = 0; col < board.columns; col++) {
+            for (int row = 0; row < board.rows; row++) {
+                grassTiles[col][row] = tileFactory.isTallGrass(mapTileNum[col][row]);
+            }
+        }
     }
     
     public void loadMap(String boardName) {
@@ -84,6 +96,9 @@ public class TileManager {
                 col = 0;
                 row++;
             }
+            
+            // After loading the map, update the grass tiles cache
+            cacheGrassTiles();
         } catch (Exception e) {
             fillWithDefaultTiles();
             e.printStackTrace();
@@ -97,6 +112,8 @@ public class TileManager {
                 mapTileNum[i][j] = TileFactory.GRASS; // Default to grass
             }
         }
+        // Update grass tiles cache
+        cacheGrassTiles();
     }
     
     public void draw(Graphics2D g2d) {
@@ -152,8 +169,8 @@ public class TileManager {
             return false;
         }
         
-        int tileNum = mapTileNum[col][row];
-        return tileFactory.isTallGrass(tileNum);
+        // Use cached grass tiles for faster lookup
+        return grassTiles[col][row];
     }
 
     public boolean isPlayerInTallGrass(Player player) {
@@ -169,7 +186,7 @@ public class TileManager {
         // Check all tiles that the player's bounds intersect with
         for (int tileY = startTileY; tileY <= endTileY; tileY++) {
             for (int tileX = startTileX; tileX <= endTileX; tileX++) {
-                if (isTileGrass(tileX, tileY)) {
+                if (isInTallGrass(tileX, tileY)) {
                     return true; // Found grass
                 }
             }
@@ -179,11 +196,6 @@ public class TileManager {
     }
 
     public boolean isTileGrass(int col, int row) {
-        if (col < 0 || col >= board.columns || row < 0 || row >= board.rows) {
-            return false;
-        }
-        
-        int tileNum = mapTileNum[col][row];
-        return tileFactory.isTallGrass(tileNum);
+        return isInTallGrass(col, row);
     }
 }

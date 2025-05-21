@@ -15,6 +15,17 @@ public class PokemonFactory {
     }
     
     public static Pokemon createPokemon(int dexNumber, int level, String name) {
+        // If name is null, look it up from the PokemonStatsLoader
+        if (name == null || name.isEmpty()) {
+            name = PokemonStatsLoader.getInstance().getPokemonName(dexNumber);
+            
+            // If still null (maybe the Pokémon doesn't exist in the database),
+            // use a default name based on dex number
+            if (name == null || name.isEmpty()) {
+                name = "Pokemon #" + dexNumber;
+            }
+        }
+        
         return new GenericPokemon(dexNumber, level, name);
     }
     

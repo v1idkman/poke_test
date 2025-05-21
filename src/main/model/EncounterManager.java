@@ -1,8 +1,7 @@
 package model;
 
-import java.util.Random;
+import java.util.*;
 import pokes.Pokemon;
-import pokes.PokemonFactory;
 
 public class EncounterManager {
     private static final Random random = new Random();
@@ -11,10 +10,26 @@ public class EncounterManager {
     
     private int encounterRate;
     private int frameCounter;
+    private Map<String, List<EncounterTable.EncounterEntry>> locationTables;
     
     public EncounterManager() {
         this.encounterRate = DEFAULT_ENCOUNTER_RATE;
         this.frameCounter = 0;
+        initializeEncounterTables();
+    }
+    
+    private void initializeEncounterTables() {
+        locationTables = new HashMap<>();
+        
+        // Use the existing encounter tables from EncounterTable class
+        for (String location : getAvailableLocations()) {
+            locationTables.put(location, EncounterTable.getEncounterTable(location));
+        }
+    }
+    
+    private List<String> getAvailableLocations() {
+        // Return all available location keys from EncounterTable
+        return EncounterTable.getAvailableLocations();
     }
     
     public void setEncounterRate(int rate) {
@@ -39,16 +54,44 @@ public class EncounterManager {
         }
         
         return false;
-    }    
+    }
     
     public Pokemon generateWildPokemon(String location) {
-        // This is where you'd implement logic to determine which Pokémon appears
-        // based on the current location, time of day, etc.
+        // Normalize location string and get the appropriate encounter table
+        String normalizedLocation = normalizeLocation(location);
         
-        // For now, just return a random Pokémon between ID 1-10 at level 5-10
-        // int pokemonId = random.nextInt(10) + 1;
-        int level = random.nextInt(6) + 5;
+        // Use the EncounterTable class to get a random encounter
+        return EncounterTable.getRandomEncounter(normalizedLocation);
+    }
+    
+    private String normalizeLocation(String location) {
+        if (location == null) {
+            return "route1";
+        }
         
-        return PokemonFactory.createPokemon(4, level, "Charmander");
+        location = location.toLowerCase().trim();
+        
+        // Check for location types
+        if (location.contains("route")) {
+            // Extract route number if possible
+            if (location.matches(".*\\d+.*")) {
+                return "route" + location.replaceAll("\\D+", "");
+            }
+            return "route1"; // Default to route1 if no number
+        } else if (location.contains("forest") || location.contains("woods")) {
+            return "forest";
+        } else if (location.contains("cave") || location.contains("tunnel") || location.contains("mountain")) {
+            return "cave";
+        } else if (location.contains("city") || location.contains("town")) {
+            return "city";
+        }
+        
+        // Check if the location exists in our tables
+        if (locationTables.containsKey(location)) {
+            return location;
+        }
+        
+        // Default fallback
+        return "route1";
     }
 }

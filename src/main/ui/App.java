@@ -16,6 +16,7 @@ import pokes.Pokemon;
 import pokes.PokemonFactory;
 import pokes.PokemonStatsLoader;
 import model.Door;
+import model.EncounterTable;
 import model.ItemFactory;
 
 import java.awt.DefaultFocusTraversalPolicy;
@@ -184,8 +185,7 @@ public class App {
     }
 
     public static void main(String[] args) {
-        // TODO: - standardise pokemon info panel
-        //       - implement type effectiveness
+        EncounterTable.initializeEncounterTables();
         initItems();
         initPokemonData();
         initMoves();

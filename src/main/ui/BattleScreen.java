@@ -7,23 +7,35 @@ import java.io.File;
 import java.util.Random;
 import java.util.Set;
 
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import model.Item;
 import model.Move;
 import model.Player;
+import model.Pokeball;
 import pokes.Pokemon;
+import pokes.Pokemon.PokemonType;
+import pokes.TypeEffectivenessChart;
 
 public class BattleScreen extends JFrame {
     private Player player;
     private Pokemon wildPokemon;
     private Pokemon playerPokemon;
+    private boolean isWildBattle;
+    private String battleLocation;
     
     // UI Components
+    private Image routeBackgroundImage;
+    private static final int BG_WIDTH = 800;
+    private static final int BG_HEIGHT = 475;
+
     private JPanel mainPanel;
+    private JPanel currentCategoryPanel;
     private JPanel battlegroundPanel;
     private JPanel actionPanel;
     private JPanel movePanel;
@@ -55,9 +67,23 @@ public class BattleScreen extends JFrame {
     private boolean playerTurn = true;
     private boolean battleEnded = false;
     
-    public BattleScreen(Player player, Pokemon wildPokemon) {
+    public BattleScreen(Player player, Pokemon wildPokemon, boolean isWildbattle, String battleLocation) {
         this.player = player;
         this.wildPokemon = wildPokemon;
+        this.isWildBattle = isWildbattle;
+
+        this.battleLocation = battleLocation != null ? battleLocation : "route"; // Default to route
+    
+        if ("route".equalsIgnoreCase(this.battleLocation)) {
+            try {
+                // Load the image and scale it once to the desired size
+                Image originalImage = ImageIO.read(getClass().getResource("/resources/backgrounds/route_bg.png"));
+                routeBackgroundImage = originalImage.getScaledInstance(BG_WIDTH, BG_HEIGHT, Image.SCALE_SMOOTH);
+            } catch (Exception e) {
+                System.err.println("Failed to load route background image: " + e.getMessage());
+                routeBackgroundImage = null;
+            }
+        }
         
         // Get the first non-fainted Pokémon from player's team
         for (Pokemon p : player.getTeam()) {
@@ -73,6 +99,8 @@ public class BattleScreen extends JFrame {
             dispose();
             return;
         }
+
+        initializeBackground(battleLocation);
         
         setTitle("Pokémon Battle");
         setSize(800, 600);
@@ -91,52 +119,72 @@ public class BattleScreen extends JFrame {
         mainPanel = new JPanel(new BorderLayout());
         mainPanel.setBackground(new Color(240, 240, 240));
         
-        // Create battleground panel (top part with Pokémon sprites and HP bars)
         createBattlegroundPanel();
         
-        // Create action panel (bottom part with buttons)
         createActionPanel();
         
-        // Create move selection panel (initially hidden)
         createMovePanel();
         
-        // Create info panel for battle messages
         createInfoPanel();
         
         // Add panels to main panel
         mainPanel.add(battlegroundPanel, BorderLayout.CENTER);
         mainPanel.add(actionPanel, BorderLayout.SOUTH);
         
-        // Add main panel to frame
         setContentPane(mainPanel);
+    }
+
+    public void initializeBackground(String battleLocation) {
+        
     }
     
     private void createBattlegroundPanel() {
-        battlegroundPanel = new JPanel(null); // Using null layout for precise positioning
+        
+        if ("route".equalsIgnoreCase(battleLocation) && routeBackgroundImage != null) {
+            // Create a custom panel that draws the background image at fixed size
+            battlegroundPanel = new JPanel(null) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    // Draw the background image at fixed size
+                    g.drawImage(routeBackgroundImage, 0, 0, BG_WIDTH, BG_HEIGHT, this);
+                }
+                
+                @Override
+                public Dimension getPreferredSize() {
+                    return new Dimension(BG_WIDTH, BG_HEIGHT);
+                }
+            };
+        }else {
+            // Create a standard panel with color background for other locations
+            battlegroundPanel = new JPanel(null);
+            
+            // Set background color based on location
+            switch (battleLocation.toLowerCase()) {
+                case "city":
+                    battlegroundPanel.setBackground(new Color(180, 210, 230)); // Light blue for city
+                    break;
+                case "cave":
+                    battlegroundPanel.setBackground(new Color(100, 100, 120)); // Dark gray for cave
+                    break;
+                case "route":
+                default:
+                    battlegroundPanel.setBackground(new Color(144, 238, 144)); // Light green for routes
+                    break;
+            }
+        }
+        
         battlegroundPanel.setPreferredSize(new Dimension(800, 400));
-        battlegroundPanel.setBackground(new Color(144, 238, 144)); // Light green background like in GBA games
-        
-        // Create battle platform for wild Pokémon (enemy)
-        JPanel enemyPlatform = new JPanel();
-        enemyPlatform.setBounds(500, 150, 200, 30);
-        enemyPlatform.setBackground(new Color(210, 180, 140)); // Tan platform
-        battlegroundPanel.add(enemyPlatform);
-        
-        // Create battle platform for player Pokémon
-        JPanel playerPlatform = new JPanel();
-        playerPlatform.setBounds(150, 250, 200, 30);
-        playerPlatform.setBackground(new Color(210, 180, 140)); // Tan platform
-        battlegroundPanel.add(playerPlatform);
         
         // Wild Pokémon sprite - positioned on top of enemy platform
         wildPokemonImage = new JLabel();
-        wildPokemonImage.setBounds(500, 50, 150, 150);
+        wildPokemonImage.setBounds(450, 140, 150, 150);
         wildPokemonImage.setIcon(loadPokemonImage(wildPokemon, true));
         battlegroundPanel.add(wildPokemonImage);
-        
+
         // Player Pokémon sprite - positioned on top of player platform
         playerPokemonImage = new JLabel();
-        playerPokemonImage.setBounds(150, 150, 150, 150);
+        playerPokemonImage.setBounds(175, 190, 150, 150);
         playerPokemonImage.setIcon(loadPokemonImage(playerPokemon, false));
         battlegroundPanel.add(playerPokemonImage);
         
@@ -172,7 +220,7 @@ public class BattleScreen extends JFrame {
         
         // Player Pokémon info box (like in the image - bottom right)
         JPanel playerInfoBox = new JPanel(null);
-        playerInfoBox.setBounds(500, 250, 250, 80);
+        playerInfoBox.setBounds(475, 300, 250, 80);
         playerInfoBox.setBackground(new Color(248, 248, 240));
         playerInfoBox.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         
@@ -210,7 +258,7 @@ public class BattleScreen extends JFrame {
     
     private void createActionPanel() {
         actionPanel = new JPanel(new BorderLayout());
-        actionPanel.setPreferredSize(new Dimension(800, 150));
+        actionPanel.setPreferredSize(new Dimension(800, 180)); // Increased from 150
         
         // Create the message box (top part of action panel)
         JPanel messageBox = new JPanel();
@@ -218,15 +266,19 @@ public class BattleScreen extends JFrame {
         messageBox.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         messageBox.setLayout(new BorderLayout());
         
-        battleMessageLabel = new JLabel("What will " + playerPokemon.getName() + " do?");
+        if (battleMessageLabel != null) {
+            battleMessageLabel.setText("What will " + playerPokemon.getName() + " do?");
+        } else {
+            battleMessageLabel = new JLabel("What will " + playerPokemon.getName() + " do?");
+        }
         battleMessageLabel.setFont(new Font("Arial", Font.BOLD, 16));
         battleMessageLabel.setBorder(new EmptyBorder(10, 20, 10, 20));
         messageBox.add(battleMessageLabel, BorderLayout.CENTER);
         
         // Create the button panel (bottom part of action panel)
-        JPanel buttonPanel = new JPanel(new GridLayout(2, 2, 2, 2));
+        JPanel buttonPanel = new JPanel(new GridLayout(2, 2, 5, 5)); // Increased gap from 2,2
         buttonPanel.setBackground(new Color(80, 80, 80));
-        buttonPanel.setBorder(new EmptyBorder(2, 2, 2, 2));
+        buttonPanel.setBorder(new EmptyBorder(5, 5, 5, 5)); // Increased padding
         
         fightButton = createActionButton("FIGHT", new Color(240, 80, 80));
         bagButton = createActionButton("BAG", new Color(80, 80, 240));
@@ -250,17 +302,21 @@ public class BattleScreen extends JFrame {
     
     private JButton createActionButton(String text, Color bgColor) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Arial", Font.BOLD, 18));
+        button.setFont(new Font("Arial", Font.BOLD, 20)); // Increased from 18
         button.setBackground(bgColor);
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setBorder(new LineBorder(Color.BLACK, 2));
+        
+        // Set preferred size to make buttons larger
+        button.setPreferredSize(new Dimension(150, 60)); // Added explicit size
+        
         return button;
     }
     
     private void createMovePanel() {
         // Create a new panel with GridLayout for the moves
-        JPanel movesGrid = new JPanel(new GridLayout(2, 2, 5, 5));
+        JPanel movesGrid = new JPanel(new GridLayout(2, 2, 8, 8)); // Increased gap
         movesGrid.setBackground(new Color(240, 240, 240));
         
         // Debug the available moves
@@ -292,14 +348,16 @@ public class BattleScreen extends JFrame {
         JPanel ppPanel = new JPanel(new BorderLayout());
         ppPanel.setBackground(new Color(240, 240, 240));
         ppLabel = new JLabel("PP: --/--");
+        ppLabel.setFont(new Font("Arial", Font.BOLD, 16)); // Increased font size
         ppPanel.add(ppLabel, BorderLayout.WEST);
         
         // Add back button
         JPanel backPanel = new JPanel(new BorderLayout());
         backPanel.setBackground(new Color(240, 240, 240));
         backButton = new JButton("Back");
-        backButton.setFont(new Font("Arial", Font.BOLD, 16));
+        backButton.setFont(new Font("Arial", Font.BOLD, 18)); // Increased from 16
         backButton.setBackground(new Color(200, 200, 200));
+        backButton.setPreferredSize(new Dimension(100, 40)); // Added explicit size
         backButton.addActionListener(e -> showActionPanel());
         backPanel.add(backButton, BorderLayout.EAST);
         
@@ -335,9 +393,10 @@ public class BattleScreen extends JFrame {
             button.setBackground(Color.GRAY);
         }
         
-        button.setFont(new Font("Arial", Font.BOLD, 16));
+        button.setFont(new Font("Arial", Font.BOLD, 18)); // Increased from 16
         button.setFocusPainted(false);
         button.setBorder(new LineBorder(Color.BLACK, 2));
+        button.setPreferredSize(new Dimension(140, 50)); // Added explicit size
         
         return button;
     }
@@ -348,13 +407,19 @@ public class BattleScreen extends JFrame {
         infoPanel.setBorder(new LineBorder(Color.BLACK, 2));
         infoPanel.setBackground(Color.WHITE);
         
-        battleMessageLabel = new JLabel("A wild " + wildPokemon.getName() + " appeared!");
+        // Don't create a new label here, just set the text on the existing one
+        if (battleMessageLabel == null) {
+            battleMessageLabel = new JLabel("A wild " + wildPokemon.getName() + " appeared!");
+        } else {
+            battleMessageLabel.setText("A wild " + wildPokemon.getName() + " appeared!");
+        }
+        
         battleMessageLabel.setFont(new Font("Arial", Font.BOLD, 18));
         battleMessageLabel.setHorizontalAlignment(JLabel.CENTER);
         battleMessageLabel.setBorder(new EmptyBorder(10, 10, 10, 10));
         
         infoPanel.add(battleMessageLabel, BorderLayout.CENTER);
-    }
+    }    
     
     private void startBattleSequence() {
         // Hide action panel initially
@@ -430,7 +495,19 @@ public class BattleScreen extends JFrame {
         
         // Calculate damage
         int damage = calculateDamage(playerPokemon, wildPokemon, move);
-        
+
+        // In the useMove method, after calculating damage:
+        double typeEffectiveness = calculateTypeEffectiveness(move.getType(), wildPokemon.getTypes());
+
+        // Add effectiveness message
+        if (typeEffectiveness > 1.9) {
+            battleMessageLabel.setText("It's super effective!");
+        } else if (typeEffectiveness < 0.1) {
+            battleMessageLabel.setText("It has no effect...");
+        } else if (typeEffectiveness < 0.6) {
+            battleMessageLabel.setText("It's not very effective...");
+        }
+        repaint();
         // Create animation sequence for attack
         animationTimer = new Timer(1000, new ActionListener() {
             @Override
@@ -469,13 +546,7 @@ public class BattleScreen extends JFrame {
                             battleMessageLabel.setText(playerPokemon.getName() + " fainted!");
                             battleEnded = true;
                         } else {
-                            // Return to action selection
-                            battleMessageLabel.setText("What will " + playerPokemon.getName() + " do?");
-                            animationTimer.stop();
-                            animationStep = 0;
-                            playerTurn = true;
-                            
-                            mainPanel.remove(infoPanel);
+                            createActionPanel();
                             mainPanel.add(actionPanel, BorderLayout.SOUTH);
                             mainPanel.revalidate();
                             mainPanel.repaint();
@@ -614,100 +685,13 @@ public class BattleScreen extends JFrame {
     }
     
     private double calculateTypeEffectiveness(Pokemon.PokemonType moveType, List<Pokemon.PokemonType> defenderTypes) {
-        // This is a simplified type effectiveness calculation
-        // In a real implementation, you would have a complete type chart
-        
-        double effectiveness = 1.0;
-        
-        for (Pokemon.PokemonType defenderType : defenderTypes) {
-            // Super effective combinations
-            if ((moveType == Pokemon.PokemonType.WATER && defenderType == Pokemon.PokemonType.FIRE) ||
-                (moveType == Pokemon.PokemonType.FIRE && defenderType == Pokemon.PokemonType.GRASS) ||
-                (moveType == Pokemon.PokemonType.GRASS && defenderType == Pokemon.PokemonType.WATER)) {
-                effectiveness *= 2.0;
-            }
-            
-            // Not very effective combinations
-            else if ((moveType == Pokemon.PokemonType.WATER && defenderType == Pokemon.PokemonType.GRASS) ||
-                     (moveType == Pokemon.PokemonType.FIRE && defenderType == Pokemon.PokemonType.WATER) ||
-                     (moveType == Pokemon.PokemonType.GRASS && defenderType == Pokemon.PokemonType.FIRE)) {
-                effectiveness *= 0.5;
-            }
-        }
-        
-        return effectiveness;
+        // Use the TypeEffectivenessChart to get the effectiveness
+        return TypeEffectivenessChart.getInstance().getEffectiveness(moveType, defenderTypes);
     }
-    
+
     private void openBag() {
-        // Create a panel for the bag interface
-        JPanel bagPanel = new JPanel();
-        bagPanel.setLayout(new BoxLayout(bagPanel, BoxLayout.Y_AXIS));
-        bagPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
-        bagPanel.setBackground(new Color(248, 248, 240));
-        
-        // Add a title label
-        JLabel titleLabel = new JLabel("Bag");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        bagPanel.add(titleLabel);
-        bagPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-        
-        // Get items from player's inventory
-        Set<Item> inventory = player.getInventory();
-        
-        if (inventory.isEmpty()) {
-            JLabel emptyLabel = new JLabel("Your bag is empty!");
-            emptyLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-            bagPanel.add(emptyLabel);
-        } else {
-            // Create a scroll pane for items
-            JPanel itemsPanel = new JPanel();
-            itemsPanel.setLayout(new BoxLayout(itemsPanel, BoxLayout.Y_AXIS));
-            itemsPanel.setBackground(Color.WHITE);
-            
-            for (Item item : inventory) {
-                JPanel itemPanel = new JPanel(new BorderLayout());
-                itemPanel.setBackground(Color.WHITE);
-                itemPanel.setBorder(new LineBorder(Color.LIGHT_GRAY));
-                itemPanel.setMaximumSize(new Dimension(700, 40));
-                
-                // Item name and quantity
-                JLabel itemLabel = new JLabel(item.getName() + " x" + item.getQuantity());
-                itemLabel.setFont(new Font("Arial", Font.PLAIN, 14));
-                itemPanel.add(itemLabel, BorderLayout.WEST);
-                
-                // Use button
-                JButton useButton = new JButton("Use");
-                useButton.addActionListener(e -> {
-                    useItem(item);
-                    mainPanel.remove(bagPanel);
-                    mainPanel.add(infoPanel, BorderLayout.SOUTH);
-                    mainPanel.revalidate();
-                    mainPanel.repaint();
-                });
-                itemPanel.add(useButton, BorderLayout.EAST);
-                
-                itemsPanel.add(itemPanel);
-                itemsPanel.add(Box.createRigidArea(new Dimension(0, 5)));
-            }
-            
-            JScrollPane scrollPane = new JScrollPane(itemsPanel);
-            scrollPane.setPreferredSize(new Dimension(700, 200));
-            scrollPane.setBorder(null);
-            bagPanel.add(scrollPane);
-        }
-        
-        // Add back button
-        bagPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-        JButton backButton = new JButton("Back");
-        backButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        backButton.addActionListener(e -> {
-            mainPanel.remove(bagPanel);
-            mainPanel.add(actionPanel, BorderLayout.SOUTH);
-            mainPanel.revalidate();
-            mainPanel.repaint();
-        });
-        bagPanel.add(backButton);
+        // Create the main bag panel
+        JPanel bagPanel = createMainBagPanel();
         
         // Show the bag panel
         mainPanel.remove(actionPanel);
@@ -715,27 +699,257 @@ public class BattleScreen extends JFrame {
         mainPanel.revalidate();
         mainPanel.repaint();
     }
+    
+    private JPanel createMainBagPanel() {
+        // Create a panel for the bag interface
+        JPanel bagPanel = new JPanel(new BorderLayout());
+        bagPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        bagPanel.setBackground(new Color(248, 248, 240));
+        
+        // Add a title label
+        JLabel titleLabel = new JLabel("Bag");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setHorizontalAlignment(JLabel.CENTER);
+        bagPanel.add(titleLabel, BorderLayout.NORTH);
+        
+        // Create a panel for category buttons
+        JPanel categoryPanel = new JPanel(new GridLayout(0, 1, 10, 10));
+        categoryPanel.setBorder(new EmptyBorder(20, 50, 20, 50));
+        categoryPanel.setBackground(new Color(248, 248, 240));
+        
+        // Add Medicine button
+        JButton medicineButton = createCategoryButton("Medicine", new Color(255, 102, 102));
+        medicineButton.addActionListener(e -> {
+            showItemCategory("Medicine");
+        });
+        categoryPanel.add(medicineButton);
+        
+        // Add Poké Balls button (only for wild battles)
+        if (isWildBattle) {
+            JButton pokeballsButton = createCategoryButton("Poké Balls", new Color(102, 178, 255));
+            pokeballsButton.addActionListener(e -> {
+                showItemCategory("Poké Balls");
+            });
+            categoryPanel.add(pokeballsButton);
+        }
+        
+        // Add Berries button
+        JButton berriesButton = createCategoryButton("Berries", new Color(102, 255, 102));
+        berriesButton.addActionListener(e -> {
+            showItemCategory("Berries");
+        });
+        categoryPanel.add(berriesButton);
+        
+        // Add back button
+        JButton backButton = new JButton("Back");
+        backButton.setFont(new Font("Arial", Font.BOLD, 14));
+        backButton.addActionListener(e -> {
+            mainPanel.remove(bagPanel);
+            mainPanel.add(actionPanel, BorderLayout.SOUTH);
+            mainPanel.revalidate();
+            mainPanel.repaint();
+        });
+        
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(backButton);
+        bagPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Add category panel to bag panel
+        bagPanel.add(categoryPanel, BorderLayout.CENTER);
+        
+        return bagPanel;
+    }
+    
+    private JButton createCategoryButton(String text, Color color) {
+        JButton button = new JButton(text);
+        button.setFont(new Font("Arial", Font.BOLD, 16));
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createRaisedBevelBorder());
+        button.setPreferredSize(new Dimension(200, 50));
+        return button;
+    }
+
+    private void showItemCategory(String category) {
+        // Get player's inventory
+        Set<Item> inventory = player.getInventory();
+        
+        // Filter items by category
+        List<Item> categoryItems = new ArrayList<>();
+        for (Item item : inventory) {
+            String itemType = getItemType(item);
+            if (itemType.equals(category)) {
+                categoryItems.add(item);
+            }
+        }
+        
+        // Create a panel for the category items
+        currentCategoryPanel = new JPanel(new BorderLayout());
+        currentCategoryPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+        currentCategoryPanel.setBackground(new Color(248, 248, 240));
+        
+        // Add a title label
+        JLabel titleLabel = new JLabel(category);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setHorizontalAlignment(JLabel.CENTER);
+        currentCategoryPanel.add(titleLabel, BorderLayout.NORTH);
+        
+        // Create a panel for the items
+        JPanel itemsPanel = new JPanel();
+        itemsPanel.setLayout(new BoxLayout(itemsPanel, BoxLayout.Y_AXIS));
+        itemsPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        if (categoryItems.isEmpty()) {
+            JLabel emptyLabel = new JLabel("No " + category + " available", JLabel.CENTER);
+            emptyLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+            itemsPanel.add(emptyLabel);
+        } else {
+            // Add each item to the panel
+            for (Item item : categoryItems) {
+                JPanel itemPanel = new JPanel(new BorderLayout());
+                itemPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+                itemPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+                
+                // Item image on the left
+                JPanel imagePanel = new JPanel() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        if (item.getImage() != null) {
+                            Image img = item.getImage();
+                            int size = Math.min(getWidth(), getHeight()) - 10;
+                            g.drawImage(img, (getWidth() - size)/2, (getHeight() - size)/2, size, size, this);
+                        }
+                    }
+                };
+                imagePanel.setPreferredSize(new Dimension(50, 50));
+                
+                // Item name and quantity
+                JLabel nameLabel = new JLabel(item.getName() + " x" + item.getQuantity());
+                nameLabel.setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 0));
+                
+                // Use button
+                JButton useButton = new JButton("Use");
+                useButton.addActionListener(e -> {
+                    useItem(item);
+                    
+                    // Find the category panel and remove it safely
+                    mainPanel.remove(currentCategoryPanel);
+                    mainPanel.add(infoPanel, BorderLayout.SOUTH);
+                    mainPanel.revalidate();
+                    mainPanel.repaint();
+                });
+                
+                // Add components to the item panel
+                itemPanel.add(imagePanel, BorderLayout.WEST);
+                itemPanel.add(nameLabel, BorderLayout.CENTER);
+                itemPanel.add(useButton, BorderLayout.EAST);
+                
+                // Add to the items panel with some spacing
+                itemsPanel.add(itemPanel);
+                itemsPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+            }
+        }
+        
+        // Create scroll pane
+        JScrollPane scrollPane = new JScrollPane(itemsPanel);
+        scrollPane.setBorder(null);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        
+        currentCategoryPanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Add back button
+        JButton backButton = new JButton("Back to Bag");
+        backButton.setFont(new Font("Arial", Font.BOLD, 14));
+        backButton.addActionListener(e -> {
+            // Remove the current category panel first
+            mainPanel.remove(currentCategoryPanel);
+            
+            // Then create a new bag panel
+            JPanel bagPanel = createMainBagPanel();
+            
+            // Add the bag panel to the main panel
+            mainPanel.add(bagPanel, BorderLayout.SOUTH);
+            mainPanel.revalidate();
+            mainPanel.repaint();
+        });
+        
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.add(backButton);
+        currentCategoryPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Show the category panel
+        // First, remove whatever is currently in the SOUTH position
+        for (Component comp : mainPanel.getComponents()) {
+            if (mainPanel.getLayout() instanceof BorderLayout) {
+                Object constraints = ((BorderLayout)mainPanel.getLayout()).getConstraints(comp);
+                if (constraints != null && constraints.equals(BorderLayout.SOUTH)) {
+                    mainPanel.remove(comp);
+                    break;
+                }
+            }
+        }
+        
+        mainPanel.add(currentCategoryPanel, BorderLayout.SOUTH);
+        mainPanel.revalidate();
+        mainPanel.repaint();
+    }
+
+    private String getItemType(Item item) {
+        String name = item.getName().toLowerCase();
+        
+        if (name.contains("ball") && !name.contains("berry")) {
+            return "Poké Balls";
+        } else if (name.contains("potion") || name.contains("revive") || 
+                   name.contains("heal") || name.contains("ether") || 
+                   name.contains("elixir") || name.contains("medicine")) {
+            return "Medicine";
+        } else if (name.contains("berry")) {
+            return "Berries";
+        } else if (name.contains("rod") || name.contains("key") || 
+                   name.contains("ticket") || name.contains("card") || 
+                   name.contains("scope") || name.contains("flute")) {
+            return "Key Items";
+        } else {
+            return "Items";
+        }
+    }    
 
     private void useItem(Item item) {
+        String itemName = item.getName().toLowerCase();
+        
+        // Check if this is a Poké Ball and we're in a trainer battle
+        if (!isWildBattle && itemName.contains("ball") && !itemName.contains("berry")) {
+            showInfoPanel("You can't use Poké Balls in a trainer battle!");
+            
+            Timer returnTimer = new Timer(1500, e -> {
+                openBag(); // Reopen the bag
+            });
+            returnTimer.setRepeats(false);
+            returnTimer.start();
+            return;
+        }
+        
         // Show item use message
         showInfoPanel("Used " + item.getName() + "!");
         
         // Process item effects based on item type
         boolean itemUsed = false;
         
-        if (item.getName().toLowerCase().contains("ball")) {
+        if (itemName.contains("ball") && !itemName.contains("berry")) {
             // Pokéball - attempt to catch the wild Pokémon
-            attemptCatch(item);
+            attemptCatch((Pokeball) item);
             itemUsed = true;
-        } else if (item.getName().toLowerCase().contains("potion")) {
+        } else if (itemName.contains("potion") || itemName.contains("heal")) {
             // Potion - heal the active Pokémon
             int healAmount = 20; // Basic potion
             
-            if (item.getName().toLowerCase().contains("super")) {
+            if (itemName.contains("super")) {
                 healAmount = 50;
-            } else if (item.getName().toLowerCase().contains("hyper")) {
+            } else if (itemName.contains("hyper")) {
                 healAmount = 200;
-            } else if (item.getName().toLowerCase().contains("max")) {
+            } else if (itemName.contains("max")) {
                 healAmount = playerPokemon.getStats().getMaxHp();
             }
             
@@ -745,6 +959,7 @@ public class BattleScreen extends JFrame {
             
             playerPokemon.getStats().setCurrentHp(newHP);
             updatePlayerPokemonHP();
+            itemUsed = true;
             
             // Create animation sequence for healing
             animationTimer = new Timer(1000, new ActionListener() {
@@ -786,8 +1001,69 @@ public class BattleScreen extends JFrame {
             // Reset animation step and start timer
             animationStep = 0;
             animationTimer.start();
+        } else if (itemName.contains("berry")) {
+            // Berry effects
+            if (itemName.contains("oran")) {
+                // Heal 10 HP
+                int currentHP = playerPokemon.getStats().getCurrentHp();
+                int maxHP = playerPokemon.getStats().getMaxHp();
+                int newHP = Math.min(currentHP + 10, maxHP);
+                
+                playerPokemon.getStats().setCurrentHp(newHP);
+                updatePlayerPokemonHP();
+                itemUsed = true;
+            } else if (itemName.contains("sitrus")) {
+                // Heal 25% of max HP
+                int maxHP = playerPokemon.getStats().getMaxHp();
+                int healAmount = maxHP / 4;
+                int currentHP = playerPokemon.getStats().getCurrentHp();
+                int newHP = Math.min(currentHP + healAmount, maxHP);
+                
+                playerPokemon.getStats().setCurrentHp(newHP);
+                updatePlayerPokemonHP();
+                itemUsed = true;
+            }
             
-            itemUsed = true;
+            // Create animation sequence for berry effects
+            animationTimer = new Timer(1000, new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    animationStep++;
+                    
+                    switch (animationStep) {
+                        case 1:
+                            battleMessageLabel.setText(playerPokemon.getName() + " ate the " + item.getName() + "!");
+                            break;
+                        case 2:
+                            // Wild Pokémon's turn after using item
+                            playerTurn = false;
+                            wildPokemonAttack();
+                            break;
+                        case 3:
+                            if (playerPokemon.getStats().getCurrentHp() <= 0) {
+                                // Player Pokémon fainted
+                                battleMessageLabel.setText(playerPokemon.getName() + " fainted!");
+                                battleEnded = true;
+                            } else {
+                                // Return to action selection
+                                battleMessageLabel.setText("What will " + playerPokemon.getName() + " do?");
+                                animationTimer.stop();
+                                animationStep = 0;
+                                playerTurn = true;
+                                
+                                mainPanel.remove(infoPanel);
+                                mainPanel.add(actionPanel, BorderLayout.SOUTH);
+                                mainPanel.revalidate();
+                                mainPanel.repaint();
+                            }
+                            break;
+                    }
+                }
+            });
+            
+            // Reset animation step and start timer
+            animationStep = 0;
+            animationTimer.start();
         }
         
         // Decrease item quantity if used
@@ -799,18 +1075,9 @@ public class BattleScreen extends JFrame {
         }
     }
 
-    private void attemptCatch(Item pokeball) {
+    private void attemptCatch(Pokeball pokeball) {
         // Calculate catch rate
-        double catchRate = 0.5; // Base catch rate
-        
-        // Adjust based on pokeball type
-        if (pokeball.getName().toLowerCase().contains("great")) {
-            catchRate = 0.7;
-        } else if (pokeball.getName().toLowerCase().contains("ultra")) {
-            catchRate = 0.85;
-        } else if (pokeball.getName().toLowerCase().contains("master")) {
-            catchRate = 1.0;
-        }
+        double catchRate = pokeball.getCatchRate();
         
         // Adjust based on remaining HP percentage
         double hpFactor = 1.0 - ((double) wildPokemon.getStats().getCurrentHp() / wildPokemon.getStats().getMaxHp()) * 0.7;
@@ -882,7 +1149,13 @@ public class BattleScreen extends JFrame {
                 showInfoPanel("But you have no other Pokémon to switch to!");
                 
                 Timer returnTimer = new Timer(1500, event -> {
-                    mainPanel.remove(infoPanel);
+                    // Clean up panels before adding action panel
+                    for (Component comp : mainPanel.getComponents()) {
+                        if (comp != battlegroundPanel) {
+                            mainPanel.remove(comp);
+                        }
+                    }
+                    
                     mainPanel.add(actionPanel, BorderLayout.SOUTH);
                     mainPanel.revalidate();
                     mainPanel.repaint();
@@ -894,93 +1167,160 @@ public class BattleScreen extends JFrame {
             switchTimer.start();
         } else {
             // Create a panel to display the player's Pokémon team
-            JPanel pokemonSelectionPanel = new JPanel();
-            pokemonSelectionPanel.setLayout(new BoxLayout(pokemonSelectionPanel, BoxLayout.Y_AXIS));
+            JPanel pokemonSelectionPanel = new JPanel(new BorderLayout());
             pokemonSelectionPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
             pokemonSelectionPanel.setBackground(new Color(248, 248, 240));
             
             // Add a title label
-            JLabel titleLabel = new JLabel("Choose a Pokémon to switch to:");
-            titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-            titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-            pokemonSelectionPanel.add(titleLabel);
-            pokemonSelectionPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+            JLabel titleLabel = new JLabel("Choose a Pokémon to switch to:", JLabel.CENTER);
+            titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+            pokemonSelectionPanel.add(titleLabel, BorderLayout.NORTH);
             
-            // Create a button for each Pokémon in the team
+            // Create a panel for the Pokémon list (similar to menu)
+            JPanel pokemonListPanel = new JPanel();
+            pokemonListPanel.setLayout(new BoxLayout(pokemonListPanel, BoxLayout.Y_AXIS));
+            pokemonListPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+            
+            // Add each Pokémon to the list
             for (Pokemon pokemon : player.getTeam()) {
                 // Skip the current Pokémon and fainted Pokémon
                 if (pokemon == playerPokemon || pokemon.getStats().getCurrentHp() <= 0) {
                     continue;
                 }
                 
-                // Create a panel for each Pokémon with info
-                JPanel pokemonPanel = new JPanel(new BorderLayout(10, 0));
+                // Create a panel for each Pokémon in the list (similar to menu)
+                JPanel pokemonPanel = new JPanel(new BorderLayout());
+                pokemonPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
+                pokemonPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 60));
                 pokemonPanel.setBackground(Color.WHITE);
-                pokemonPanel.setBorder(new LineBorder(Color.BLACK, 1));
-                pokemonPanel.setMaximumSize(new Dimension(700, 50));
                 
-                // Add Pokémon name and level
+                // Create a PokemonView to handle drawing
+                PokemonView pokemonView = new PokemonView(pokemon);
+                
+                // Create a custom panel to display the Pokémon sprite
+                JPanel spritePanel = new JPanel() {
+                    @Override
+                    protected void paintComponent(Graphics g) {
+                        super.paintComponent(g);
+                        // Draw the Pokémon icon (using PokemonView)
+                        pokemonView.draw(g, this, 5, 5, getWidth() - 10, getHeight() - 10, false, pokemon.getIsShiny());
+                    }
+                };
+                spritePanel.setPreferredSize(new Dimension(60, 60));
+                
+                // Create info panel with name and HP
+                JPanel infoPanel = new JPanel(new BorderLayout(5, 5));
+                infoPanel.setBackground(Color.WHITE);
+                
+                // Pokémon name and level
                 JLabel nameLabel = new JLabel(pokemon.getName() + " (Lv. " + pokemon.getLevel() + ")");
                 nameLabel.setFont(new Font("Arial", Font.BOLD, 14));
-                pokemonPanel.add(nameLabel, BorderLayout.WEST);
+                infoPanel.add(nameLabel, BorderLayout.NORTH);
                 
-                // Add HP info
-                int currentHP = pokemon.getStats().getCurrentHp();
-                int maxHP = pokemon.getStats().getMaxHp();
-                JProgressBar hpBar = new JProgressBar(0, maxHP);
-                hpBar.setValue(currentHP);
+                // HP bar similar to menu
+                JProgressBar hpBar = new JProgressBar(0, pokemon.getStats().getMaxHp());
+                hpBar.setValue(pokemon.getStats().getCurrentHp());
                 hpBar.setStringPainted(true);
-                hpBar.setString("HP: " + currentHP + "/" + maxHP);
+                hpBar.setString("HP: " + pokemon.getStats().getCurrentHp() + "/" + pokemon.getStats().getMaxHp());
                 
                 // Set color based on HP percentage
-                float percentage = (float) currentHP / maxHP;
+                float percentage = (float) pokemon.getStats().getCurrentHp() / pokemon.getStats().getMaxHp();
                 if (percentage < 0.2) {
                     hpBar.setForeground(Color.RED);
                 } else if (percentage < 0.5) {
                     hpBar.setForeground(Color.ORANGE);
                 } else {
-                    hpBar.setForeground(new Color(96, 192, 96));
+                    hpBar.setForeground(new Color(30, 201, 139));
                 }
                 
-                pokemonPanel.add(hpBar, BorderLayout.CENTER);
+                infoPanel.add(hpBar, BorderLayout.CENTER);
+                
+                // Display types
+                JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+                typePanel.setBackground(Color.WHITE);
+                
+                for (PokemonType type : pokemon.getTypes()) {
+                    JLabel typeLabel = new JLabel(type.name());
+                    typeLabel.setOpaque(true);
+                    typeLabel.setBackground(UIComponentFactory.getColorForType(type));
+                    typeLabel.setForeground(Color.WHITE);
+                    typeLabel.setFont(new Font("Arial", Font.BOLD, 10));
+                    typeLabel.setBorder(BorderFactory.createEmptyBorder(2, 4, 2, 4));
+                    typePanel.add(typeLabel);
+                }
+                
+                infoPanel.add(typePanel, BorderLayout.SOUTH);
                 
                 // Add select button
                 JButton selectButton = new JButton("Select");
+                selectButton.setBackground(new Color(30, 201, 139));
+                selectButton.setForeground(Color.WHITE);
+                selectButton.setFocusPainted(false);
                 selectButton.addActionListener(e -> {
                     performSwitch(pokemon);
-                    mainPanel.remove(pokemonSelectionPanel);
+                    
+                    // Clean up panels before adding info panel
+                    for (Component comp : mainPanel.getComponents()) {
+                        if (comp != battlegroundPanel) {
+                            mainPanel.remove(comp);
+                        }
+                    }
+                    
                     mainPanel.add(infoPanel, BorderLayout.SOUTH);
                     mainPanel.revalidate();
                     mainPanel.repaint();
                 });
+                
+                // Add components to the Pokémon panel
+                pokemonPanel.add(spritePanel, BorderLayout.WEST);
+                pokemonPanel.add(infoPanel, BorderLayout.CENTER);
                 pokemonPanel.add(selectButton, BorderLayout.EAST);
                 
-                pokemonSelectionPanel.add(pokemonPanel);
-                pokemonSelectionPanel.add(Box.createRigidArea(new Dimension(0, 5)));
+                // Add to the list with spacing
+                pokemonListPanel.add(pokemonPanel);
+                pokemonListPanel.add(Box.createRigidArea(new Dimension(0, 5)));
             }
+            
+            // Create a scroll pane for the list
+            JScrollPane scrollPane = new JScrollPane(pokemonListPanel);
+            scrollPane.setBorder(null);
+            scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            pokemonSelectionPanel.add(scrollPane, BorderLayout.CENTER);
             
             // Add back button
             JButton backButton = new JButton("Back");
-            backButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+            backButton.setFont(new Font("Arial", Font.BOLD, 14));
             backButton.addActionListener(e -> {
-                mainPanel.remove(pokemonSelectionPanel);
+                // Clean up panels before adding action panel
+                for (Component comp : mainPanel.getComponents()) {
+                    if (comp != battlegroundPanel) {
+                        mainPanel.remove(comp);
+                    }
+                }
+                
                 mainPanel.add(actionPanel, BorderLayout.SOUTH);
                 mainPanel.revalidate();
                 mainPanel.repaint();
             });
             
-            pokemonSelectionPanel.add(Box.createRigidArea(new Dimension(0, 10)));
-            pokemonSelectionPanel.add(backButton);
+            JPanel buttonPanel = new JPanel();
+            buttonPanel.add(backButton);
+            pokemonSelectionPanel.add(buttonPanel, BorderLayout.SOUTH);
+            
+            // Clean up panels before adding Pokémon selection panel
+            for (Component comp : mainPanel.getComponents()) {
+                if (comp != battlegroundPanel) {
+                    mainPanel.remove(comp);
+                }
+            }
             
             // Show the Pokémon selection panel
-            mainPanel.remove(actionPanel);
             mainPanel.add(pokemonSelectionPanel, BorderLayout.SOUTH);
             mainPanel.revalidate();
             mainPanel.repaint();
         }
-    }
-    
-    // Helper method to perform the actual switch
+    }    
+
     private void performSwitch(Pokemon newPokemon) {
         // Show switch message
         showInfoPanel(playerPokemon.getName() + ", come back!");
@@ -1011,7 +1351,7 @@ public class BattleScreen extends JFrame {
                         
                         // Update color based on HP percentage
                         float percentage = (float) playerPokemon.getStats().getCurrentHp() / 
-                                          playerPokemon.getStats().getMaxHp();
+                                        playerPokemon.getStats().getMaxHp();
                         if (percentage < 0.2) {
                             playerPokemonHP.setForeground(Color.RED);
                         } else if (percentage < 0.5) {
@@ -1026,46 +1366,31 @@ public class BattleScreen extends JFrame {
                         wildPokemonAttack();
                         break;
                     case 3:
-                        if (playerPokemon.getStats().getCurrentHp() <= 0) {
-                            // Player Pokémon fainted
-                            battleMessageLabel.setText(playerPokemon.getName() + " fainted!");
-                            
-                            // Check if player has any usable Pokémon left
-                            boolean hasUsablePokemon = false;
-                            for (Pokemon p : player.getTeam()) {
-                                if (p.getStats().getCurrentHp() > 0) {
-                                    hasUsablePokemon = true;
-                                    break;
-                                }
+                    if (playerPokemon.getStats().getCurrentHp() <= 0) {
+                        battleMessageLabel.setText(playerPokemon.getName() + " fainted!");
+                    } else {
+                        // Return to action selection
+                        battleMessageLabel.setText("What will " + playerPokemon.getName() + " do?");
+                        
+                        // Recreate the action panel to ensure it has the updated message
+                        createActionPanel();
+                        
+                        animationTimer.stop();
+                        animationStep = 0;
+                        playerTurn = true;
+                        
+                        // Ensure we're removing the correct panel
+                        for (Component comp : mainPanel.getComponents()) {
+                            if (comp != battlegroundPanel) {
+                                mainPanel.remove(comp);
                             }
-                            
-                            if (hasUsablePokemon) {
-                                // Force player to switch again
-                                Timer forceSwitch = new Timer(1500, event -> switchPokemon());
-                                forceSwitch.setRepeats(false);
-                                forceSwitch.start();
-                            } else {
-                                // All Pokémon fainted, battle is over
-                                battleEnded = true;
-                                battleMessageLabel.setText("You have no usable Pokémon left!");
-                                
-                                Timer closeTimer = new Timer(2000, event -> dispose());
-                                closeTimer.setRepeats(false);
-                                closeTimer.start();
-                            }
-                        } else {
-                            // Return to action selection
-                            battleMessageLabel.setText("What will " + playerPokemon.getName() + " do?");
-                            animationTimer.stop();
-                            animationStep = 0;
-                            playerTurn = true;
-                            
-                            mainPanel.remove(infoPanel);
-                            mainPanel.add(actionPanel, BorderLayout.SOUTH);
-                            mainPanel.revalidate();
-                            mainPanel.repaint();
                         }
-                        break;
+                        
+                        mainPanel.add(actionPanel, BorderLayout.SOUTH);
+                        mainPanel.revalidate();
+                        mainPanel.repaint();
+                    }
+                    break;
                 }
             }
         });
@@ -1163,6 +1488,4 @@ public class BattleScreen extends JFrame {
         
         return new ImageIcon(image);
     }
-    
-    
 }
