@@ -15,40 +15,69 @@ public class PokemonFactory {
     }
     
     public static Pokemon createPokemon(int dexNumber, int level, String name) {
-        // If name is null, look it up from the PokemonStatsLoader
+        // If name is null or empty, look it up from the PokemonStatsLoader
         if (name == null || name.isEmpty()) {
             name = PokemonStatsLoader.getInstance().getPokemonName(dexNumber);
-            
-            // If still null (maybe the Pokémon doesn't exist in the database),
-            // use a default name based on dex number
-            if (name == null || name.isEmpty()) {
-                name = "Pokemon #" + dexNumber;
-            }
+        }
+        
+        // If still null or problematic, use a fallback
+        if (name == null || name.isEmpty() || name.equals("Unknown")) {
+            name = "Pokemon #" + dexNumber;
         }
         
         return new GenericPokemon(dexNumber, level, name);
     }
     
     public static PokemonType stringToType(String typeString) {
-        if (typeString == null || typeString.isEmpty()) {
+        if (typeString == null || typeString.isEmpty() || "NULL".equals(typeString)) {
             return null;
         }
         
-        // Convert to uppercase and trim any whitespace
-        String normalizedType = typeString.toUpperCase().trim();
+        // Convert to uppercase and trim any whitespace, remove quotes
+        String normalizedType = typeString.replace("\"", "").toUpperCase().trim();
         
-        // Handle special cases with spaces (like "Mr. Mime")
-        if (normalizedType.contains(" ")) {
-            normalizedType = normalizedType.replace(" ", "_");
+        // Handle special cases and normalize type names from CSV
+        switch (normalizedType) {
+            case "NORMAL":
+                return PokemonType.NORMAL;
+            case "FIRE":
+                return PokemonType.FIRE;
+            case "WATER":
+                return PokemonType.WATER;
+            case "ELECTRIC":
+                return PokemonType.ELECTRIC;
+            case "GRASS":
+                return PokemonType.GRASS;
+            case "ICE":
+                return PokemonType.ICE;
+            case "FIGHTING":
+                return PokemonType.FIGHTING;
+            case "POISON":
+                return PokemonType.POISON;
+            case "GROUND":
+                return PokemonType.GROUND;
+            case "FLYING":
+                return PokemonType.FLYING;
+            case "PSYCHIC":
+                return PokemonType.PSYCHIC;
+            case "BUG":
+                return PokemonType.BUG;
+            case "ROCK":
+                return PokemonType.ROCK;
+            case "GHOST":
+                return PokemonType.GHOST;
+            case "DRAGON":
+                return PokemonType.DRAGON;
+            case "DARK":
+                return PokemonType.DARK;
+            case "STEEL":
+                return PokemonType.STEEL;
+            case "FAIRY":
+                return PokemonType.FAIRY;
+            default:
+                System.out.println("Unknown type: " + typeString + " - defaulting to NORMAL");
+                return PokemonType.NORMAL;
         }
-        
-        // Try to get the type, return NORMAL if not found
-        PokemonType type = typeMap.get(normalizedType);
-        if (type == null) {
-            System.out.println("Unknown type: " + typeString);
-            return PokemonType.NORMAL; // Default to NORMAL if type not found
-        }
-        
-        return type;
-    }    
+    }
+    
 }

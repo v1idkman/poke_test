@@ -365,7 +365,30 @@ public class Stats {
         // Recalculate stats with the new EVs
         calculateStats(baseHp, baseAttack, baseDefense, baseSpeed, baseSpAtk, baseSpDef);
     }
+
+    /**
+     * Update stats when the Pokémon levels up
+     */
+    public void updateLevel(int newLevel) {
+        calculateStats(newLevel);
+    }
     
+    /**
+     * Calculate all stats based on base stats, IVs, EVs, and level
+     */
+    private void calculateStats(int level) {
+        // HP formula: ((2 * Base + IV + (EV/4)) * Level / 100) + Level + 10
+        this.maxHp = ((2 * baseHp + hpIV + (hpEV / 4)) * level / 100) + level + 10;
+        this.currentHp = maxHp; // Full health on level up
+        
+        // Other stats formula: ((2 * Base + IV + (EV/4)) * Level / 100) + 5
+        // Nature modifiers would be applied here in a full implementation
+        this.attack = ((2 * baseAttack + attackIV + (attackEV / 4)) * level / 100) + 5;
+        this.defense = ((2 * baseDefense + defenseIV + (defenseEV / 4)) * level / 100) + 5;
+        this.speed = ((2 * baseSpeed + speedIV + (speedEV / 4)) * level / 100) + 5;
+        this.specialAtk = ((2 * baseSpAtk + specialAtkIV + (specialAtkEV / 4)) * level / 100) + 5;
+        this.specialDef = ((2 * baseSpDef + specialDefIV + (specialDefEV / 4)) * level / 100) + 5;
+    }
 
     public int getAttack() {
         return attack;

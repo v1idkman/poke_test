@@ -288,6 +288,10 @@ public class Move {
     public StatModifier[] getStatModifiers() {
         return statModifiers;
     }
+
+    public void setPP(int pp) {
+        this.currentPP = Math.min(pp, maxPP);
+    }
     
     // For comparing moves
     @Override

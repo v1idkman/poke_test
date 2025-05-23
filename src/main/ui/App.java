@@ -32,10 +32,9 @@ public class App {
     static final int FIXED_HEIGHT = 640;
     static final int FIXED_WIDTH = 960;
 
-    // Add this method
-    private static void initPokemonData() {
-        PokemonStatsLoader statsLoader = PokemonStatsLoader.getInstance();
-        statsLoader.loadFromCSV("src/main/resources/pokemon_info.csv");
+    public static void initPokemonData() {
+        PokemonStatsLoader loader = PokemonStatsLoader.getInstance();
+        loader.loadFromCSV("/resources/pokemon_information.csv");
     }
 
     public static void initWorlds() {
@@ -152,7 +151,7 @@ public class App {
     private static void initPokemon() {
         Pokemon charizard = PokemonFactory.createPokemon(6, 36, "Charizard");
         Pokemon bulbasaur = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
-        Pokemon charizard2 = PokemonFactory.createPokemon(6, 40,  "Charizard");
+        Pokemon charmander = PokemonFactory.createPokemon(4, 8,  "Charmander");
         Pokemon blastoise = PokemonFactory.createPokemon(9, 45, "Blastoise");
         blastoise.damage(30);
         blastoise.holdItem(ItemFactory.createItem("max revive"));
@@ -161,13 +160,19 @@ public class App {
         Move flamethrower = MoveFactory.createMove("Flamethrower");
         Move overheat = MoveFactory.createMove("Overheat");
         Move vineWhip = MoveFactory.createMove("Vine Whip");
+        Move scratch = MoveFactory.createMove("Scratch");
+        Move bubbleBeam = MoveFactory.createMove("Bubble Beam");
+        scratch.setPP(0);
 
         charizard.addMove(flamethrower);
         charizard.addMove(overheat);
         bulbasaur.addMove(vineWhip);
+        charmander.addMove(flamethrower);
+        charmander.addMove(scratch);
+        blastoise.addMove(bubbleBeam);
+        player.addPokemonToCurrentTeam(charmander);
         player.addPokemonToCurrentTeam(charizard);
         player.addPokemonToCurrentTeam(bulbasaur);
-        player.addPokemonToCurrentTeam(charizard2);
         player.addPokemonToCurrentTeam(blastoise);
 
     }
@@ -197,4 +202,8 @@ public class App {
             }
         });
     }
+
+    // Self Notes:
+    // TODO: standardize pokemon menu appearance
+    // TODO: implement actual moves to wild pokemon (find csv for matching pokemon to moves?)
 }

@@ -7,6 +7,7 @@ import model.Item;
 import model.Move;
 import model.Move.StatusEffect;
 import model.Stats;
+import pokes.LevelManager.ExpGrowthRate;
 
 public abstract class Pokemon {
     protected String name;
@@ -20,6 +21,7 @@ public abstract class Pokemon {
     protected Item heldItem;
     protected StatusEffect status;
     protected StatusEffect previousStatus;
+    protected LevelManager levelManager;
 
     public enum PokemonType {
         NORMAL, FIRE, WATER, GRASS, ELECTRIC, ICE, FIGHTING, POISON, GROUND, 
@@ -69,8 +71,55 @@ public abstract class Pokemon {
             // Fallback if stats not found
             this.stats = new Stats(50, 50, 50, 50, 50, 50, level);
         }
+        ExpGrowthRate growthRate = determineGrowthRate(dexNumber);
+        this.levelManager = new LevelManager(this, level, growthRate);
     }
-    
+
+    /**
+     * Determine the experience growth rate for this Pokémon using CSV data
+     */
+    private ExpGrowthRate determineGrowthRate(int dexNumber) {
+        PokemonStatsLoader loader = PokemonStatsLoader.getInstance();
+        String growthRateString = loader.getPokemonExpGrowth(dexNumber, name);
+        
+        if (growthRateString != null) {
+            switch (growthRateString.toLowerCase()) {
+                case "fast":
+                    return ExpGrowthRate.FAST;
+                case "medium fast":
+                    return ExpGrowthRate.MEDIUM_FAST;
+                case "medium slow":
+                    return ExpGrowthRate.MEDIUM_SLOW;
+                case "slow":
+                    return ExpGrowthRate.SLOW;
+                case "erratic":
+                    return ExpGrowthRate.ERRATIC;
+                case "fluctuating":
+                    return ExpGrowthRate.FLUCTUATING;
+                default:
+                    return ExpGrowthRate.MEDIUM_FAST;
+            }
+        }
+        
+        // Fallback to the original logic if CSV data not available
+        if (dexNumber <= 50) {
+            return ExpGrowthRate.FAST;
+        } else if (dexNumber <= 150) {
+            return ExpGrowthRate.MEDIUM_FAST;
+        } else if (dexNumber <= 250) {
+            return ExpGrowthRate.MEDIUM_SLOW;
+        } else if (dexNumber <= 350) {
+            return ExpGrowthRate.SLOW;
+        } else if (dexNumber <= 450) {
+            return ExpGrowthRate.ERRATIC;
+        } else {
+            return ExpGrowthRate.FLUCTUATING;
+        }
+    }
+
+    public boolean gainExperience(int exp) {
+        return levelManager.addExperience(exp);
+    }
 
     public List<PokemonType> getTypes() {
         return types;
@@ -122,6 +171,10 @@ public abstract class Pokemon {
 
     public PokemonNature getNature() {
         return PokemonNature.valueOf(nature);
+    }
+
+    public LevelManager getLevelManager() {
+        return levelManager;
     }
 
     public void addMove(Move move) {

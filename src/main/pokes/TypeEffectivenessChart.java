@@ -76,7 +76,6 @@ public class TypeEffectivenessChart {
             }
             
             reader.close();
-            System.out.println("Type effectiveness chart loaded successfully");
             
         } catch (IOException e) {
             System.err.println("Error loading type chart: " + e.getMessage());
