@@ -16,7 +16,16 @@ public class TileFactory {
     public static final int GRASS = 00;
     public static final int GRASS_PATH_TOP = 01;
     public static final int GRASS_PATH_BOTTOM = 02;
-    public static final int GRASS_PATCH = 03;
+    public static final int GRASS_PATH_RIGHT = 03;
+    public static final int GRASS_PATH_LEFT = 04;
+    public static final int GRASS_PATH_TOP_RIGHT = 05;
+    public static final int GRASS_PATH_TOP_LEFT = 06;
+    public static final int GRASS_PATH_BOTTOM_RIGHT = 07;
+    public static final int GRASS_PATH_BOTTOM_LEFT = 8;
+    public static final int GRASS_PATH_TOP_RIGHT_INSIDE = 9;
+
+
+    public static final int GRASS_PATCH = 9;
 
     public static final int WATER = 10;
     public static final int WAVY_WATER = 11;
@@ -45,6 +54,12 @@ public class TileFactory {
         tiles.put(GRASS, "grass_tile");
         tiles.put(GRASS_PATH_TOP, "grass_path_top");
         tiles.put(GRASS_PATH_BOTTOM, "grass_path_bottom");
+        tiles.put(GRASS_PATH_RIGHT, "grass_path_right");
+        tiles.put(GRASS_PATH_LEFT, "grass_path_left");
+        tiles.put(GRASS_PATH_TOP_RIGHT, "grass_path_top_right");
+        tiles.put(GRASS_PATH_TOP_LEFT, "grass_path_top_left");
+        tiles.put(GRASS_PATH_BOTTOM_RIGHT, "grass_path_bottom_right");
+        tiles.put(GRASS_PATH_BOTTOM_LEFT, "grass_path_bottom_left");
         tiles.put(GRASS_PATCH, "grass_patch");
         tiles.put(WATER, "water_tile_0");
         tiles.put(WAVY_WATER, "wavy_water");
@@ -147,7 +162,7 @@ public class TileFactory {
      * Get all available tiles
      */
     public Tile[] getAllTiles() {
-        Tile[] tiles = new Tile[60];
+        Tile[] tiles = new Tile[100];
         
         // Pre-load all known tiles
         tiles[GRASS] = getTile(GRASS);
@@ -160,6 +175,12 @@ public class TileFactory {
         tiles[HOUSE_GOLD] = getTile(HOUSE_GOLD);
         tiles[WATER_TO_GRASS_LEFT] = getTile(WATER_TO_GRASS_LEFT);
         tiles[WAVY_WATER] = getTile(WAVY_WATER);
+        tiles[GRASS_PATH_RIGHT] = getTile(GRASS_PATH_RIGHT);
+        tiles[GRASS_PATH_LEFT] = getTile(GRASS_PATH_LEFT);
+        tiles[GRASS_PATH_TOP_RIGHT] = getTile(GRASS_PATH_TOP_RIGHT);
+        tiles[GRASS_PATH_TOP_LEFT] = getTile(GRASS_PATH_TOP_LEFT);
+        tiles[GRASS_PATH_BOTTOM_RIGHT] = getTile(GRASS_PATH_BOTTOM_RIGHT);
+        tiles[GRASS_PATH_BOTTOM_LEFT] = getTile(GRASS_PATH_BOTTOM_LEFT);
         // Add more tiles as needed
         
         return tiles;

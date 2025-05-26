@@ -12,6 +12,7 @@ import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 
 import exceptions.NoSuchWorldException;
+import model.Door;
 import model.Player;
 
 public class WorldManager {
@@ -132,5 +133,34 @@ public class WorldManager {
         currentWorld.requestFocusInWindow();
         window.revalidate();
         window.repaint();
+    }
+
+    public void initBoards(Player player) {
+        createOutsideBoard(player);
+        createInsideBoard(player);
+    }
+
+    public void createOutsideBoard(Player player) {
+        Board outsideBoard = new Board(player, "outside", 30, 46);
+
+        // objects
+        outsideBoard.placeManyObjects("/resources/buildings/tree1.png", 0, 0, 4, outsideBoard.getRows());
+        outsideBoard.addObject("/resources/buildings/green_roof_two_floor_house.png", 5, 5);
+
+
+        // doors
+        outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
+                            "house_interior", outsideBoard.getLocation()));
+        outsideBoard.addObject("/resources/buildings/green_spruce.png", 15, 5);
+        
+        addBoard(outsideBoard);
+    }
+
+    public void createInsideBoard(Player player) {
+        Board inside1 = new Board(player, "house_interior", 10, 15);
+        inside1.addObject("/resources/buildings/marroon_single_bed.png", 10, 0);
+        inside1.addDoor(new Door(new Point(5, 5), "/resources/player_sprites/s_facing_back.png", 
+                            "outside", new Point(10, 15)));
+        addBoard(inside1);
     }
 }

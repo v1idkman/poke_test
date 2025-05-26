@@ -3,7 +3,6 @@ package ui;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.GridBagLayout;
-import java.awt.Point;
 import java.awt.event.KeyEvent;
 
 import javax.swing.*;
@@ -16,7 +15,6 @@ import moves.MoveLoader;
 import pokes.Pokemon;
 import pokes.PokemonFactory;
 import pokes.PokemonStatsLoader;
-import model.Door;
 import model.EncounterTable;
 import model.ItemFactory;
 
@@ -30,8 +28,8 @@ public class App {
     private static Player player = new Player("sarp");
     private static JFrame window = new JFrame("Poke test");
     private static WorldManager worldManager = new WorldManager(window);
-    static final int FIXED_HEIGHT = 640;
-    static final int FIXED_WIDTH = 960;
+    public static final int FIXED_HEIGHT = 640;
+    public static final int FIXED_WIDTH = 960;
 
     public static void initPokemonData() {
         PokemonStatsLoader loader = PokemonStatsLoader.getInstance();
@@ -39,24 +37,8 @@ public class App {
     }
 
     public static void initWorlds() {
-        // initialize all boards
-        Board outsideBoard = new Board(player, "outside", 30, 46);
-        Board inside1 = new Board(player, "house_interior", 10, 15);
-
-        // add all boards to the world manager and set the current world
-        worldManager.addBoard(outsideBoard);
-        worldManager.addBoard(inside1);
+        worldManager.initBoards(player);
         worldManager.setCurrentWorld("outside");
-
-        // add objects to boards (maybe make method for more objects)
-        outsideBoard.addObject("/resources/buildings/red_house.png", 2, 4);
-        outsideBoard.addObject("/resources/buildings/green_spruce.png", 8, 5);
-        outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
-                            "house_interior", outsideBoard.getLocation()));
-
-        inside1.addObject("/resources/buildings/marroon_single_bed.png", 10, 0);
-        inside1.addDoor(new Door(new Point(5, 5), "/resources/player_sprites/s_facing_back.png", 
-                            "outside", new Point(10, 15)));
     }
 
     private static void initWindow() {
@@ -152,7 +134,6 @@ public class App {
     public static void initLearnsets() {
         LearnsetLoader loader = LearnsetLoader.getInstance();
         loader.loadFromTypeScriptFile("/resources/learnsets.ts");
-        loader.getMoves("caterpie");
     }
 
     private static void initPokemon() {
@@ -214,8 +195,4 @@ public class App {
             }
         });
     }
-
-    // Self Notes:
-    // TODO: standardize pokemon menu appearance
-    // TODO: implement actual moves to wild pokemon (find csv for matching pokemon to moves?)
 }

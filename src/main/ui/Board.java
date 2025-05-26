@@ -107,9 +107,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         Graphics2D g2d = (Graphics2D) g.create();
         
+        // Set rendering hints for pixel-perfect rendering
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, 
+                            RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        g2d.setRenderingHint(RenderingHints.KEY_RENDERING, 
+                            RenderingHints.VALUE_RENDER_SPEED);
+        g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
+                            RenderingHints.VALUE_ANTIALIAS_OFF);
+        
         Camera camera = worldManager.getCamera();
         
-        // Apply camera translation if active
+        // Apply camera translation if active - ensure integer coordinates
         if (camera != null && camera.isActive()) {
             g2d.translate(-camera.getX(), -camera.getY());
         }
@@ -124,12 +132,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         // Draw player
         playerView.draw(g2d, this, TILE_SIZE);
-        
-        // Debug bounds if needed
-        drawDebugBounds(g2d);
+
+        // drawDebugBounds(g2d);
         
         g2d.dispose();
     }
+
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -510,49 +518,52 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         // This would be where you'd implement a screen flash or transition animation
         // For now, just print to console
         System.out.println("A wild " + wildPokemon.getName() + " appeared!");
-        
-        // You could add a visual effect here like screen flashing
-        // For example:
-        /*
-        JPanel flashPanel = new JPanel();
-        flashPanel.setBackground(Color.BLACK);
-        flashPanel.setBounds(0, 0, getWidth(), getHeight());
-        add(flashPanel, JLayeredPane.POPUP_LAYER);
-        
-        Timer flashTimer = new Timer(100, new ActionListener() {
-            int flashes = 0;
-            
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                flashes++;
-                flashPanel.setVisible(!flashPanel.isVisible());
-                
-                if (flashes >= 6) {
-                    remove(flashPanel);
-                    revalidate();
-                    repaint();
-                    ((Timer)e.getSource()).stop();
-                }
-            }
-        });
-        flashTimer.start();
-        */
     }
     
-    // Add this method to Player class if it doesn't exist
     public void stopMoving() {
         // Reset any movement-related state
         player.setMoving(false);
         player.setSprintKeyPressed(false);
     }
     
-    // Add this method to Player class if it doesn't exist
     public boolean isInBattle() {
         return inBattle; // You'll need to add this field to Player
     }
     
-    // Add this method to Player class if it doesn't exist
     public void setInBattle(boolean inBattle) {
         this.inBattle = inBattle;
+    }
+
+    public void placeManyObjects(String path, int startTileX, int startTileY, int endTileX, int endTileY) {
+        // Ensure start coordinates are less than end coordinates
+        if (startTileX > endTileX) {
+            int temp = startTileX;
+            startTileX = endTileX;
+            endTileX = temp;
+        }
+        
+        if (startTileY > endTileY) {
+            int temp = startTileY;
+            startTileY = endTileY;
+            endTileY = temp;
+        }
+        
+        // Place objects in a rectangular grid
+        for (int y = startTileY; y <= endTileY; y++) {
+            for (int x = startTileX; x <= endTileX; x++) {
+                // Check bounds to prevent placing objects outside the world
+                if (x >= 0 && x < columns && y >= 0 && y < rows) {
+                    addObject(path, x, y);
+                }
+            }
+        }
+    }
+
+    public int getRows() {
+        return rows;
+    }
+
+    public int getColumns() {
+        return columns;
     }
 }

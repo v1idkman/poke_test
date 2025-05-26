@@ -211,21 +211,7 @@ public class LearnsetLoader {
     }
     
     private void processPokemonLearnsetGen7Only(String pokemonName, String learnsetContent) {
-        if (pokemonName.equals("beldum")) {
-            System.out.println("Raw learnset data for Beldum:");
-            System.out.println(learnsetContent);
-            System.out.println("=== Processing each move ===");
-        }
-        
         PokemonMoveData moveData = parseMovesFromLearnsetSeparately(learnsetContent);
-        
-        if (pokemonName.equals("beldum")) {
-            System.out.println("=== Final Results for Beldum ===");
-            System.out.println("Level-up moves: " + moveData.getLevelUpMoves());
-            System.out.println("Tutor moves: " + moveData.getTutorMoves());
-            System.out.println("TM moves: " + moveData.getTmMoves());
-            System.out.println("Event moves: " + moveData.getEventMoves());
-        }
         
         if (moveData != null && !moveData.getAllMoves().isEmpty()) {
             pokemonMoveData.put(pokemonName, moveData);
@@ -236,11 +222,11 @@ public class LearnsetLoader {
                 learnsets.put(pokemonName, levelUpOnly);
             }
             
-            System.out.println("Successfully processed " + pokemonName + " with " + 
+            /* System.out.println("Successfully processed " + pokemonName + " with " + 
                              moveData.getLevelUpMoves().size() + " level-up moves, " +
                              moveData.getTmMoves().size() + " TM moves, " +
                              moveData.getTutorMoves().size() + " tutor moves, " +
-                             moveData.getEggMoves().size() + " egg moves");
+                             moveData.getEggMoves().size() + " egg moves"); */
         }
     }
     
