@@ -10,8 +10,9 @@ import javax.swing.*;
 
 import model.Move;
 import model.Player;
-import model.MoveFactory;
-import model.MoveLoader;
+import moves.LearnsetLoader;
+import moves.MoveFactory;
+import moves.MoveLoader;
 import pokes.Pokemon;
 import pokes.PokemonFactory;
 import pokes.PokemonStatsLoader;
@@ -148,11 +149,19 @@ public class App {
         moveLoader.loadFromCSV("src/main/resources/pokemon_moves.csv");
     }
     
+    public static void initLearnsets() {
+        LearnsetLoader loader = LearnsetLoader.getInstance();
+        loader.loadFromTypeScriptFile("/resources/learnsets.ts");
+        loader.getMoves("caterpie");
+    }
+
     private static void initPokemon() {
         Pokemon charizard = PokemonFactory.createPokemon(6, 36, "Charizard");
         Pokemon bulbasaur = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
         Pokemon charmander = PokemonFactory.createPokemon(4, 8,  "Charmander");
         Pokemon blastoise = PokemonFactory.createPokemon(9, 45, "Blastoise");
+        Pokemon rayquaza = PokemonFactory.createPokemon(384, 70, "Rayquaza");
+        Pokemon caterpie = PokemonFactory.createPokemon(10, 5, "Caterpie");
         blastoise.damage(30);
         blastoise.holdItem(ItemFactory.createItem("max revive"));
         charizard.getStats().addEVs(100, 140, 80, 0, 100, 0);
@@ -174,6 +183,8 @@ public class App {
         player.addPokemonToCurrentTeam(charizard);
         player.addPokemonToCurrentTeam(bulbasaur);
         player.addPokemonToCurrentTeam(blastoise);
+        player.addPokemonToCurrentTeam(rayquaza);
+        player.addPokemonToCurrentTeam(caterpie);
 
     }
 
@@ -194,6 +205,7 @@ public class App {
         initItems();
         initPokemonData();
         initMoves();
+        initLearnsets();
         initPokemon();
         initWorlds();
         SwingUtilities.invokeLater(new Runnable() {

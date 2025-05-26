@@ -1,4 +1,4 @@
-package model;
+package moves;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import pokes.Pokemon.PokemonType;
+import model.Move;
 import model.Move.MoveCategory;
 import model.Move.StatusEffect;
 
@@ -234,5 +235,13 @@ public class MoveLoader {
     
     public Map<String, Move> getAllMoves() {
         return new HashMap<>(movesByName);
+    }
+
+    public void clearMoves() {
+        movesByName.clear();
+    }
+
+    public Move getMove(String name) {
+        return movesByName.get(name.toLowerCase());
     }
 }

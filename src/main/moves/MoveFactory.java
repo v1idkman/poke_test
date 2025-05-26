@@ -1,14 +1,54 @@
-package model;
+package moves;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import model.Move;
+import pokes.Pokemon;
 import pokes.Pokemon.PokemonType;
 
 public class MoveFactory {
     private static final Random random = new Random();
+    
+    public static List<Move> getMovesForPokemon(Pokemon pokemon) {
+        List<Move> moves = new ArrayList<>();
+        String speciesName = pokemon.getName().split("\\s+")[0].toLowerCase();
+        int level = pokemon.getLevel();
+        
+        // Get learnset moves
+        List<String> learnsetMoves = LearnsetLoader.getInstance().getAvailableMoves(speciesName, level);
+        Collections.shuffle(learnsetMoves);
+        
+        // Try to get 4 moves from learnset
+        for (String moveName : learnsetMoves) {
+            if (moves.size() >= 4) break;
+            Move move = createMove(moveName);
+            if (move != null && !moves.contains(move)) {
+                moves.add(move);
+            }
+        }
+        
+        // If not enough moves, fill with defaults
+        if (moves.size() < 4) {
+            List<Move> defaultMoves = getDefaultMovesForType(pokemon.getTypes().get(0));
+            for (Move move : defaultMoves) {
+                if (moves.size() >= 4) break;
+                if (!moves.contains(move)) {
+                    moves.add(move);
+                }
+            }
+        }
+        
+        // Guarantee at least one move (this should never be needed now)
+        if (moves.isEmpty()) {
+            moves.add(new Move("Struggle", PokemonType.NORMAL, 50, 100, 1, Move.MoveCategory.PHYSICAL));
+        }
+        
+        return moves;
+    }
     
     public static Move createMove(String name) {
         return MoveLoader.getInstance().getMoveByName(name);

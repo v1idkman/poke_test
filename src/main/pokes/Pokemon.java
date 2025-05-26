@@ -1,13 +1,18 @@
 package pokes;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 import model.Item;
 import model.Move;
 import model.Move.StatusEffect;
 import model.Stats;
 import pokes.LevelManager.ExpGrowthRate;
+import moves.LearnsetLoader;
+import moves.MoveLoader;
 
 public abstract class Pokemon {
     protected String name;
@@ -282,4 +287,145 @@ public abstract class Pokemon {
         }
     }
 
+    public void generateWildMoves() {
+        LearnsetLoader loader = LearnsetLoader.getInstance();
+        moves.PokemonMoveData moveData = loader.getPokemonMoveData(this.name.toLowerCase());
+        
+        if (moveData == null) {
+            // Fallback to basic moves if no learnset data
+            generateFallbackMoves();
+            return;
+        }
+        
+        // Get all available moves for this Pokemon's level
+        List<String> availableMoves = getAvailableMovesForLevel(moveData, stats.getLevel());
+        
+        // Clear existing moves
+        this.moves.clear();
+        
+        // Generate random moveset (up to 4 moves)
+        int moveCount = Math.min(4, availableMoves.size());
+        if (moveCount == 0) {
+            generateFallbackMoves();
+            return;
+        }
+        
+        // Randomly select moves from available pool
+        Collections.shuffle(availableMoves);
+        for (int i = 0; i < moveCount; i++) {
+            String moveName = availableMoves.get(i);
+            Move move = MoveLoader.getInstance().getMove(moveName);
+            if (move != null) {
+                this.moves.add(move);
+            }
+        }
+        
+        // Ensure at least one move exists
+        if (this.moves.isEmpty()) {
+            generateFallbackMoves();
+        }
+    }
+    
+    private List<String> getAvailableMovesForLevel(moves.PokemonMoveData moveData, int level) {
+        List<String> available = new ArrayList<>();
+        Random random = new Random();
+        
+        // Add level-up moves that can be learned at or before this level
+        for (Map.Entry<String, Integer> entry : moveData.getLevelUpMoves().entrySet()) {
+            if (entry.getValue() <= level) {
+                available.add(entry.getKey());
+            }
+        }
+        
+        // For wild Pokemon, also include some TM/Tutor moves randomly
+        // Higher level Pokemon have better chance of knowing these moves
+        double tmChance = Math.min(0.15, 0.05 + (level * 0.005)); // 5% base, +0.5% per level, max 15%
+        double tutorChance = Math.min(0.10, 0.02 + (level * 0.003)); // 2% base, +0.3% per level, max 10%
+        
+        for (String tmMove : moveData.getTmMoves()) {
+            if (random.nextDouble() < tmChance) {
+                available.add(tmMove);
+            }
+        }
+        
+        for (String tutorMove : moveData.getTutorMoves()) {
+            if (random.nextDouble() < tutorChance) {
+                available.add(tutorMove);
+            }
+        }
+        
+        // Very rare chance for egg moves (1% for high level Pokemon)
+        if (level >= 20) {
+            double eggChance = Math.min(0.01, (level - 20) * 0.0005);
+            for (String eggMove : moveData.getEggMoves()) {
+                if (random.nextDouble() < eggChance) {
+                    available.add(eggMove);
+                }
+            }
+        }
+        
+        return available;
+    }
+    
+    private void generateFallbackMoves() {
+        this.moves.clear();
+        
+        // Add type-appropriate default moves based on Pokemon types
+        if (!this.types.isEmpty()) {
+            PokemonType primaryType = this.types.get(0);
+            Move defaultMove = getDefaultMoveForType(primaryType);
+            if (defaultMove != null) {
+                this.moves.add(defaultMove);
+            }
+        }
+        
+        // Always ensure Tackle as a backup
+        Move tackle = MoveLoader.getInstance().getMove("tackle");
+        if (tackle != null && !this.moves.contains(tackle)) {
+            this.moves.add(tackle);
+        }
+    }
+    
+    private Move getDefaultMoveForType(PokemonType type) {
+        MoveLoader moveLoader = MoveLoader.getInstance();
+        
+        switch (type) {
+            case FIRE:
+                return moveLoader.getMove("ember");
+            case WATER:
+                return moveLoader.getMove("watergun");
+            case GRASS:
+                return moveLoader.getMove("vinewhip");
+            case ELECTRIC:
+                return moveLoader.getMove("thundershock");
+            case PSYCHIC:
+                return moveLoader.getMove("confusion");
+            case ICE:
+                return moveLoader.getMove("powdersnow");
+            case DRAGON:
+                return moveLoader.getMove("dragonrage");
+            case DARK:
+                return moveLoader.getMove("bite");
+            case FIGHTING:
+                return moveLoader.getMove("karatechop");
+            case POISON:
+                return moveLoader.getMove("poisonsting");
+            case GROUND:
+                return moveLoader.getMove("mudslap");
+            case FLYING:
+                return moveLoader.getMove("gust");
+            case BUG:
+                return moveLoader.getMove("bugbite");
+            case ROCK:
+                return moveLoader.getMove("rockthrow");
+            case GHOST:
+                return moveLoader.getMove("lick");
+            case STEEL:
+                return moveLoader.getMove("metalclaw");
+            case NORMAL:
+            default:
+                return moveLoader.getMove("tackle");
+        }
+    }
+    
 }

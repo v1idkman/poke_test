@@ -67,7 +67,6 @@ public class PokemonStatsLoader {
         while ((nextLine = reader.readNext()) != null) {
             try {
                 // Parse the CSV structure based on the provided file
-                int pokemonId = parseIntSafely(nextLine[0], 0);
                 int pokemonDex = parseIntSafely(nextLine[1], 0);
                 String pokemonName = cleanPokemonName(nextLine[2]); // Column 3 (index 2)
                 String classification = cleanString(nextLine[3]);

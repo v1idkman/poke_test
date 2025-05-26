@@ -79,6 +79,14 @@ public class BattleScreen extends JFrame {
         this.isWildBattle = isWildbattle;
 
         this.battleLocation = battleLocation != null ? battleLocation : "route"; // Default to route
+
+        // Ensure wild Pokemon has appropriate moves
+        if (wildPokemon.getMoves().isEmpty()) {
+            wildPokemon.generateWildMoves();
+        }
+        
+        // Validate that wild Pokemon has at least one usable move
+        validateWildPokemonMoves();
     
         if ("route".equalsIgnoreCase(this.battleLocation)) {
             try {
@@ -640,48 +648,89 @@ public class BattleScreen extends JFrame {
     }
     
     private void wildPokemonAttack() {
-        // Select a random move for the wild Pokémon
         List<Move> wildMoves = wildPokemon.getMoves();
+        List<Move> usableMoves = new ArrayList<>();
         
-        if (wildMoves.isEmpty()) {
-            // If no moves, use a default "Tackle" move
-            queueMessage("The wild " + wildPokemon.getName() + " used Tackle!");
+        // Filter for moves with PP remaining
+        for (Move move : wildMoves) {
+            if (move != null && move.getCurrentPP() > 0) {
+                usableMoves.add(move);
+            }
+        }
+        
+        if (usableMoves.isEmpty()) {
+            // Use Struggle if no moves have PP
+            queueMessage("The wild " + wildPokemon.getName() + " used Struggle!");
             
-            // Calculate a simple damage
-            int damage = 5 + new Random().nextInt(5);
-            
-            // Apply damage to player's Pokémon
+            // Struggle deals damage to both the target and the user
+            int damage = Math.max(1, wildPokemon.getStats().getMaxHp() / 4);
             playerPokemon.damage(damage);
-            updatePlayerPokemonHP();
+            wildPokemon.damage(wildPokemon.getStats().getMaxHp() / 4); // Recoil damage
             
-            // Show damage message
+            updatePlayerPokemonHP();
+            updateWildPokemonHP();
+            
             queueMessage("It dealt " + damage + " damage!");
+            queueMessage("The wild " + wildPokemon.getName() + " is hurt by recoil!");
         } else {
-            // Select a random move
-            Move selectedMove = wildMoves.get(new Random().nextInt(wildMoves.size()));
+            // AI move selection - prefer stronger moves but add some randomness
+            Move selectedMove = selectBestMove(usableMoves);
+            
+            // Decrease PP
+            selectedMove.decreasePP();
             
             queueMessage("The wild " + wildPokemon.getName() + " used " + selectedMove.getName() + "!");
             
             // Calculate damage
             int damage = calculateDamage(wildPokemon, playerPokemon, selectedMove);
+            double typeEffectiveness = calculateTypeEffectiveness(selectedMove.getType(), playerPokemon.getTypes());
             
-            // Apply damage to player's Pokémon
+            // Apply damage
             playerPokemon.damage(damage);
             updatePlayerPokemonHP();
             
-            // Show damage message
+            // Show effectiveness message
+            if (typeEffectiveness > 1.9) {
+                queueMessage("It's super effective!");
+            } else if (typeEffectiveness < 0.1) {
+                queueMessage("It has no effect...");
+            } else if (typeEffectiveness < 0.6) {
+                queueMessage("It's not very effective...");
+            }
+            
             queueMessage("It dealt " + damage + " damage!");
         }
         
-        // IMPORTANT: Instead of creating a new timer, continue with the main animation sequence
-        // This prevents the recursion issue
+        // Continue with battle logic...
+        checkBattleEnd();
+    }
+
+    private void checkBattleEnd() {
+        // Check if wild Pokemon fainted
+        if (wildPokemon.getStats().getCurrentHp() <= 0) {
+            battleEnded = true;
+            queueMessage("The wild " + wildPokemon.getName() + " fainted!");
+            
+            // Award experience
+            Timer expTimer = new Timer(1500, e -> {
+                awardExperience();
+                
+                // Close battle after experience is awarded
+                Timer closeTimer = new Timer(2000, event -> dispose());
+                closeTimer.setRepeats(false);
+                closeTimer.start();
+            });
+            expTimer.setRepeats(false);
+            expTimer.start();
+            
+            return;
+        }
         
-        // Check if player Pokémon fainted
+        // Check if player Pokemon fainted
         if (playerPokemon.getStats().getCurrentHp() <= 0) {
-            // Player Pokémon fainted
             queueMessage(playerPokemon.getName() + " fainted!");
             
-            // Check if player has any usable Pokémon left
+            // Check if player has any usable Pokemon left
             boolean hasUsablePokemon = false;
             for (Pokemon p : player.getTeam()) {
                 if (p != playerPokemon && p.getStats().getCurrentHp() > 0) {
@@ -691,37 +740,61 @@ public class BattleScreen extends JFrame {
             }
             
             if (hasUsablePokemon) {
-                // Force player to switch
-                Timer forceSwitch = new Timer(1500, event -> {
+                // Force player to switch Pokemon
+                queueMessage("Choose your next Pokemon!");
+                
+                Timer forceSwitch = new Timer(2000, e -> {
                     switchPokemon();
                 });
                 forceSwitch.setRepeats(false);
                 forceSwitch.start();
             } else {
-                // All Pokémon fainted, battle is over
+                // All Pokemon fainted, battle is over
                 battleEnded = true;
-                queueMessage("You have no usable Pokémon left!");
+                queueMessage("You have no usable Pokemon left!");
+                queueMessage("You blacked out!");
                 
-                Timer closeTimer = new Timer(2000, event -> dispose());
+                Timer closeTimer = new Timer(3000, e -> dispose());
                 closeTimer.setRepeats(false);
                 closeTimer.start();
             }
-        } else {
+            
+            return;
+        }
+        
+        // If battle hasn't ended, continue to next turn
+        if (!battleEnded) {
             // Return to action selection after a delay
-            Timer returnTimer = new Timer(1500, event -> {
+            Timer returnTimer = new Timer(1500, e -> {
                 battleMessageLabel.setText("What will " + playerPokemon.getName() + " do?");
-                
                 switchToPanel(actionPanel);
-                
-                animationStep = 0;
                 playerTurn = true;
             });
             returnTimer.setRepeats(false);
             returnTimer.start();
         }
-        
     }
-
+    
+    
+    private Move selectBestMove(List<Move> usableMoves) {
+        Random random = new Random();
+        
+        // 70% chance to use the strongest move, 30% chance for random selection
+        if (random.nextDouble() < 0.7) {
+            // Find the move with highest power
+            Move bestMove = usableMoves.get(0);
+            for (Move move : usableMoves) {
+                if (move.getPower() > bestMove.getPower()) {
+                    bestMove = move;
+                }
+            }
+            return bestMove;
+        } else {
+            // Random selection for unpredictability
+            return usableMoves.get(random.nextInt(usableMoves.size()));
+        }
+    }
+    
     private void switchToPanel(JPanel newPanel) {
         // Remove all panels from the SOUTH position
         for (Component comp : mainPanel.getComponents()) {
@@ -1589,5 +1662,21 @@ public class BattleScreen extends JFrame {
         g2d.dispose();
         
         return new ImageIcon(image);
+    }
+
+    private void validateWildPokemonMoves() {
+        List<Move> usableMoves = new ArrayList<>();
+        
+        for (Move move : wildPokemon.getMoves()) {
+            if (move != null && move.getCurrentPP() > 0) {
+                usableMoves.add(move);
+            }
+        }
+        
+        // If no usable moves, regenerate moveset
+        if (usableMoves.isEmpty()) {
+            System.out.println("Wild " + wildPokemon.getName() + " has no usable moves, regenerating...");
+            wildPokemon.generateWildMoves();
+        }
     }
 }

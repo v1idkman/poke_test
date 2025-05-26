@@ -1,6 +1,8 @@
 package model;
 
 import java.util.*;
+
+import moves.MoveLoader;
 import pokes.Pokemon;
 import pokes.PokemonFactory;
 import pokes.PokemonStatsLoader;
@@ -15,14 +17,14 @@ public class EncounterTable {
         private int dexNumber;
         private int minLevel;
         private int maxLevel;
-        private int weight; // Higher weight = more common
+        private double weight; // Higher weight = more common
         private String specificForm; // For alternate forms like Alola, Galar, etc.
         
-        public EncounterEntry(int dexNumber, int minLevel, int maxLevel, int weight) {
+        public EncounterEntry(int dexNumber, int minLevel, int maxLevel, double weight) {
             this(dexNumber, minLevel, maxLevel, weight, null);
         }
         
-        public EncounterEntry(int dexNumber, int minLevel, int maxLevel, int weight, String specificForm) {
+        public EncounterEntry(int dexNumber, int minLevel, int maxLevel, double weight, String specificForm) {
             this.dexNumber = dexNumber;
             this.minLevel = minLevel;
             this.maxLevel = maxLevel;
@@ -33,7 +35,7 @@ public class EncounterTable {
         public int getDexNumber() { return dexNumber; }
         public int getMinLevel() { return minLevel; }
         public int getMaxLevel() { return maxLevel; }
-        public int getWeight() { return weight; }
+        public double getWeight() { return weight; }
         public String getSpecificForm() { return specificForm; }
     }
     
@@ -137,7 +139,9 @@ public class EncounterTable {
         
         List<EncounterEntry> encounters = locationTables.get(location);
         if (encounters == null || encounters.isEmpty()) {
-            return PokemonFactory.createPokemon(1, 5, "Bulbasaur");
+            Pokemon fallback = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
+            fallback.generateWildMoves();
+            return fallback;
         }
         
         EncounterEntry selectedEntry = getWeightedRandomEncounter(encounters);
@@ -149,21 +153,14 @@ public class EncounterTable {
         String pokemonName;
         
         if (selectedEntry.getSpecificForm() != null) {
-            // Use specific form name if specified
             pokemonName = selectedEntry.getSpecificForm();
         } else {
-            // Get the default name for this dex number
             pokemonName = loader.getPokemonName(selectedEntry.getDexNumber());
             
-            // Debug output to see what name we're getting
-            System.out.println("Retrieved name for dex #" + selectedEntry.getDexNumber() + ": " + pokemonName);
-            
-            // If name is still problematic, try alternative approaches
             if (pokemonName == null || pokemonName.startsWith("Pokemon #") || pokemonName.equals("Unknown")) {
                 List<String> availableForms = loader.getFormsForDex(selectedEntry.getDexNumber());
                 if (!availableForms.isEmpty()) {
                     pokemonName = availableForms.get(0);
-                    // Extract base name if it contains form info
                     if (pokemonName.contains(" (")) {
                         pokemonName = pokemonName.substring(0, pokemonName.indexOf(" ("));
                     }
@@ -171,7 +168,91 @@ public class EncounterTable {
             }
         }
         
-        return PokemonFactory.createPokemon(selectedEntry.getDexNumber(), level, pokemonName);
+        // Create the Pokemon
+        Pokemon wildPokemon = PokemonFactory.createPokemon(selectedEntry.getDexNumber(), level, pokemonName);
+        
+        // Generate appropriate moves based on learnset and level
+        wildPokemon.generateWildMoves();
+        
+        // Apply location-specific move modifications
+        applyLocationMoveModifications(wildPokemon, location);
+        
+        return wildPokemon;
+    }
+    
+    private static void applyLocationMoveModifications(Pokemon pokemon, String location) {
+        Random random = new Random();
+        
+        // Higher level areas might have Pokemon with more diverse movesets
+        if (location != null) {
+            switch (location.toLowerCase()) {
+                case "cave":
+                    // Cave Pokemon might know more Rock/Ground type moves
+                    addLocationSpecificMoves(pokemon, Arrays.asList("rockthrow", "mudslap", "sandattack", "rockslide"));
+                    break;
+                case "water":
+                    // Water areas might have Pokemon with water moves
+                    addLocationSpecificMoves(pokemon, Arrays.asList("watergun", "bubble", "surf", "hydropump"));
+                    break;
+                case "forest":
+                    // Forest Pokemon might know Grass moves
+                    addLocationSpecificMoves(pokemon, Arrays.asList("vinewhip", "razorleaf", "sleeppowder", "synthesis"));
+                    break;
+                case "mountain":
+                    // Mountain Pokemon might know Rock/Fire moves
+                    addLocationSpecificMoves(pokemon, Arrays.asList("rockthrow", "ember", "flamethrower", "earthquake"));
+                    break;
+                case "city":
+                    // Urban Pokemon might know Electric/Steel moves
+                    addLocationSpecificMoves(pokemon, Arrays.asList("thundershock", "metalclaw", "spark", "thunderbolt"));
+                    break;
+            }
+        }
+        
+        // Small chance for wild Pokemon to have rare moves (3% chance for high-level Pokemon)
+        if (pokemon.getLevel() >= 15 && random.nextDouble() < 0.03) {
+            addRareMoves(pokemon);
+        }
+    }
+    
+    private static void addLocationSpecificMoves(Pokemon pokemon, List<String> locationMoves) {
+        Random random = new Random();
+        MoveLoader moveDB = MoveLoader.getInstance();
+        
+        // 25% chance to replace one move with a location-specific move
+        if (random.nextDouble() < 0.25 && !pokemon.getMoves().isEmpty()) {
+            String randomLocationMove = locationMoves.get(random.nextInt(locationMoves.size()));
+            Move locationMove = moveDB.getMove(randomLocationMove);
+            
+            if (locationMove != null) {
+                // Replace a random move with the location-specific move
+                int replaceIndex = random.nextInt(pokemon.getMoves().size());
+                pokemon.getMoves().set(replaceIndex, locationMove);
+            }
+        }
+    }
+    
+    private static void addRareMoves(Pokemon pokemon) {
+        moves.LearnsetLoader loader = moves.LearnsetLoader.getInstance();
+        moves.PokemonMoveData moveData = loader.getPokemonMoveData(pokemon.getName().toLowerCase());
+        
+        if (moveData != null && !moveData.getEggMoves().isEmpty()) {
+            Random random = new Random();
+            List<String> eggMoves = new ArrayList<>(moveData.getEggMoves());
+            
+            if (!eggMoves.isEmpty()) {
+                String randomEggMove = eggMoves.get(random.nextInt(eggMoves.size()));
+                Move eggMove = MoveLoader.getInstance().getMove(randomEggMove);
+                
+                if (eggMove != null && pokemon.getMoves().size() < 4) {
+                    pokemon.getMoves().add(eggMove);
+                } else if (eggMove != null) {
+                    // Replace a random move
+                    int replaceIndex = random.nextInt(pokemon.getMoves().size());
+                    pokemon.getMoves().set(replaceIndex, eggMove);
+                }
+            }
+        }
     }
     
     private static EncounterEntry getWeightedRandomEncounter(List<EncounterEntry> encounters) {
