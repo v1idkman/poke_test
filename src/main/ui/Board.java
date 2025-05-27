@@ -133,7 +133,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         // Draw player
         playerView.draw(g2d, this, TILE_SIZE);
 
-        // drawDebugBounds(g2d);
+        drawDebugBounds(g2d);
         
         g2d.dispose();
     }

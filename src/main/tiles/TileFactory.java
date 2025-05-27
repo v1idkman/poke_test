@@ -23,17 +23,19 @@ public class TileFactory {
     public static final int GRASS_PATH_BOTTOM_RIGHT = 07;
     public static final int GRASS_PATH_BOTTOM_LEFT = 8;
     public static final int GRASS_PATH_TOP_RIGHT_INSIDE = 9;
+    public static final int GRASS_PATH_TOP_LEFT_INSIDE = 10;
+    public static final int GRASS_PATH_BOTTOM_RIGHT_INSIDE = 11;
+    public static final int GRASS_PATH_BOTTOM_LEFT_INSIDE = 12;
 
+    public static final int GRASS_PATCH = 19;
 
-    public static final int GRASS_PATCH = 9;
+    public static final int WATER = 20;
+    public static final int WAVY_WATER = 21;
+    public static final int WATER_TO_GRASS_LEFT = 22;
 
-    public static final int WATER = 10;
-    public static final int WAVY_WATER = 11;
-    public static final int WATER_TO_GRASS_LEFT = 12;
-
-    public static final int DIRT = 20;
-    public static final int ICE = 30;
-    public static final int HOUSE_GOLD = 40;
+    public static final int DIRT = 40;
+    public static final int ICE = 60;
+    public static final int HOUSE_GOLD = 80;
     
     // Add more tile constants as needed
     
@@ -60,6 +62,10 @@ public class TileFactory {
         tiles.put(GRASS_PATH_TOP_LEFT, "grass_path_top_left");
         tiles.put(GRASS_PATH_BOTTOM_RIGHT, "grass_path_bottom_right");
         tiles.put(GRASS_PATH_BOTTOM_LEFT, "grass_path_bottom_left");
+        tiles.put(GRASS_PATH_TOP_RIGHT_INSIDE, "grass_path_top_right_inside");
+        tiles.put(GRASS_PATH_TOP_LEFT_INSIDE, "grass_path_top_left_inside");
+        tiles.put(GRASS_PATH_BOTTOM_RIGHT_INSIDE, "grass_path_bottom_right_inside");
+        tiles.put(GRASS_PATH_BOTTOM_LEFT_INSIDE, "grass_path_bottom_left_inside");
         tiles.put(GRASS_PATCH, "grass_patch");
         tiles.put(WATER, "water_tile_0");
         tiles.put(WAVY_WATER, "wavy_water");
@@ -165,24 +171,12 @@ public class TileFactory {
         Tile[] tiles = new Tile[100];
         
         // Pre-load all known tiles
-        tiles[GRASS] = getTile(GRASS);
-        tiles[GRASS_PATH_BOTTOM] = getTile(GRASS_PATH_BOTTOM);
-        tiles[GRASS_PATH_TOP] = getTile(GRASS_PATH_TOP);
-        tiles[GRASS_PATCH] = getTile(GRASS_PATCH);
-        tiles[WATER] = getTile(WATER);
-        tiles[DIRT] = getTile(DIRT);
-        tiles[ICE] = getTile(ICE);
-        tiles[HOUSE_GOLD] = getTile(HOUSE_GOLD);
-        tiles[WATER_TO_GRASS_LEFT] = getTile(WATER_TO_GRASS_LEFT);
-        tiles[WAVY_WATER] = getTile(WAVY_WATER);
-        tiles[GRASS_PATH_RIGHT] = getTile(GRASS_PATH_RIGHT);
-        tiles[GRASS_PATH_LEFT] = getTile(GRASS_PATH_LEFT);
-        tiles[GRASS_PATH_TOP_RIGHT] = getTile(GRASS_PATH_TOP_RIGHT);
-        tiles[GRASS_PATH_TOP_LEFT] = getTile(GRASS_PATH_TOP_LEFT);
-        tiles[GRASS_PATH_BOTTOM_RIGHT] = getTile(GRASS_PATH_BOTTOM_RIGHT);
-        tiles[GRASS_PATH_BOTTOM_LEFT] = getTile(GRASS_PATH_BOTTOM_LEFT);
-        // Add more tiles as needed
-        
+        for (int i = 0; i < tiles.length; i++) {
+            if (tiles[i] == null) {
+                continue;
+            }
+            tiles[i] = null;  
+        }
         return tiles;
     }
 }

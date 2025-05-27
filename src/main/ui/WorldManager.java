@@ -145,7 +145,10 @@ public class WorldManager {
 
         // objects
         outsideBoard.placeManyObjects("/resources/buildings/tree1.png", 0, 0, 4, outsideBoard.getRows());
+        outsideBoard.placeManyObjects("/resources/buildings/tree1.png", 5, 0, outsideBoard.getColumns(), 4);
+        outsideBoard.placeManyObjects("/resources/buildings/tree1.png", 5, outsideBoard.getRows() - 4, outsideBoard.getColumns(), outsideBoard.getRows());
         outsideBoard.addObject("/resources/buildings/green_roof_two_floor_house.png", 5, 5);
+        outsideBoard.addObject("/resources/buildings/green_fat_tree.png", 11, 11);
 
 
         // doors
