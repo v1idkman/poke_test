@@ -136,6 +136,7 @@ public class WorldManager {
     }
 
     public void initBoards(Player player) {
+        // NOTE: resize buildings 150% x 175%
         createOutsideBoard(player);
         createInsideBoard(player);
     }
@@ -144,18 +145,23 @@ public class WorldManager {
         Board outsideBoard = new Board(player, "outside", 30, 46);
 
         // objects
-        outsideBoard.placeManyObjects("/resources/buildings/tree1.png", 0, 0, 4, outsideBoard.getRows());
-        outsideBoard.placeManyObjects("/resources/buildings/tree1.png", 5, 0, outsideBoard.getColumns(), 4);
-        outsideBoard.placeManyObjects("/resources/buildings/tree1.png", 5, outsideBoard.getRows() - 4, outsideBoard.getColumns(), outsideBoard.getRows());
-        outsideBoard.addObject("/resources/buildings/green_roof_two_floor_house.png", 5, 5);
+        outsideBoard.placeManyObjects("/resources/buildings/tree2.png", 0, 0, 4, 16, 2, 1);
+        outsideBoard.placeManyObjects("/resources/buildings/tree2.png", 0, 21, 4, outsideBoard.getRows(), 2, 1);
+        outsideBoard.placeManyObjects("/resources/buildings/tree2.png", 6, 0, outsideBoard.getColumns(), 4, 2, 1);
+        outsideBoard.placeManyObjects("/resources/buildings/tree2.png", 6, outsideBoard.getRows() - 4, outsideBoard.getColumns(), 
+                                        outsideBoard.getRows(), 2, 1);
+        
+        outsideBoard.addObject("/resources/buildings/green_roof_two_floor_house.png", 10, 4);
+        outsideBoard.addObject("/resources/buildings/blue_roof_two_floor_house.png", 17, 4);
+        outsideBoard.addObject("/resources/buildings/green_roof_one_floor_house.png", 23, 5);
         outsideBoard.addObject("/resources/buildings/green_fat_tree.png", 11, 11);
+        outsideBoard.addObject("/resources/buildings/tiny_tree1.png", 8, 11);
+        outsideBoard.addObject("/resources/buildings/tiny_tree1.png", 8, 12);
 
 
         // doors
-        outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
-                            "house_interior", outsideBoard.getLocation()));
-        outsideBoard.addObject("/resources/buildings/green_spruce.png", 15, 5);
-        
+        /* outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
+                            "house_interior", outsideBoard.getLocation())); */
         addBoard(outsideBoard);
     }
 

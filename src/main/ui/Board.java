@@ -133,7 +133,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         // Draw player
         playerView.draw(g2d, this, TILE_SIZE);
 
-        drawDebugBounds(g2d);
+        // drawDebugBounds(g2d);
         
         g2d.dispose();
     }
@@ -534,7 +534,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         this.inBattle = inBattle;
     }
 
-    public void placeManyObjects(String path, int startTileX, int startTileY, int endTileX, int endTileY) {
+    public void placeManyObjects(String path, int startTileX, int startTileY, int endTileX, int endTileY, int xSpacing, int ySpacing) {
         // Ensure start coordinates are less than end coordinates
         if (startTileX > endTileX) {
             int temp = startTileX;
@@ -549,8 +549,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
         
         // Place objects in a rectangular grid
-        for (int y = startTileY; y <= endTileY; y++) {
-            for (int x = startTileX; x <= endTileX; x++) {
+        for (int y = startTileY; y <= endTileY; y = y + ySpacing) {
+            for (int x = startTileX; x <= endTileX; x = x + xSpacing) {
                 // Check bounds to prevent placing objects outside the world
                 if (x >= 0 && x < columns && y >= 0 && y < rows) {
                     addObject(path, x, y);
