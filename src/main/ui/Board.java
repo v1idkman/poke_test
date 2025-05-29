@@ -13,6 +13,7 @@ import model.Player.Direction;
 import model.WorldObject;
 import pokes.Pokemon;
 import tiles.TileManager;
+import model.Npc;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     public static final int TILE_SIZE = 32;
     public int rows;
     public int columns;
-    private List<WorldObject> objects;
+    private String worldName;
 
     private Timer timer;
     private Player player;
@@ -34,7 +35,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private static final int RUN_SPEED = 4; 
 
     private List<Door> doors;
-    private String worldName;
+    private List<WorldObject> objects;
+    private List<Npc> npcs = new ArrayList<>();
+    private boolean npcBattleInProgress = false;
     private WorldManager worldManager;
     private TileManager tileManager;
 
@@ -133,7 +136,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         // Draw player
         playerView.draw(g2d, this, TILE_SIZE);
 
-        // drawDebugBounds(g2d);
+        drawDebugBounds(g2d);
         
         g2d.dispose();
     }
@@ -146,6 +149,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         if (worldManager != null) {
             worldManager.getCamera().update(player);
         }
+
+        checkNPCEncounters();
         
         // Decrease encounter cooldown if active
         if (encounterCooldown > 0) {
@@ -318,14 +323,14 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             Rectangle bounds = obj.getBounds(TILE_SIZE);
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
-
-        // GREEN: door bounds
+    
+        // GREEN: door bounds and interaction areas
         g.setColor(Color.GREEN);
         for (Door door : doors) {
             Rectangle bounds = door.getBounds(TILE_SIZE);
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
             
-            // Draw interaction area
+            // Draw door interaction area
             Rectangle interactionArea = new Rectangle(
                 bounds.x - TILE_SIZE, 
                 bounds.y - TILE_SIZE,
@@ -335,7 +340,50 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             g.drawRect(interactionArea.x, interactionArea.y, 
                     interactionArea.width, interactionArea.height);
         }
-
+    
+        // ORANGE: NPC bounds
+        g.setColor(Color.ORANGE);
+        for (Npc npc : npcs) {
+            Rectangle npcBounds = npc.getBounds(TILE_SIZE);
+            g.drawRect(npcBounds.x, npcBounds.y, npcBounds.width, npcBounds.height);
+        }
+    
+        // MAGENTA: NPC interaction areas (for dialogue/general interaction)
+        g.setColor(Color.MAGENTA);
+        for (Npc npc : npcs) {
+            Rectangle npcBounds = npc.getBounds(TILE_SIZE);
+            Rectangle npcInteractionArea = new Rectangle(
+                npcBounds.x - TILE_SIZE, 
+                npcBounds.y - TILE_SIZE,
+                npcBounds.width + TILE_SIZE * 2, 
+                npcBounds.height + TILE_SIZE * 2
+            );
+            g.drawRect(npcInteractionArea.x, npcInteractionArea.y, 
+                    npcInteractionArea.width, npcInteractionArea.height);
+        }
+    
+        // CYAN: NPC battle initiation areas (sight range)
+        g.setColor(Color.CYAN);
+        for (Npc npc : npcs) {
+            if (!npc.isDefeated()) { // Only show for undefeated NPCs
+                Rectangle npcBounds = npc.getBounds(TILE_SIZE);
+                
+                int sightRange = npc.getSightRange() * TILE_SIZE;
+                
+                // Draw battle initiation area based on NPC's facing direction
+                Rectangle battleArea = getBattleInitiationArea(npc, npcBounds, sightRange);
+                
+                // Draw with semi-transparent fill to show the area clearly
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setColor(new Color(0, 255, 255, 50)); // Semi-transparent cyan
+                g2d.fillRect(battleArea.x, battleArea.y, battleArea.width, battleArea.height);
+                g2d.setColor(Color.CYAN);
+                g2d.drawRect(battleArea.x, battleArea.y, battleArea.width, battleArea.height);
+                g2d.dispose();
+            }
+        }
+    
+        // YELLOW: Tall grass areas (existing code)
         g.setColor(new Color(0, 255, 0, 100)); // Semi-transparent green
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < columns; x++) {
@@ -344,13 +392,104 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 }
             }
         }
-
+    
+        // Player in grass indicator (existing code)
         if (tileManager.isPlayerInTallGrass(player)) {
             g.setColor(Color.YELLOW);
             g.drawString("IN GRASS", playerBounds.x, playerBounds.y - 10);
         }
+    
+        // Add legend for debug colors
+        drawDebugLegend(g);
     }
-
+    
+    private Rectangle getBattleInitiationArea(Npc npc, Rectangle npcBounds, int sightRange) {
+        Npc.Direction npcDirection = npc.getDirection();
+        
+        // Use the actual sight range from the NPC
+        int actualSightRange = npc.getSightRange() * TILE_SIZE;
+        
+        Rectangle battleArea;
+        
+        switch (npcDirection) {
+            case FRONT: // Looking down
+                battleArea = new Rectangle(
+                    npcBounds.x - TILE_SIZE, // Allow ±1 tile width (Math.abs(deltaX) <= 1)
+                    npcBounds.y + npcBounds.height,
+                    npcBounds.width + (2 * TILE_SIZE), // 3 tiles wide total
+                    actualSightRange
+                );
+                break;
+            case BACK: // Looking up
+                battleArea = new Rectangle(
+                    npcBounds.x - TILE_SIZE,
+                    npcBounds.y - actualSightRange,
+                    npcBounds.width + (2 * TILE_SIZE),
+                    actualSightRange
+                );
+                break;
+            case LEFT: // Looking left
+                battleArea = new Rectangle(
+                    npcBounds.x - actualSightRange,
+                    npcBounds.y - TILE_SIZE, // Allow ±1 tile height
+                    actualSightRange,
+                    npcBounds.height + (2 * TILE_SIZE) // 3 tiles tall total
+                );
+                break;
+            case RIGHT: // Looking right
+                battleArea = new Rectangle(
+                    npcBounds.x + npcBounds.width,
+                    npcBounds.y - TILE_SIZE,
+                    actualSightRange,
+                    npcBounds.height + (2 * TILE_SIZE)
+                );
+                break;
+            default:
+                battleArea = new Rectangle(
+                    npcBounds.x - actualSightRange,
+                    npcBounds.y - actualSightRange,
+                    npcBounds.width + actualSightRange * 2,
+                    npcBounds.height + actualSightRange * 2
+                );
+                break;
+        }
+        
+        return battleArea;
+    }
+    
+    private void drawDebugLegend(Graphics g) {
+        g.setColor(Color.BLACK);
+        g.fillRect(10, 10, 200, 160);
+        g.setColor(Color.WHITE);
+        g.drawRect(10, 10, 200, 160);
+        
+        int y = 25;
+        g.setColor(Color.RED);
+        g.drawString("RED: Player Bounds", 15, y);
+        y += 15;
+        g.setColor(Color.BLUE);
+        g.drawString("BLUE: Object Bounds", 15, y);
+        y += 15;
+        g.setColor(Color.GREEN);
+        g.drawString("GREEN: Door Areas", 15, y);
+        y += 15;
+        g.setColor(Color.ORANGE);
+        g.drawString("ORANGE: NPC Bounds", 15, y);
+        y += 15;
+        g.setColor(Color.MAGENTA);
+        g.drawString("MAGENTA: NPC Interaction", 15, y);
+        y += 15;
+        g.setColor(Color.CYAN);
+        g.drawString("CYAN: NPC Battle Range", 15, y);
+        y += 15;
+        g.setColor(Color.GREEN);
+        g.drawString("GREEN: Tall Grass", 15, y);
+        y += 15;
+        g.setColor(Color.YELLOW);
+        g.drawString("YELLOW: In Grass Indicator", 15, y);
+    }
+    
+    
     @Override
     public void keyTyped(KeyEvent e) {}
 
@@ -463,55 +602,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     public boolean isLarge() {
         return rows >= 20 || columns >= 30;
     }
-
-    private void startWildEncounter() {
-        // Set flags to prevent movement during encounter
-        inBattle = true;
-        
-        // Reset all movement states
-        resetKeyStates();
-        
-        // Stop the player's movement
-        player.setMoving(false);
-        player.stopMoving();
-        
-        // Pause the game timer to prevent any movement updates
-        timer.stop();
-        
-        // Generate a wild Pokémon based on current location
-        Pokemon wildPokemon = encounterManager.generateWildPokemon(worldName);
-        
-        // Play encounter animation
-        playEncounterAnimation(wildPokemon);
-        
-        // Start battle
-        player.setInBattle(true);
-        
-        // Create and show battle screen
-        SwingUtilities.invokeLater(() -> {
-            BattleScreen battleScreen = new BattleScreen(player, wildPokemon, true, "route");
-            battleScreen.setVisible(true);
-            
-            // When battle ends
-            battleScreen.addWindowListener(new WindowAdapter() {
-                @Override
-                public void windowClosed(WindowEvent e) {
-                    endWildEncounter();
-                }
-            });
-        });
-    }
-    
-    // Add method to end wild encounter
-    private void endWildEncounter() {
-        inBattle = false;
-        player.setInBattle(false);
-        encounterCooldown = ENCOUNTER_COOLDOWN_TIME;
-        timer.start();
-        
-        // Request focus back to the board
-        requestFocusInWindow();
-    }
     
     // Add method for encounter animation
     private void playEncounterAnimation(Pokemon wildPokemon) {
@@ -565,5 +655,111 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     public int getColumns() {
         return columns;
+    }
+
+    public List<WorldObject> getObjects() {
+        return objects;
+    }
+
+    // Add these methods to your Board class
+    public void addNPC(Npc npc) {
+        npcs.add(npc);
+        objects.add(npc); // Add to general objects for rendering
+    }
+
+    private void checkNPCEncounters() {
+        if (npcBattleInProgress || inBattle) return;
+        
+        for (Npc npc : npcs) {
+            if (npc.canSeePlayer(player, TILE_SIZE)) {
+                initiateNPCBattle(npc);
+                break;
+            }
+        }
+    }
+
+    private void initiateNPCBattle(Npc npc) {
+        npcBattleInProgress = true;
+        
+        // Stop player movement
+        resetKeyStates();
+        player.setMoving(false);
+        player.stopMoving();
+        timer.stop();
+        
+        // Show dialogue first
+        showNPCDialogue(npc, () -> {
+            // Start battle after dialogue
+            startTrainerBattle(npc);
+        });
+    }
+
+    private void showNPCDialogue(Npc npc, Runnable onComplete) {
+        SwingUtilities.invokeLater(() -> {
+            NpcDialogueScreen dialogue = new NpcDialogueScreen(npc, this);
+            dialogue.setVisible(true);
+            
+            dialogue.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosed(java.awt.event.WindowEvent e) {
+                    onComplete.run();
+                }
+            });
+        });
+    }
+
+    private void startWildEncounter() {
+        inBattle = true;
+        resetKeyStates();
+        player.setMoving(false);
+        player.stopMoving();
+        timer.stop();
+        
+        Pokemon wildPokemon = encounterManager.generateWildPokemon(worldName);
+        playEncounterAnimation(wildPokemon);
+        player.setInBattle(true);
+        
+        SwingUtilities.invokeLater(() -> {
+            WildPokemonBattle battleScreen = new WildPokemonBattle(player, wildPokemon, "route");
+            battleScreen.setVisible(true);
+            
+            battleScreen.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosed(WindowEvent e) {
+                    endWildEncounter();
+                }
+            });
+        });
+    }
+
+    private void endWildEncounter() {
+        inBattle = false;
+        player.setInBattle(false);
+        encounterCooldown = ENCOUNTER_COOLDOWN_TIME;
+        timer.start();
+        
+        // Request focus back to the board
+        requestFocusInWindow();
+    }
+    
+    // Update the startTrainerBattle method:
+    private void startTrainerBattle(Npc npc) {
+        SwingUtilities.invokeLater(() -> {
+            TrainerBattle battleScreen = new TrainerBattle(player, npc, "route");
+            battleScreen.setVisible(true);
+            
+            battleScreen.addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosed(java.awt.event.WindowEvent e) {
+                    endNPCBattle();
+                }
+            });
+        });
+    }
+
+    private void endNPCBattle() {
+        npcBattleInProgress = false;
+        timer.start();
+        requestFocusInWindow();
     }
 }

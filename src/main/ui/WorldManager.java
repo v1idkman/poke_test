@@ -13,7 +13,10 @@ import javax.swing.JPanel;
 
 import exceptions.NoSuchWorldException;
 import model.Door;
+import model.Npc;
 import model.Player;
+import pokes.Pokemon;
+import pokes.PokemonFactory;
 
 public class WorldManager {
     private Map<String, Board> worlds = new HashMap<>();
@@ -150,6 +153,8 @@ public class WorldManager {
         outsideBoard.placeManyObjects("/resources/buildings/tree2.png", 6, 0, outsideBoard.getColumns(), 4, 2, 1);
         outsideBoard.placeManyObjects("/resources/buildings/tree2.png", 6, outsideBoard.getRows() - 4, outsideBoard.getColumns(), 
                                         outsideBoard.getRows(), 2, 1);
+        outsideBoard.placeManyObjects("/resources/buildings/tree2.png", outsideBoard.getColumns() - 6, 0, 
+                                        outsideBoard.getColumns(), outsideBoard.getRows(), 2, 1);
         
         outsideBoard.addObject("/resources/buildings/green_roof_two_floor_house.png", 10, 4);
         outsideBoard.addObject("/resources/buildings/blue_roof_two_floor_house.png", 17, 4);
@@ -158,6 +163,19 @@ public class WorldManager {
         outsideBoard.addObject("/resources/buildings/tiny_tree1.png", 8, 11);
         outsideBoard.addObject("/resources/buildings/tiny_tree1.png", 8, 12);
 
+        // Create an NPC
+        Npc bugCatcher = new Npc(new Point(10, 15), "Bug Catcher Sam", 
+                                "/resources/npc_sprites/npc1.png", Npc.Direction.FRONT, outsideBoard);
+        bugCatcher.setDialogueText("I love catching bugs! Want to battle?");
+
+        // Add Pokemon to the NPC
+        Pokemon caterpie = PokemonFactory.createPokemon(10, 8, "Caterpie");
+        Pokemon weedle = PokemonFactory.createPokemon(13, 9, "Weedle");
+        bugCatcher.addPokemon(caterpie);
+        bugCatcher.addPokemon(weedle);
+
+        // Add to your board
+        outsideBoard.addNPC(bugCatcher);
 
         // doors
         /* outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
