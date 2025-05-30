@@ -2,8 +2,6 @@ package ui;
 
 import model.Player;
 import pokes.Pokemon;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import javax.swing.Timer;
 
 public class WildPokemonBattle extends BattleScreen {

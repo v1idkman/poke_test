@@ -6,10 +6,12 @@ import javax.swing.*;
 
 import exceptions.NoSuchWorldException;
 import model.Building;
+import model.CivilianNpc;
 import model.Door;
 import model.EncounterManager;
 import model.Player;
 import model.Player.Direction;
+import model.TrainerNpc;
 import model.WorldObject;
 import pokes.Pokemon;
 import tiles.TileManager;
@@ -36,7 +38,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     private List<Door> doors;
     private List<WorldObject> objects;
-    private List<Npc> npcs = new ArrayList<>();
+    private List<TrainerNpc> trainers = new ArrayList<>();
+    private List<CivilianNpc> civilians = new ArrayList<>();
+    private List<Npc> allNpcs = new ArrayList<>();
     private boolean npcBattleInProgress = false;
     private WorldManager worldManager;
     private TileManager tileManager;
@@ -151,6 +155,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
 
         checkNPCEncounters();
+        updateNpcs();
         
         // Decrease encounter cooldown if active
         if (encounterCooldown > 0) {
@@ -341,41 +346,30 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                     interactionArea.width, interactionArea.height);
         }
     
-        // ORANGE: NPC bounds
+        // ORANGE: Trainer NPC bounds
         g.setColor(Color.ORANGE);
-        for (Npc npc : npcs) {
-            Rectangle npcBounds = npc.getBounds(TILE_SIZE);
-            g.drawRect(npcBounds.x, npcBounds.y, npcBounds.width, npcBounds.height);
+        for (TrainerNpc trainer : trainers) {
+            Rectangle bounds = trainer.getBounds(TILE_SIZE);
+            g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
-    
-        // MAGENTA: NPC interaction areas (for dialogue/general interaction)
-        g.setColor(Color.MAGENTA);
-        for (Npc npc : npcs) {
-            Rectangle npcBounds = npc.getBounds(TILE_SIZE);
-            Rectangle npcInteractionArea = new Rectangle(
-                npcBounds.x - TILE_SIZE, 
-                npcBounds.y - TILE_SIZE,
-                npcBounds.width + TILE_SIZE * 2, 
-                npcBounds.height + TILE_SIZE * 2
-            );
-            g.drawRect(npcInteractionArea.x, npcInteractionArea.y, 
-                    npcInteractionArea.width, npcInteractionArea.height);
+        
+        // PINK: Civilian NPC bounds
+        g.setColor(Color.PINK);
+        for (CivilianNpc civilian : civilians) {
+            Rectangle bounds = civilian.getBounds(TILE_SIZE);
+            g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
-    
-        // CYAN: NPC battle initiation areas (sight range)
+        
+        // CYAN: Only show battle areas for trainers
         g.setColor(Color.CYAN);
-        for (Npc npc : npcs) {
-            if (!npc.isDefeated()) { // Only show for undefeated NPCs
-                Rectangle npcBounds = npc.getBounds(TILE_SIZE);
+        for (TrainerNpc trainer : trainers) {
+            if (!trainer.isDefeated()) {
+                Rectangle npcBounds = trainer.getBounds(TILE_SIZE);
+                int sightRange = trainer.getSightRange() * TILE_SIZE;
+                Rectangle battleArea = getBattleInitiationArea(trainer, npcBounds, sightRange);
                 
-                int sightRange = npc.getSightRange() * TILE_SIZE;
-                
-                // Draw battle initiation area based on NPC's facing direction
-                Rectangle battleArea = getBattleInitiationArea(npc, npcBounds, sightRange);
-                
-                // Draw with semi-transparent fill to show the area clearly
                 Graphics2D g2d = (Graphics2D) g.create();
-                g2d.setColor(new Color(0, 255, 255, 50)); // Semi-transparent cyan
+                g2d.setColor(new Color(0, 255, 255, 50));
                 g2d.fillRect(battleArea.x, battleArea.y, battleArea.width, battleArea.height);
                 g2d.setColor(Color.CYAN);
                 g2d.drawRect(battleArea.x, battleArea.y, battleArea.width, battleArea.height);
@@ -403,7 +397,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         drawDebugLegend(g);
     }
     
-    private Rectangle getBattleInitiationArea(Npc npc, Rectangle npcBounds, int sightRange) {
+    private Rectangle getBattleInitiationArea(TrainerNpc npc, Rectangle npcBounds, int sightRange) {
         Npc.Direction npcDirection = npc.getDirection();
         
         // Use the actual sight range from the NPC
@@ -412,7 +406,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         Rectangle battleArea;
         
         switch (npcDirection) {
-            case FRONT: // Looking down
+            case BACK: // Looking down
                 battleArea = new Rectangle(
                     npcBounds.x - TILE_SIZE, // Allow ±1 tile width (Math.abs(deltaX) <= 1)
                     npcBounds.y + npcBounds.height,
@@ -420,7 +414,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                     actualSightRange
                 );
                 break;
-            case BACK: // Looking up
+            case FRONT: // Looking up
                 battleArea = new Rectangle(
                     npcBounds.x - TILE_SIZE,
                     npcBounds.y - actualSightRange,
@@ -661,24 +655,19 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         return objects;
     }
 
-    // Add these methods to your Board class
-    public void addNPC(Npc npc) {
-        npcs.add(npc);
-        objects.add(npc); // Add to general objects for rendering
+    public void addTrainer(TrainerNpc trainer) {
+        trainers.add(trainer);
+        allNpcs.add(trainer);
+        objects.add(trainer);
     }
-
-    private void checkNPCEncounters() {
-        if (npcBattleInProgress || inBattle) return;
-        
-        for (Npc npc : npcs) {
-            if (npc.canSeePlayer(player, TILE_SIZE)) {
-                initiateNPCBattle(npc);
-                break;
-            }
-        }
+    
+    public void addCivilian(CivilianNpc civilian) {
+        civilians.add(civilian);
+        allNpcs.add(civilian);
+        objects.add(civilian);
     }
-
-    private void initiateNPCBattle(Npc npc) {
+    
+    private void initiateNPCBattle(TrainerNpc npc) {
         npcBattleInProgress = true;
         
         // Stop player movement
@@ -743,7 +732,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     }
     
     // Update the startTrainerBattle method:
-    private void startTrainerBattle(Npc npc) {
+    private void startTrainerBattle(TrainerNpc npc) {
         SwingUtilities.invokeLater(() -> {
             TrainerBattle battleScreen = new TrainerBattle(player, npc, "route");
             battleScreen.setVisible(true);
@@ -761,5 +750,43 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         npcBattleInProgress = false;
         timer.start();
         requestFocusInWindow();
+    }
+
+    private TrainerNpc approachingTrainer = null;
+    
+    private void checkNPCEncounters() {
+        if (npcBattleInProgress || inBattle || approachingTrainer != null) return;
+        
+        for (TrainerNpc trainer : trainers) {
+            if (trainer.canSeePlayer(player, TILE_SIZE) && trainer.canInitiateBattle() 
+                && !trainer.isApproachingForBattle()) {
+                
+                // Start the approach sequence instead of immediate battle
+                approachingTrainer = trainer;
+                trainer.startApproachingPlayer(player, TILE_SIZE);
+                
+                // Stop player movement during approach
+                resetKeyStates();
+                player.setMoving(false);
+                break;
+            }
+        }
+    }
+    
+    public void onTrainerApproachComplete(TrainerNpc trainer) {
+        // Called when trainer finishes approaching the player
+        approachingTrainer = null;
+        trainer.completeApproach();
+        
+        // Now initiate the dialogue and battle
+        initiateNPCBattle(trainer);
+    }
+    
+    public void updateNpcs() {
+        for (TrainerNpc trainer : trainers) {
+            if (trainer.canMove()) {
+                trainer.updateMovement(TILE_SIZE);
+            }
+        }
     }
 }

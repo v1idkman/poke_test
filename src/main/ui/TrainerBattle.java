@@ -1,7 +1,7 @@
 package ui;
 
 import model.Player;
-import model.Npc;
+import model.TrainerNpc;
 import pokes.Pokemon;
 
 import java.awt.Component;
@@ -9,11 +9,11 @@ import java.util.List;
 import javax.swing.Timer;
 
 public class TrainerBattle extends BattleScreen {
-    private Npc trainer;
+    private TrainerNpc trainer;
     private List<Pokemon> trainerTeam;
     private int currentTrainerPokemonIndex;
     
-    public TrainerBattle(Player player, Npc trainer, String battleLocation) {
+    public TrainerBattle(Player player, TrainerNpc trainer, String battleLocation) {
         // Pass the initial message directly to super() to avoid method call
         super(player, getFirstUsablePokemon(trainer), battleLocation, 
               trainer.getName() + " wants to battle!");
@@ -25,7 +25,7 @@ public class TrainerBattle extends BattleScreen {
     }
     
     // Keep your static helper methods as they are
-    private static Pokemon getFirstUsablePokemon(Npc trainer) {
+    private static Pokemon getFirstUsablePokemon(TrainerNpc trainer) {
         for (Pokemon pokemon : trainer.getTeam()) {
             if (pokemon.getStats().getCurrentHp() > 0) {
                 return pokemon;
@@ -34,7 +34,7 @@ public class TrainerBattle extends BattleScreen {
         throw new IllegalStateException("Trainer has no usable Pokemon!");
     }
     
-    private static int findFirstUsablePokemonIndex(Npc trainer) {
+    private static int findFirstUsablePokemonIndex(TrainerNpc trainer) {
         for (int i = 0; i < trainer.getTeam().size(); i++) {
             if (trainer.getTeam().get(i).getStats().getCurrentHp() > 0) {
                 return i;

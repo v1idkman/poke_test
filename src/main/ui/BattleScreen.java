@@ -20,7 +20,6 @@ import model.Item;
 import model.Move;
 import model.Player;
 import model.Pokeball;
-import pokes.LevelManager;
 import pokes.Pokemon;
 import pokes.TypeEffectivenessChart;
 

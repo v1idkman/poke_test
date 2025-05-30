@@ -114,7 +114,6 @@ public class TileFactory {
      * Load an image from the specified path
      */
     private BufferedImage loadImage(String path) {
-        System.out.println("Attempting to load: " + path);
         InputStream stream = getClass().getResourceAsStream(path);
         if (stream == null) {
             System.err.println("Resource not found: " + path);

@@ -13,8 +13,9 @@ import javax.swing.JPanel;
 
 import exceptions.NoSuchWorldException;
 import model.Door;
-import model.Npc;
 import model.Player;
+import model.TrainerNpc;
+import model.Npc.Direction;
 import pokes.Pokemon;
 import pokes.PokemonFactory;
 
@@ -164,8 +165,8 @@ public class WorldManager {
         outsideBoard.addObject("/resources/buildings/tiny_tree1.png", 8, 12);
 
         // Create an NPC
-        Npc bugCatcher = new Npc(new Point(10, 15), "Bug Catcher Sam", 
-                                "/resources/npc_sprites/npc1.png", Npc.Direction.FRONT, outsideBoard);
+        TrainerNpc bugCatcher = new TrainerNpc(new Point(10, 20), "Bug Catcher", "/resources/npc_sprites/bug_catcher/facing_back.png", 
+                        Direction.BACK, outsideBoard, "Bug Catcher Class", false);
         bugCatcher.setDialogueText("I love catching bugs! Want to battle?");
 
         // Add Pokemon to the NPC
@@ -175,7 +176,7 @@ public class WorldManager {
         bugCatcher.addPokemon(weedle);
 
         // Add to your board
-        outsideBoard.addNPC(bugCatcher);
+        outsideBoard.addTrainer(bugCatcher);
 
         // doors
         /* outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
