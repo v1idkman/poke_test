@@ -166,7 +166,7 @@ public class WorldManager {
 
         // Create an NPC
         TrainerNpc bugCatcher = new TrainerNpc(new Point(10, 20), "Bug Catcher", "/resources/npc_sprites/bug_catcher/facing_back.png", 
-                        Direction.BACK, outsideBoard, "Bug Catcher Class", false);
+                        Direction.BACK, outsideBoard, "Bug Catcher Class", true);
         bugCatcher.setDialogueText("I love catching bugs! Want to battle?");
 
         // Add Pokemon to the NPC

@@ -136,15 +136,21 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         for (WorldObject obj : objects) {
             obj.draw(g2d, this, TILE_SIZE);
         }
-        
+
+        /* for (TrainerNpc trainer : trainers) {
+            Icon icon = trainer.getExclamationIcon();
+            if (icon != null) {
+                icon.draw(g);
+            }
+        } */
+
         // Draw player
         playerView.draw(g2d, this, TILE_SIZE);
 
-        drawDebugBounds(g2d);
+        // drawDebugBounds(g2d);
         
         g2d.dispose();
     }
-
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -154,8 +160,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             worldManager.getCamera().update(player);
         }
 
-        checkNPCEncounters();
         updateNpcs();
+
+        if (approachingTrainer != null && approachingTrainer.isApproachingForBattle()) {
+            // Force player to stay still
+            player.setMoving(false);
+            resetKeyStates();
+            repaint();
+            return;
+        }
+
+        checkNPCEncounters();
         
         // Decrease encounter cooldown if active
         if (encounterCooldown > 0) {
@@ -360,13 +375,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
         
-        // CYAN: Only show battle areas for trainers
+        // CYAN: Battle initiation rectangles for trainers
         g.setColor(Color.CYAN);
         for (TrainerNpc trainer : trainers) {
             if (!trainer.isDefeated()) {
                 Rectangle npcBounds = trainer.getBounds(TILE_SIZE);
-                int sightRange = trainer.getSightRange() * TILE_SIZE;
-                Rectangle battleArea = getBattleInitiationArea(trainer, npcBounds, sightRange);
+                Rectangle battleArea = getBattleInitiationArea(trainer, npcBounds, 0);
                 
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setColor(new Color(0, 255, 255, 50));
@@ -376,8 +390,38 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 g2d.dispose();
             }
         }
-    
-        // YELLOW: Tall grass areas (existing code)
+        
+        // YELLOW: Midpoint lines for battle rectangles
+        g.setColor(Color.YELLOW);
+        for (TrainerNpc trainer : trainers) {
+            if (!trainer.isDefeated()) {
+                Rectangle battleArea = getBattleInitiationArea(trainer, trainer.getBounds(TILE_SIZE), 0);
+                
+                switch (trainer.getDirection()) {
+                    case FRONT:
+                    case BACK:
+                        // Vertical rectangle - draw VERTICAL midpoint line
+                        int midX = battleArea.x + (battleArea.width / 2);
+                        g.drawLine(midX, battleArea.y, midX, battleArea.y + battleArea.height);
+                        break;
+                        
+                    case LEFT:
+                    case RIGHT:
+                        // Horizontal rectangle - draw HORIZONTAL midpoint line
+                        int midY = battleArea.y + (battleArea.height / 2);
+                        g.drawLine(battleArea.x, midY, battleArea.x + battleArea.width, midY);
+                        break;
+                }
+            }
+        }
+        
+        // RED DOT: Player center
+        int playerCenterX = player.getWorldX() + (TILE_SIZE / 2);
+        int playerCenterY = player.getWorldY() + (TILE_SIZE / 2);
+        g.setColor(Color.RED);
+        g.fillOval(playerCenterX - 3, playerCenterY - 3, 6, 6);
+        
+        // LIGHT GREEN: Tall grass areas
         g.setColor(new Color(0, 255, 0, 100)); // Semi-transparent green
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < columns; x++) {
@@ -387,63 +431,71 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             }
         }
     
-        // Player in grass indicator (existing code)
+        // Player in grass indicator
         if (tileManager.isPlayerInTallGrass(player)) {
             g.setColor(Color.YELLOW);
             g.drawString("IN GRASS", playerBounds.x, playerBounds.y - 10);
         }
     
         // Add legend for debug colors
-        drawDebugLegend(g);
+        // drawDebugLegend(g);
+
     }
     
     private Rectangle getBattleInitiationArea(TrainerNpc npc, Rectangle npcBounds, int sightRange) {
-        Npc.Direction npcDirection = npc.getDirection();
-        
-        // Use the actual sight range from the NPC
-        int actualSightRange = npc.getSightRange() * TILE_SIZE;
+        // Use player dimensions for consistent rectangle size
+        int playerWidth = player.getHeight(); 
+        int playerHeight = player.getWidth();
         
         Rectangle battleArea;
         
-        switch (npcDirection) {
-            case BACK: // Looking down
+        switch (npc.getDirection()) {
+            case FRONT: // Looking up - vertical rectangle
+                int frontVisionHeight = 5 * playerWidth; // 5 * 32 = 160 pixels
                 battleArea = new Rectangle(
-                    npcBounds.x - TILE_SIZE, // Allow ±1 tile width (Math.abs(deltaX) <= 1)
-                    npcBounds.y + npcBounds.height,
-                    npcBounds.width + (2 * TILE_SIZE), // 3 tiles wide total
-                    actualSightRange
+                    npcBounds.x + (npcBounds.width / 2) - (playerWidth / 2), // Center on NPC
+                    npcBounds.y - frontVisionHeight, // Extend upward
+                    playerWidth, // Width = 32 pixels
+                    frontVisionHeight // Height = 160 pixels
                 );
                 break;
-            case FRONT: // Looking up
+                
+            case BACK: // Looking down - vertical rectangle
+                int backVisionHeight = 5 * playerWidth; // 5 * 32 = 160 pixels
                 battleArea = new Rectangle(
-                    npcBounds.x - TILE_SIZE,
-                    npcBounds.y - actualSightRange,
-                    npcBounds.width + (2 * TILE_SIZE),
-                    actualSightRange
+                    npcBounds.x + (npcBounds.width / 2) - (playerWidth / 2), // Center on NPC
+                    npcBounds.y + npcBounds.height, // Start after NPC sprite
+                    playerWidth, // Width = 32 pixels
+                    backVisionHeight // Height = 160 pixels
                 );
                 break;
-            case LEFT: // Looking left
+                
+            case LEFT: // Looking left - horizontal rectangle
+                int leftVisionWidth = 5 * playerHeight; // 5 * 32 = 160 pixels
                 battleArea = new Rectangle(
-                    npcBounds.x - actualSightRange,
-                    npcBounds.y - TILE_SIZE, // Allow ±1 tile height
-                    actualSightRange,
-                    npcBounds.height + (2 * TILE_SIZE) // 3 tiles tall total
+                    npcBounds.x - leftVisionWidth, // Extend leftward
+                    npcBounds.y + (npcBounds.height / 2) - (playerHeight / 2), // Center on NPC
+                    leftVisionWidth, // Width = 160 pixels
+                    playerHeight // Height = 32 pixels
                 );
                 break;
-            case RIGHT: // Looking right
+                
+            case RIGHT: // Looking right - horizontal rectangle
+                int rightVisionWidth = 5 * playerHeight; // 5 * 32 = 160 pixels
                 battleArea = new Rectangle(
-                    npcBounds.x + npcBounds.width,
-                    npcBounds.y - TILE_SIZE,
-                    actualSightRange,
-                    npcBounds.height + (2 * TILE_SIZE)
+                    npcBounds.x + npcBounds.width, // Start after NPC sprite
+                    npcBounds.y + (npcBounds.height / 2) - (playerHeight / 2), // Center on NPC
+                    rightVisionWidth, // Width = 160 pixels
+                    playerHeight // Height = 32 pixels
                 );
                 break;
+                
             default:
                 battleArea = new Rectangle(
-                    npcBounds.x - actualSightRange,
-                    npcBounds.y - actualSightRange,
-                    npcBounds.width + actualSightRange * 2,
-                    npcBounds.height + actualSightRange * 2
+                    npcBounds.x - TILE_SIZE,
+                    npcBounds.y - TILE_SIZE,
+                    TILE_SIZE * 2,
+                    TILE_SIZE * 2
                 );
                 break;
         }
@@ -489,7 +541,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
+        if (approachingTrainer != null && approachingTrainer.isApproachingForBattle()) {
+            return;
+        }
+
         int key = e.getKeyCode();
+
         if (key == KeyEvent.VK_SHIFT) {
             shiftPressed = true;
             player.setSprintKeyPressed(true);
@@ -516,6 +573,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyReleased(KeyEvent e) {
+        if (approachingTrainer != null && approachingTrainer.isApproachingForBattle()) {
+            return;
+        }
         int key = e.getKeyCode();
         if (key == KeyEvent.VK_SHIFT) {
             shiftPressed = false;
@@ -761,13 +821,16 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             if (trainer.canSeePlayer(player, TILE_SIZE) && trainer.canInitiateBattle() 
                 && !trainer.isApproachingForBattle()) {
                 
-                // Start the approach sequence instead of immediate battle
+                // STOP PLAYER MOVEMENT IMMEDIATELY
+                resetKeyStates();
+                player.setMoving(false);
+                player.stopMoving();
+                
+                // Start the approach sequence
                 approachingTrainer = trainer;
                 trainer.startApproachingPlayer(player, TILE_SIZE);
                 
-                // Stop player movement during approach
-                resetKeyStates();
-                player.setMoving(false);
+                System.out.println("Player movement stopped! " + trainer.getName() + " is approaching!");
                 break;
             }
         }
@@ -787,6 +850,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             if (trainer.canMove()) {
                 trainer.updateMovement(TILE_SIZE);
             }
+            trainer.updateAnimation();
+            // trainer.updateExclamationIcon();
         }
-    }
+    }    
+    
 }

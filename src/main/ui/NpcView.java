@@ -14,7 +14,7 @@ import java.util.Map;
 public class NpcView implements Drawable {
     private final Npc npc;
     private Image currentImage;
-    private String npcType; // e.g., "bug_catcher"
+    private String npcType;
     
     // Cache images to avoid reloading
     private Map<String, Image> imageCache = new HashMap<>();
@@ -37,6 +37,8 @@ public class NpcView implements Drawable {
             Image img = ImageIO.read(getClass().getResource(path));
             if (img != null) {
                 imageCache.put(path, img);
+            } else {
+                System.out.println("Warning: NPC sprite not found, check bin: " + path);
             }
         } catch (IOException | IllegalArgumentException exc) {
             System.out.println("Error preloading NPC image: " + path + " - " + exc.getMessage());
@@ -70,6 +72,15 @@ public class NpcView implements Drawable {
         String path;
         boolean isMoving = npc.isMoving();
         Direction direction = npc.getDirection();
+        
+        // Check if NPC is a TrainerNpc and handle special cases
+        if (npc instanceof model.TrainerNpc) {
+            model.TrainerNpc trainer = (model.TrainerNpc) npc;
+            // If trainer is defeated, not actively moving towards player, or not approaching, show static sprite
+            if (trainer.isDefeated() || !trainer.isApproachingForBattle() || !trainer.isMovingTowardsPlayer()) {
+                isMoving = false;
+            }
+        }
         
         if (isMoving && npc.canMove()) {
             path = String.format(
@@ -106,7 +117,7 @@ public class NpcView implements Drawable {
             }
         }
     }
-
+    
     public void draw(Graphics g, ImageObserver observer, int tileSize) {
         if (currentImage != null) {
             int x = npc.getPosition().x * tileSize;
@@ -123,7 +134,6 @@ public class NpcView implements Drawable {
         loadImage();
     }
     
-    // ADD THIS METHOD - This is what was missing!
     public Image getCurrentImage() {
         return currentImage;
     }

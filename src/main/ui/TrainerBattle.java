@@ -14,17 +14,14 @@ public class TrainerBattle extends BattleScreen {
     private int currentTrainerPokemonIndex;
     
     public TrainerBattle(Player player, TrainerNpc trainer, String battleLocation) {
-        // Pass the initial message directly to super() to avoid method call
         super(player, getFirstUsablePokemon(trainer), battleLocation, 
               trainer.getName() + " wants to battle!");
         
-        // Initialize fields AFTER super() call
         this.trainer = trainer;
         this.trainerTeam = trainer.getTeam();
         this.currentTrainerPokemonIndex = findFirstUsablePokemonIndex(trainer);
     }
     
-    // Keep your static helper methods as they are
     private static Pokemon getFirstUsablePokemon(TrainerNpc trainer) {
         for (Pokemon pokemon : trainer.getTeam()) {
             if (pokemon.getStats().getCurrentHp() > 0) {
@@ -100,7 +97,6 @@ public class TrainerBattle extends BattleScreen {
         if (pokemonButton != null) pokemonButton.setEnabled(true);
         if (runButton != null) runButton.setEnabled(canRun());
         
-        // Ensure the action panel is properly displayed
         if (actionPanel != null) {
             for (Component component : actionPanel.getComponents()) {
                 component.setEnabled(true);

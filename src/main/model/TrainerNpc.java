@@ -20,14 +20,13 @@ public class TrainerNpc extends Npc {
     // Movement animation variables
     private boolean isMovingTowardsPlayer = false;
     private boolean isApproachingForBattle = false;
-    private Point targetPosition;
     private Point originalPosition;
     private int movementSpeed = 2;
     private double exactX, exactY;
     private Player targetPlayer; // Store reference to player being approached
     
     public TrainerNpc(Point position, String name, String spritePath, Direction facing, 
-                     Board board, String trainerClass, boolean canMove) {
+                    Board board, String trainerClass, boolean canMove) {
         super(position, name, spritePath, facing, board, canMove);
         this.team = new ArrayList<>();
         this.hasBeenDefeated = false;
@@ -37,144 +36,169 @@ public class TrainerNpc extends Npc {
         this.canMove = canMove;
         this.dialogueText = "Let's battle!";
         this.originalPosition = new Point(position);
+        
+        // Initialize exact coordinates (like Player class)
         this.exactX = position.x;
         this.exactY = position.y;
+        this.movementSpeed = 2; // Set movement speed in pixels per frame
         
         if (canMove) {
-            String npcType = extractNpcTypeFromPath(spritePath);
-            this.npcView = new NpcView(this, npcType);
+            this.npcView = new NpcView(this, extractNpcTypeFromPath(spritePath));
         }
     }
-    
+
     private String extractNpcTypeFromPath(String spritePath) {
         String[] parts = spritePath.split("/");
-        if (parts.length >= 3) {
-            return parts[2];
+        // The path structure is: /resources/npc_sprites/bug_catcher/facing_back.png
+        // parts[0] = "" (empty because of leading slash)
+        // parts[1] = "resources"
+        // parts[2] = "npc_sprites" 
+        // parts[3] = "bug_catcher" <- This is what we want
+        // parts[4] = "facing_back.png"
+        
+        if (parts.length >= 4) {
+            return parts[3]; // Return "bug_catcher" instead of "npc_sprites"
         }
         return "default";
     }
     
+    
     public void startApproachingPlayer(Player player, int tileSize) {
-        if (!canMove || hasBeenDefeated || defeated || isApproachingForBattle) return;
+        if (!canMove || hasBeenDefeated || defeated || isApproachingForBattle) {
+            return;
+        }
         
         this.targetPlayer = player;
         this.isApproachingForBattle = true;
-        
-        // Calculate the tile to stop at (adjacent to player)
-        int playerTileX = player.getWorldX() / tileSize;
-        int playerTileY = player.getWorldY() / tileSize;
-        
-        // Find the best adjacent position to approach
-        Point approachPosition = findBestApproachPosition(playerTileX, playerTileY);
-        
-        if (approachPosition != null) {
-            moveTowardsPosition(approachPosition);
-        }
-    }
-    
-    private Point findBestApproachPosition(int playerTileX, int playerTileY) {
-        // Try positions adjacent to the player, prioritizing the direction we're facing
-        Point[] adjacentPositions = {
-            new Point(playerTileX, playerTileY - 1), // Above player
-            new Point(playerTileX, playerTileY + 1), // Below player
-            new Point(playerTileX - 1, playerTileY), // Left of player
-            new Point(playerTileX + 1, playerTileY)  // Right of player
-        };
-        
-        // Find the closest valid position
-        Point bestPosition = null;
-        double shortestDistance = Double.MAX_VALUE;
-        
-        for (Point pos : adjacentPositions) {
-            if (isValidPosition(pos)) {
-                double distance = Math.sqrt(Math.pow(pos.x - position.x, 2) + Math.pow(pos.y - position.y, 2));
-                if (distance < shortestDistance) {
-                    shortestDistance = distance;
-                    bestPosition = pos;
-                }
-            }
-        }
-        
-        return bestPosition;
-    }
-    
-    private boolean isValidPosition(Point pos) {
-        // Check if position is within board bounds and not blocked
-        if (pos.x < 0 || pos.y < 0 || pos.x >= board.getColumns() || pos.y >= board.getRows()) {
-            return false;
-        }
-        
-        // Check for object collisions
-        Rectangle posRect = new Rectangle(pos.x * Board.TILE_SIZE, pos.y * Board.TILE_SIZE, 
-                                        Board.TILE_SIZE, Board.TILE_SIZE);
-        
-        for (WorldObject obj : board.getObjects()) {
-            if (obj != this && !(obj instanceof Door)) {
-                if (posRect.intersects(obj.getBounds(Board.TILE_SIZE))) {
-                    return false;
-                }
-            }
-        }
-        
-        return true;
-    }
-    
-    private void moveTowardsPosition(Point target) {
-        this.targetPosition = target;
         this.isMovingTowardsPlayer = true;
         
-        // Calculate direction to face
-        int deltaX = target.x - position.x;
-        int deltaY = target.y - position.y;
+        // Calculate initial direction to face player
+        double playerPixelX = player.getWorldX();
+        double playerPixelY = player.getWorldY();
+        double npcPixelX = exactX * tileSize;
+        double npcPixelY = exactY * tileSize;
         
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-            setFacing(deltaX > 0 ? Direction.RIGHT : Direction.LEFT);
+        double distanceX = playerPixelX - npcPixelX;
+        double distanceY = playerPixelY - npcPixelY;
+        
+        // Face the direction with the largest distance first
+        if (Math.abs(distanceX) > Math.abs(distanceY)) {
+            setFacing(distanceX > 0 ? Direction.RIGHT : Direction.LEFT);
         } else {
-            setFacing(deltaY > 0 ? Direction.FRONT : Direction.BACK);
+            setFacing(distanceY > 0 ? Direction.BACK : Direction.FRONT);
         }
         
+        // Start moving immediately
         startMoving();
     }
     
     public void updateMovement(int tileSize) {
-        if (!isMovingTowardsPlayer || targetPosition == null) return;
+        if (!isMovingTowardsPlayer || targetPlayer == null) return;
         
-        double targetPixelX = targetPosition.x * tileSize;
-        double targetPixelY = targetPosition.y * tileSize;
+        // Get current positions in pixels
         double currentPixelX = exactX * tileSize;
         double currentPixelY = exactY * tileSize;
+        double playerPixelX = targetPlayer.getWorldX();
+        double playerPixelY = targetPlayer.getWorldY();
         
-        double distanceX = targetPixelX - currentPixelX;
-        double distanceY = targetPixelY - currentPixelY;
-        double distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+        // Calculate direction to player
+        double distanceX = playerPixelX - currentPixelX;
+        double distanceY = playerPixelY - currentPixelY;
+        double totalDistance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
         
-        if (distance <= movementSpeed) {
-            // Reached target position
-            position.setLocation(targetPosition);
-            exactX = targetPosition.x;
-            exactY = targetPosition.y;
+        // Debug output
+        System.out.println("NPC at: " + currentPixelX + ", " + currentPixelY + 
+                          " | Player at: " + playerPixelX + ", " + playerPixelY + 
+                          " | Distance: " + totalDistance + " | Facing: " + facing);
+        
+        // Check for collision with player
+        Rectangle npcBounds = new Rectangle(
+            (int)currentPixelX, 
+            (int)currentPixelY, 
+            tileSize, 
+            tileSize
+        );
+        Rectangle playerBounds = targetPlayer.getBounds(tileSize);
+        
+        if (npcBounds.intersects(playerBounds) || totalDistance <= tileSize) {
+            // Collision detected - stop moving and initiate battle
+            System.out.println("COLLISION DETECTED! Starting battle...");
             isMovingTowardsPlayer = false;
             stopMoving();
+            facePlayer(targetPlayer, tileSize);
             
-            // If this was an approach for battle, face the player and trigger dialogue
-            if (isApproachingForBattle && targetPlayer != null) {
-                facePlayer(targetPlayer, tileSize);
-                // Notify the board that approach is complete
+            // Force the NPC view to update to standing sprite immediately
+            if (npcView != null) {
+                npcView.update();
+            }
+            
+            if (isApproachingForBattle) {
                 board.onTrainerApproachComplete(this);
             }
-        } else {
-            // Continue moving
-            double moveX = (distanceX / distance) * movementSpeed;
-            double moveY = (distanceY / distance) * movementSpeed;
             
+            isApproachingForBattle = false;
+            return;
+        }        
+        
+        double moveX = 0;
+        double moveY = 0;
+        
+        switch (facing) {
+            case LEFT:
+            case RIGHT:
+                // Only move in X axis when facing left or right
+                if (Math.abs(distanceX) > 2) { // Only move if distance is significant
+                    moveX = (distanceX > 0) ? movementSpeed : -movementSpeed;
+                    moveY = 0; // No Y movement
+                }
+                break;
+                
+            case FRONT:
+            case BACK:
+                // Only move in Y axis when facing front or back
+                if (Math.abs(distanceY) > 2) { // Only move if distance is significant
+                    moveX = 0; // No X movement
+                    moveY = (distanceY > 0) ? movementSpeed : -movementSpeed;
+                }
+                break;
+        }
+        
+        // Apply movement if there's any
+        if (moveX != 0 || moveY != 0) {
+            // Update exact position in tile units
             exactX += moveX / tileSize;
             exactY += moveY / tileSize;
             
+            // Update tile position for collision detection
+            position.setLocation((int)Math.round(exactX), (int)Math.round(exactY));
+            
             updateAnimation();
+        } else {
+            // If we can't move in our facing direction, turn to face the player
+            turnTowardsPlayer(distanceX, distanceY);
         }
         
         if (npcView != null) {
             npcView.update();
+        }
+    }
+
+    private void turnTowardsPlayer(double distanceX, double distanceY) {
+        // Determine which axis has the larger distance and turn to face that direction
+        if (Math.abs(distanceX) > Math.abs(distanceY)) {
+            // Player is more to the left or right
+            Direction newDirection = (distanceX > 0) ? Direction.RIGHT : Direction.LEFT;
+            if (facing != newDirection) {
+                setFacing(newDirection);
+                System.out.println("Turning to face: " + newDirection);
+            }
+        } else {
+            // Player is more up or down
+            Direction newDirection = (distanceY > 0) ? Direction.BACK : Direction.FRONT;
+            if (facing != newDirection) {
+                setFacing(newDirection);
+                System.out.println("Turning to face: " + newDirection);
+            }
         }
     }
     
@@ -188,28 +212,29 @@ public class TrainerNpc extends Npc {
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
             setFacing(deltaX > 0 ? Direction.RIGHT : Direction.LEFT);
         } else {
-            setFacing(deltaY > 0 ? Direction.FRONT : Direction.BACK);
+            // CORRECTED: FRONT = down (positive Y), BACK = up (negative Y)
+            setFacing(deltaY > 0 ? Direction.BACK : Direction.FRONT);
         }
     }
     
-    @Override
+        @Override
     public void draw(Graphics g, ImageObserver observer, int tileSize) {
         if (npcView != null && canMove) {
-            // Use exact position for smooth movement during approach
-            if (isMovingTowardsPlayer) {
-                if (npcView.getCurrentImage() != null) {
-                    int x = (int)(exactX * tileSize);
-                    int y = (int)(exactY * tileSize);
-                    g.drawImage(npcView.getCurrentImage(), x, y, observer);
-                }
+            // Use exact pixel position for smooth movement
+            if (npcView.getCurrentImage() != null) {
+                int x = getWorldX();
+                int y = getWorldY();
+                g.drawImage(npcView.getCurrentImage(), x, y, observer);
             } else {
-                npcView.draw(g, observer, tileSize);
+                // Fallback if image is missing
+                g.setColor(Color.BLUE);
+                g.fillRect(getWorldX(), getWorldY(), tileSize, tileSize);
             }
         } else {
             super.draw(g, observer, tileSize);
         }
     }
-    
+
     public boolean isApproachingForBattle() {
         return isApproachingForBattle;
     }
@@ -254,46 +279,121 @@ public class TrainerNpc extends Npc {
     public boolean canSeePlayer(Player player, int tileSize) {
         if (hasBeenDefeated || defeated) return false;
         
+        // Calculate player center
+        int playerCenterX = player.getWorldX() + (tileSize / 2);
+        int playerCenterY = player.getWorldY() + (tileSize / 2);
+        
+        // Calculate battle initiation rectangle
+        Rectangle battleArea = getBattleInitiationRectangle(tileSize);
+        
+        // Check if player center has crossed the midpoint of the battle rectangle
+        boolean crossedMidpoint = hasPlayerCrossedMidpoint(playerCenterX, playerCenterY, battleArea);
+        
+        if (!crossedMidpoint) {
+            return false;
+        }
+        
+        // Perform line-of-sight check if midpoint crossing detected
+        int playerTileX = playerCenterX / tileSize;
+        int playerTileY = playerCenterY / tileSize;
         int npcTileX = position.x;
         int npcTileY = position.y;
-        int playerTileX = player.getWorldX() / tileSize;
-        int playerTileY = player.getWorldY() / tileSize;
         
-        // Calculate direction vector from NPC to player
-        int deltaX = playerTileX - npcTileX;
-        int deltaY = playerTileY - npcTileY;
-        
-        // Check if player is within maximum vision range (5 tiles)
-        int distance = Math.max(Math.abs(deltaX), Math.abs(deltaY));
-        if (distance > visionRange) {
-            return false;
-        }
-        
-        // Check if player is in the direction NPC is facing
-        boolean inFacingDirection = false;
-        switch (facing) {
-            case BACK: // NPC looking down (positive Y direction)
-                inFacingDirection = deltaY > 0 && Math.abs(deltaX) <= 1;
-                break;
-            case FRONT: // NPC looking up (negative Y direction)
-                inFacingDirection = deltaY < 0 && Math.abs(deltaX) <= 1;
-                break;
-            case LEFT: // NPC looking left (negative X direction)
-                inFacingDirection = deltaX < 0 && Math.abs(deltaY) <= 1;
-                break;
-            case RIGHT: // NPC looking right (positive X direction)
-                inFacingDirection = deltaX > 0 && Math.abs(deltaY) <= 1;
-                break;
-        }
-        
-        if (!inFacingDirection) {
-            return false;
-        }
-        
-        // Perform line-of-sight check with object blocking
         return hasLineOfSight(npcTileX, npcTileY, playerTileX, playerTileY, tileSize);
     }
     
+    private boolean hasPlayerCrossedMidpoint(int playerCenterX, int playerCenterY, Rectangle battleArea) {
+        switch (facing) {
+            case FRONT: // Looking up - vertical rectangle, divide by Y (midpoint line is vertical)
+                int frontMidpointX = battleArea.x + (battleArea.width / 2);
+                return battleArea.contains(playerCenterX, playerCenterY) && 
+                       playerCenterX >= frontMidpointX;
+                
+            case BACK: // Looking down - vertical rectangle, divide by Y (midpoint line is vertical)
+                int backMidpointX = battleArea.x + (battleArea.width / 2);
+                return battleArea.contains(playerCenterX, playerCenterY) && 
+                       playerCenterX >= backMidpointX;
+                
+            case LEFT: // Looking left - horizontal rectangle, divide by X (midpoint line is horizontal)
+                int leftMidpointY = battleArea.y + (battleArea.height / 2);
+                return battleArea.contains(playerCenterX, playerCenterY) && 
+                       playerCenterY >= leftMidpointY;
+                
+            case RIGHT: // Looking right - horizontal rectangle, divide by X (midpoint line is horizontal)
+                int rightMidpointY = battleArea.y + (battleArea.height / 2);
+                return battleArea.contains(playerCenterX, playerCenterY) && 
+                       playerCenterY >= rightMidpointY;
+                
+            default:
+                // Fallback - just check if player is in rectangle
+                return battleArea.contains(playerCenterX, playerCenterY);
+        }
+    }
+    
+    private Rectangle getBattleInitiationRectangle(int tileSize) {
+        int npcPixelX = position.x * tileSize;
+        int npcPixelY = position.y * tileSize;
+        
+        // Use player dimensions for consistent rectangle size
+        int playerWidth = tileSize;
+        int playerHeight = tileSize;
+        
+        Rectangle battleArea;
+        
+        switch (facing) {
+            case FRONT: // Looking up - vertical rectangle
+                int frontVisionHeight = 5 * playerWidth;
+                battleArea = new Rectangle(
+                    npcPixelX - (playerWidth / 2), // Center horizontally on NPC
+                    npcPixelY - frontVisionHeight, // Extend upward
+                    playerWidth,
+                    frontVisionHeight
+                );
+                break;
+                
+            case BACK: // Looking down - vertical rectangle
+                int backVisionHeight = 5 * playerWidth;
+                battleArea = new Rectangle(
+                    npcPixelX - (playerWidth / 2),
+                    npcPixelY + tileSize, // Start after NPC sprite
+                    playerWidth,
+                    backVisionHeight
+                );
+                break;
+                
+            case LEFT: // Looking left - horizontal rectangle
+                int leftVisionWidth = 5 * playerHeight;
+                battleArea = new Rectangle(
+                    npcPixelX - leftVisionWidth, // Extend leftward
+                    npcPixelY - (playerHeight / 2), // Center vertically on NPC
+                    leftVisionWidth,
+                    playerHeight
+                );
+                break;
+                
+            case RIGHT: // Looking right - horizontal rectangle
+                int rightVisionWidth = 5 * playerHeight;
+                battleArea = new Rectangle(
+                    npcPixelX + tileSize, // Start after NPC sprite
+                    npcPixelY - (playerHeight / 2),
+                    rightVisionWidth,
+                    playerHeight
+                );
+                break;
+                
+            default:
+                battleArea = new Rectangle(
+                    npcPixelX - tileSize,
+                    npcPixelY - tileSize,
+                    tileSize * 2,
+                    tileSize * 2
+                );
+                break;
+        }
+        
+        return battleArea;
+    }
+
     public boolean hasLineOfSight(int startX, int startY, int endX, int endY, int tileSize) {
         // Use Bresenham's line algorithm to check each tile along the line of sight
         int dx = Math.abs(endX - startX);
@@ -364,5 +464,25 @@ public class TrainerNpc extends Npc {
     public void setVisionRange(int range) { this.visionRange = range; }
     public String getTrainerClass() { return trainerClass; }
 
-    // TODO: the npc moving mecahnics are not working, I'm very tired
+    public int getWorldX() {
+        return (int) Math.round(exactX * Board.TILE_SIZE);
+    }
+    
+    public int getWorldY() {
+        return (int) Math.round(exactY * Board.TILE_SIZE);
+    }
+    
+    
+    public Rectangle getBounds(int tileSize) {
+        return new Rectangle(
+            getWorldX(),
+            getWorldY(),
+            tileSize,
+            tileSize
+        );
+    }
+
+    public boolean isMovingTowardsPlayer() {
+        return isMovingTowardsPlayer;
+    }
 }
