@@ -4,8 +4,11 @@ import java.awt.*;
 import java.awt.image.ImageObserver;
 import java.util.ArrayList;
 import java.util.List;
+
+import model.Player.MovementState;
 import pokes.Pokemon;
 import ui.Board;
+import ui.Icon;
 import ui.NpcView;
 
 public class TrainerNpc extends Npc {
@@ -23,7 +26,11 @@ public class TrainerNpc extends Npc {
     private Point originalPosition;
     private int movementSpeed = 2;
     private double exactX, exactY;
-    private Player targetPlayer; // Store reference to player being approached
+    private Player targetPlayer;
+
+    private Icon exclamationIcon;
+    private boolean iconDisplayed = false;
+    private boolean waitingForIconComplete = false;
     
     public TrainerNpc(Point position, String name, String spritePath, Direction facing, 
                     Board board, String trainerClass, boolean canMove) {
@@ -41,6 +48,8 @@ public class TrainerNpc extends Npc {
         this.exactX = position.x;
         this.exactY = position.y;
         this.movementSpeed = 2; // Set movement speed in pixels per frame
+
+        this.exclamationIcon = new Icon("exclamation");
         
         if (canMove) {
             this.npcView = new NpcView(this, extractNpcTypeFromPath(spritePath));
@@ -68,9 +77,17 @@ public class TrainerNpc extends Npc {
             return;
         }
         
+        // Only start approaching if icon has been displayed and completed
+        if (!iconDisplayed || !exclamationIcon.isComplete()) {
+            this.targetPlayer = player; // Store for later
+            return;
+        }
+        
         this.targetPlayer = player;
         this.isApproachingForBattle = true;
         this.isMovingTowardsPlayer = true;
+        
+        System.out.println(getName() + " is now approaching the player!");
         
         // Calculate initial direction to face player
         double playerPixelX = player.getWorldX();
@@ -280,8 +297,8 @@ public class TrainerNpc extends Npc {
         if (hasBeenDefeated || defeated) return false;
         
         // Calculate player center
-        int playerCenterX = player.getWorldX() + (tileSize / 2);
-        int playerCenterY = player.getWorldY() + (tileSize / 2);
+        int playerCenterX = player.getWorldX() + (player.width / 2);
+        int playerCenterY = player.getWorldY() + (player.height / 2);
         
         // Calculate battle initiation rectangle
         Rectangle battleArea = getBattleInitiationRectangle(tileSize);
@@ -299,9 +316,25 @@ public class TrainerNpc extends Npc {
         int npcTileX = position.x;
         int npcTileY = position.y;
         
-        return hasLineOfSight(npcTileX, npcTileY, playerTileX, playerTileY, tileSize);
+        boolean hasLineOfSight = hasLineOfSight(npcTileX, npcTileY, playerTileX, playerTileY, tileSize);
+        
+        // If we can see the player and haven't shown the icon yet
+        if (hasLineOfSight && !iconDisplayed && !isApproachingForBattle) {
+            this.targetPlayer = player;
+            
+            // IMMEDIATELY STOP PLAYER MOVEMENT when spotted
+            player.setMoving(false);
+            player.stopMoving();
+            
+            // Show the exclamation icon
+            player.setMovementState(MovementState.FROZEN);
+            showExclamationIcon();
+            
+            System.out.println("Player spotted by " + getName() + "! Movement disabled.");
+        }
+        
+        return hasLineOfSight;
     }
-    
     private boolean hasPlayerCrossedMidpoint(int playerCenterX, int playerCenterY, Rectangle battleArea) {
         switch (facing) {
             case FRONT: // Looking up - vertical rectangle, divide by Y (midpoint line is vertical)
@@ -484,5 +517,40 @@ public class TrainerNpc extends Npc {
 
     public boolean isMovingTowardsPlayer() {
         return isMovingTowardsPlayer;
+    }
+
+    public void showExclamationIcon() {
+        if (!iconDisplayed && !hasBeenDefeated && !defeated) {
+            int iconX = getWorldX() + (Board.TILE_SIZE / 2);
+            int iconY = getWorldY();
+            exclamationIcon.show(iconX, iconY);
+            iconDisplayed = true;
+            waitingForIconComplete = false;
+        }
+    }
+    
+    public void updateIcon() {
+        if (exclamationIcon != null) {
+            exclamationIcon.update();
+            
+            // Check if icon animation is complete and we should start approaching
+            if (iconDisplayed && !waitingForIconComplete && exclamationIcon.isComplete()) {
+                waitingForIconComplete = true;
+                // Icon has finished displaying, now start approaching
+                if (targetPlayer != null) {
+                    startApproachingPlayer(targetPlayer, Board.TILE_SIZE);
+                }
+            }
+        }
+    }
+
+    public void drawIcon(Graphics g) {
+        if (exclamationIcon != null) {
+            exclamationIcon.draw(g);
+        }
+    }
+    
+    public boolean isIconComplete() {
+        return exclamationIcon != null && exclamationIcon.isComplete();
     }
 }

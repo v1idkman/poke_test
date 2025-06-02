@@ -11,6 +11,14 @@ public class Player extends Trainer {
 
     public enum Direction { FRONT, BACK, LEFT, RIGHT }
 
+    public enum MovementState {
+        FREE,           // Can move normally
+        FROZEN,         // Cannot move (spotted by trainer)
+        IN_BATTLE       // In battle (existing state)
+    }
+
+    private MovementState movementState = MovementState.FREE;
+
     private Direction direction = Direction.BACK;
     private boolean moving, running = false;
     private int animationFrame = 0;
@@ -232,8 +240,22 @@ public class Player extends Trainer {
         return inBattle;
     }
 
-    public void setInBattle(boolean inBattle) {
-        this.inBattle = inBattle;
+    public MovementState getMovementState() {
+        return movementState;
+    }
+
+    public void setMovementState(MovementState state) {
+        this.movementState = state;
+        if (state == MovementState.FROZEN) {
+            setMoving(false);
+            setSprintKeyPressed(false);
+        } else if (state == MovementState.FREE) {
+            setMoving(true);
+        } else if (state == MovementState.IN_BATTLE) {
+            this.inBattle = true;
+            setMoving(false);
+            setSprintKeyPressed(false);
+        }
     }
 
     public void addToInventory(String itemName) {
@@ -310,6 +332,10 @@ public class Player extends Trainer {
         direction = dir;
         moving = true;
         updateRunningState();
+    }
+
+    public boolean getMoving() {
+        return moving;
     }
 
     public void stopMoving() {

@@ -11,6 +11,7 @@ import model.Door;
 import model.EncounterManager;
 import model.Player;
 import model.Player.Direction;
+import model.Player.MovementState;
 import model.TrainerNpc;
 import model.WorldObject;
 import pokes.Pokemon;
@@ -132,22 +133,18 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         // Draw tiles first
         tileManager.draw(g2d);
         
-        // Then draw objects
+        // Draw objects
         for (WorldObject obj : objects) {
             obj.draw(g2d, this, TILE_SIZE);
         }
 
-        /* for (TrainerNpc trainer : trainers) {
-            Icon icon = trainer.getExclamationIcon();
-            if (icon != null) {
-                icon.draw(g);
-            }
-        } */
-
-        // Draw player
         playerView.draw(g2d, this, TILE_SIZE);
 
-        // drawDebugBounds(g2d);
+        for (TrainerNpc trainer : trainers) {
+            trainer.drawIcon(g2d);
+        }
+
+        drawDebugBounds(g2d);
         
         g2d.dispose();
     }
@@ -438,7 +435,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
     
         // Add legend for debug colors
-        // drawDebugLegend(g);
+        drawDebugLegend(g);
 
     }
     
@@ -541,7 +538,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
-        if (approachingTrainer != null && approachingTrainer.isApproachingForBattle()) {
+        if (approachingTrainer != null && player.getMoving() == false) {
             return;
         }
 
@@ -552,19 +549,19 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             player.setSprintKeyPressed(true);
             player.setMoving(true);
         }
-        if (key == KeyEvent.VK_UP) {
+        if (key == KeyEvent.VK_UP || key == KeyEvent.VK_W) {
             upPressed = true;
             player.setDirection(Player.Direction.FRONT);
             player.setMoving(true);
-        } else if (key == KeyEvent.VK_RIGHT) {
+        } else if (key == KeyEvent.VK_RIGHT || key == KeyEvent.VK_D) {
             rightPressed = true;
             player.setDirection(Player.Direction.RIGHT);
             player.setMoving(true);
-        } else if (key == KeyEvent.VK_DOWN) {
+        } else if (key == KeyEvent.VK_DOWN || key == KeyEvent.VK_S) {
             downPressed = true;
             player.setDirection(Player.Direction.BACK);
             player.setMoving(true);
-        } else if (key == KeyEvent.VK_LEFT) {
+        } else if (key == KeyEvent.VK_LEFT || key == KeyEvent.VK_A) {
             leftPressed = true;
             player.setDirection(Player.Direction.LEFT);
             player.setMoving(true);
@@ -573,7 +570,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyReleased(KeyEvent e) {
-        if (approachingTrainer != null && approachingTrainer.isApproachingForBattle()) {
+        if (approachingTrainer != null && player.getMoving() == false) {
             return;
         }
         int key = e.getKeyCode();
@@ -766,7 +763,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         Pokemon wildPokemon = encounterManager.generateWildPokemon(worldName);
         playEncounterAnimation(wildPokemon);
-        player.setInBattle(true);
+        player.setMovementState(MovementState.IN_BATTLE);
         
         SwingUtilities.invokeLater(() -> {
             WildPokemonBattle battleScreen = new WildPokemonBattle(player, wildPokemon, "route");
@@ -783,7 +780,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     private void endWildEncounter() {
         inBattle = false;
-        player.setInBattle(false);
+        player.setMovementState(MovementState.FREE);
         encounterCooldown = ENCOUNTER_COOLDOWN_TIME;
         timer.start();
         
@@ -851,8 +848,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 trainer.updateMovement(TILE_SIZE);
             }
             trainer.updateAnimation();
-            // trainer.updateExclamationIcon();
+            trainer.updateIcon();
         }
-    }    
+    }
     
 }

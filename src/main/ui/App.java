@@ -31,6 +31,9 @@ public class App {
     public static final int FIXED_HEIGHT = 640;
     public static final int FIXED_WIDTH = 960;
 
+    /* public static final int FIXED_HEIGHT = 1080;
+    public static final int FIXED_WIDTH = 1920; */
+
     public static void initPokemonData() {
         PokemonStatsLoader loader = PokemonStatsLoader.getInstance();
         loader.loadFromCSV("/resources/pokemon_information.csv");
@@ -138,6 +141,7 @@ public class App {
 
     private static void initPokemon() {
         // TODO: currently pokemon moves that are M are also being added to wild pokemon movesets, only add level up moves.
+        // TOOD: resize app to full resolution and adapt zoom and camera accordingly.
         Pokemon charizard = PokemonFactory.createPokemon(6, 36, "Charizard");
         Pokemon bulbasaur = PokemonFactory.createPokemon(1, 5, "Bulbasaur");
         Pokemon charmander = PokemonFactory.createPokemon(4, 8,  "Charmander");
