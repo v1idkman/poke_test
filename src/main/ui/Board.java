@@ -4,11 +4,12 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-import exceptions.NoSuchWorldException;
 import model.Building;
 import model.CivilianNpc;
 import model.Door;
 import model.EncounterManager;
+import model.InteractableItem;
+import model.InteractableObject;
 import model.Player;
 import model.Player.Direction;
 import model.Player.MovementState;
@@ -39,6 +40,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     private List<Door> doors;
     private List<WorldObject> objects;
+    private List<InteractableObject> interactableObjects = new ArrayList<>();
     private List<TrainerNpc> trainers = new ArrayList<>();
     private List<CivilianNpc> civilians = new ArrayList<>();
     private List<Npc> allNpcs = new ArrayList<>();
@@ -100,9 +102,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         this.worldManager = manager;
     }
     
+    // Update the addDoor method
     public void addDoor(Door door) {
         doors.add(door);
-        objects.add(door); // Add to general objects for rendering
+        objects.add(door);
+        interactableObjects.add(door);
+    }
+
+    // Add method for adding any interactable object
+    public void addInteractableObject(InteractableObject obj) {
+        interactableObjects.add(obj);
+        objects.add(obj);
     }
     
     public Player getPlayer() {
@@ -341,7 +351,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
     
-        // GREEN: door bounds and interaction areas
+        // GREEN: door bounds and interaction areas with direction indicators
         g.setColor(Color.GREEN);
         for (Door door : doors) {
             Rectangle bounds = door.getBounds(TILE_SIZE);
@@ -356,6 +366,46 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             );
             g.drawRect(interactionArea.x, interactionArea.y, 
                     interactionArea.width, interactionArea.height);
+            
+            // Draw direction indicator
+            g.setColor(Color.YELLOW);
+            int centerX = bounds.x + bounds.width / 2;
+            int centerY = bounds.y + bounds.height / 2;
+            
+            switch (door.getDirection()) {
+                case FRONT:
+                    // Arrow pointing up
+                    g.drawLine(centerX, centerY, centerX, centerY - 10);
+                    g.drawLine(centerX, centerY - 10, centerX - 3, centerY - 7);
+                    g.drawLine(centerX, centerY - 10, centerX + 3, centerY - 7);
+                    break;
+                case BACK:
+                    // Arrow pointing down
+                    g.drawLine(centerX, centerY, centerX, centerY + 10);
+                    g.drawLine(centerX, centerY + 10, centerX - 3, centerY + 7);
+                    g.drawLine(centerX, centerY + 10, centerX + 3, centerY + 7);
+                    break;
+                case LEFT:
+                    // Arrow pointing left
+                    g.drawLine(centerX, centerY, centerX - 10, centerY);
+                    g.drawLine(centerX - 10, centerY, centerX - 7, centerY - 3);
+                    g.drawLine(centerX - 10, centerY, centerX - 7, centerY + 3);
+                    break;
+                case RIGHT:
+                    // Arrow pointing right
+                    g.drawLine(centerX, centerY, centerX + 10, centerY);
+                    g.drawLine(centerX + 10, centerY, centerX + 7, centerY - 3);
+                    g.drawLine(centerX + 10, centerY, centerX + 7, centerY + 3);
+                    break;
+                case ANY:
+                    // Arrow pointing in all directions
+                    g.drawLine(centerX, centerY, centerX - 10, centerY);
+                    g.drawLine(centerX, centerY, centerX + 10, centerY);
+                    g.drawLine(centerX, centerY, centerX, centerY - 10);
+                    g.drawLine(centerX, centerY, centerX, centerY + 10);
+                    break;
+            }
+            g.setColor(Color.GREEN); // Reset color
         }
     
         // ORANGE: Trainer NPC bounds
@@ -386,6 +436,25 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 g2d.drawRect(battleArea.x, battleArea.y, battleArea.width, battleArea.height);
                 g2d.dispose();
             }
+        }
+
+        // PURPLE: All interactable objects
+        g.setColor(Color.MAGENTA);
+        for (InteractableObject obj : interactableObjects) {
+            Rectangle bounds = obj.getBounds(TILE_SIZE);
+            g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
+            
+            // Draw interaction area
+            Rectangle interactionArea = obj.getInteractionArea(TILE_SIZE);
+            g.setColor(new Color(255, 0, 255, 50)); // Semi-transparent magenta
+            g.fillRect(interactionArea.x, interactionArea.y, 
+                    interactionArea.width, interactionArea.height);
+            g.setColor(Color.MAGENTA);
+            g.drawRect(interactionArea.x, interactionArea.y, 
+                    interactionArea.width, interactionArea.height);
+            
+            // Draw direction indicator
+            drawDirectionIndicator(g, obj, bounds);
         }
         
         // YELLOW: Midpoint lines for battle rectangles
@@ -530,6 +599,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         y += 15;
         g.setColor(Color.YELLOW);
         g.drawString("YELLOW: In Grass Indicator", 15, y);
+        y += 15;
+        g.setColor(Color.MAGENTA);
+        g.drawString("MAGENTA: Interactable Objects", 15, y);
     }
     
     
@@ -593,42 +665,58 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
         if (key == KeyEvent.VK_E) {
             interactionKeyPressed = true;
-            checkDoorInteraction(); 
+            checkInteractableObjectInteraction();
         } else {
             interactionKeyPressed = false;
         }
     }
 
-    private void checkDoorInteraction() {
+        // Replace the existing checkDoorInteraction method with a generic one
+    private void checkInteractableObjectInteraction() {
         Rectangle playerBounds = player.getBounds(TILE_SIZE);
         
-        for (Door door : doors) {
-            Rectangle doorBounds = door.getBounds(TILE_SIZE);
-            // Create a slightly larger interaction area around the door
-            Rectangle interactionArea = new Rectangle(
-                doorBounds.x - TILE_SIZE, 
-                doorBounds.y - TILE_SIZE,
-                doorBounds.width + TILE_SIZE * 2, 
-                doorBounds.height + TILE_SIZE * 2
-            );
+        // Create a list to track objects to remove
+        List<InteractableObject> objectsToRemove = new ArrayList<>();
+        
+        for (InteractableObject obj : interactableObjects) {
+            Rectangle interactionArea = obj.getInteractionArea(TILE_SIZE);
             
             if (playerBounds.intersects(interactionArea)) {
-                if (interactionKeyPressed && worldManager != null) {
-                    resetKeyStates();
-                    try {
-                        // Get the door's spawn point for the target world
-                        Point spawnPoint = door.getSpawnPoint();
-                        worldManager.switchWorld(door.getTargetWorld(), spawnPoint);
-                        break;
-                    } catch (NoSuchWorldException e) {
-                        // Handle exception
-                        System.err.println("Could not find world: " + door.getTargetWorld());
+                if (interactionKeyPressed) {
+                    // Check if player is facing the correct direction for interaction
+                    if (obj.canPlayerInteract(player.getDirection())) {
+                        resetKeyStates();
+                        
+                        // Stop player movement before interaction
+                        player.setMoving(false);
+                        player.stopMoving();
+                        
+                        // Perform the object's action
+                        obj.performAction(player, this);
+                        
+                        // Check if object should be removed after interaction
+                        if (obj.shouldRemoveAfterInteraction()) {
+                            objectsToRemove.add(obj);
+                        }
+                        
+                        break; // Only interact with one object at a time
+                    } else {
+                        System.out.println("You need to face the object to interact with it!");
                     }
                 }
             }
         }
-    } 
-    
+        
+        // Remove objects that should be removed after interaction
+        for (InteractableObject obj : objectsToRemove) {
+            interactableObjects.remove(obj);
+            objects.remove(obj);
+            if (obj instanceof Door) {
+                doors.remove(obj);
+            }
+        }
+    }
+
     public void resetKeyStates() {
         upPressed = false;
         downPressed = false;
@@ -832,6 +920,43 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             }
         }
     }
+
+    private void drawDirectionIndicator(Graphics g, InteractableObject obj, Rectangle bounds) {
+        g.setColor(Color.YELLOW);
+        int centerX = bounds.x + bounds.width / 2;
+        int centerY = bounds.y + bounds.height / 2;
+        
+        switch (obj.getDirection()) {
+            case FRONT:
+                // Arrow pointing up
+                g.drawLine(centerX, centerY, centerX, centerY - 10);
+                g.drawLine(centerX, centerY - 10, centerX - 3, centerY - 7);
+                g.drawLine(centerX, centerY - 10, centerX + 3, centerY - 7);
+                break;
+            case BACK:
+                // Arrow pointing down
+                g.drawLine(centerX, centerY, centerX, centerY + 10);
+                g.drawLine(centerX, centerY + 10, centerX - 3, centerY + 7);
+                g.drawLine(centerX, centerY + 10, centerX + 3, centerY + 7);
+                break;
+            case LEFT:
+                // Arrow pointing left
+                g.drawLine(centerX, centerY, centerX - 10, centerY);
+                g.drawLine(centerX - 10, centerY, centerX - 7, centerY - 3);
+                g.drawLine(centerX - 10, centerY, centerX - 7, centerY + 3);
+                break;
+            case RIGHT:
+                // Arrow pointing right
+                g.drawLine(centerX, centerY, centerX + 10, centerY);
+                g.drawLine(centerX + 10, centerY, centerX + 7, centerY - 3);
+                g.drawLine(centerX + 10, centerY, centerX + 7, centerY + 3);
+                break;
+            case ANY:
+                // Circle to indicate any direction
+                g.drawOval(centerX - 5, centerY - 5, 10, 10);
+                break;
+        }
+    }
     
     public void onTrainerApproachComplete(TrainerNpc trainer) {
         // Called when trainer finishes approaching the player
@@ -851,5 +976,43 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             trainer.updateIcon();
         }
     }
-    
+
+	public WorldManager getWorldManager() {
+		return worldManager;
+	}
+
+    // Generic method for adding any interactable item
+    public void addInteractableItem(String itemName, int quantity, int x, int y, InteractableObject.Direction direction) {
+        InteractableItem item = new InteractableItem(new Point(x, y), itemName, quantity, direction);
+        addInteractableObject(item);
+    }
+
+    // Convenience method for pokeballs - REMOVE spritePath parameter
+    public void addPokeball(String pokeballType, int quantity, int x, int y) {
+        InteractableItem pokeball = new InteractableItem(new Point(x, y), pokeballType, quantity);
+        pokeball.setInteractionMessage("Found " + quantity + " " + pokeballType + "(s)!");
+        addInteractableObject(pokeball);
+    }
+
+    // Convenience method for medicine items - REMOVE spritePath parameter
+    public void addMedicine(String medicineType, int quantity, int x, int y) {
+        InteractableItem medicine = new InteractableItem(new Point(x, y), medicineType, quantity);
+        addInteractableObject(medicine);
+    }
+
+    // Convenience method for key items - REMOVE spritePath parameter
+    public void addKeyItem(String keyItemType, int x, int y) {
+        InteractableItem keyItem = new InteractableItem(new Point(x, y), keyItemType, 1);
+        keyItem.setInteractionMessage("Found " + keyItemType + "!");
+        addInteractableObject(keyItem);
+    }
+
+    // Remove the old addCustomItem method with spritePath parameter and keep only this one:
+    public void addCustomItem(String itemName, int quantity, int x, int y, String customMessage) {
+        InteractableItem item = new InteractableItem(new Point(x, y), itemName, quantity);
+        if (customMessage != null) {
+            item.setInteractionMessage(customMessage);
+        }
+        addInteractableObject(item);
+    }
 }

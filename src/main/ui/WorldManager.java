@@ -13,6 +13,7 @@ import javax.swing.JPanel;
 
 import exceptions.NoSuchWorldException;
 import model.Door;
+import model.InteractableObject;
 import model.Player;
 import model.TrainerNpc;
 import model.Npc.Direction;
@@ -62,8 +63,13 @@ public class WorldManager {
         // Set player position in the new world
         Player player = currentWorld.getPlayer();
         if (spawnPoint != null) {
-            player.setPosition(spawnPoint);
+            // Create a defensive copy to prevent reference corruption
+            Point safeSpawnPoint = new Point(spawnPoint.x, spawnPoint.y);
+            player.setPosition(safeSpawnPoint);
             player.updateExactCoordinates();
+            
+            // Debug output to verify correct spawn point
+            System.out.println("Teleporting player to: (" + safeSpawnPoint.x + ", " + safeSpawnPoint.y + ")");
         }
         
         // Update the current world
@@ -82,7 +88,7 @@ public class WorldManager {
         // Update the window content
         updateWindowContent();
     }
-
+    
     public Board getCurrentWorld() {
         return currentWorld;
     }
@@ -148,6 +154,15 @@ public class WorldManager {
     public void createOutsideBoard(Player player) {
         Board outsideBoard = new Board(player, "outside", 30, 46);
 
+        outsideBoard.addDoor(new Door(new Point(12, 7), "/resources/buildings/tree2.png", 
+                            "house_interior", new Point(5, 8), Door.Direction.FRONT));
+        
+        // Door facing down (player must face down to enter) 
+        outsideBoard.addDoor(new Door(new Point(19, 7), "/resources/buildings/tree2.png", 
+                            "house_interior", new Point(5, 8), Door.Direction.FRONT));
+
+        addBoard(outsideBoard);
+
         // objects
         outsideBoard.placeManyObjects("/resources/buildings/tree2.png", 0, 0, 4, 16, 2, 1);
         outsideBoard.placeManyObjects("/resources/buildings/tree2.png", 0, 21, 4, outsideBoard.getRows(), 2, 1);
@@ -175,20 +190,29 @@ public class WorldManager {
         bugCatcher.addPokemon(caterpie);
         bugCatcher.addPokemon(weedle);
 
-        // Add to your board
         outsideBoard.addTrainer(bugCatcher);
 
-        // doors
-        /* outsideBoard.addDoor(new Door(new Point(10, 10), "/resources/player_sprites/s_facing_front.png", 
-                            "house_interior", outsideBoard.getLocation())); */
         addBoard(outsideBoard);
     }
 
     public void createInsideBoard(Player player) {
         Board inside1 = new Board(player, "house_interior", 10, 15);
         inside1.addObject("/resources/buildings/marroon_single_bed.png", 10, 0);
+        
+        // Add doors
         inside1.addDoor(new Door(new Point(5, 5), "/resources/player_sprites/s_facing_back.png", 
-                            "outside", new Point(10, 15)));
+                            "outside", new Point(10, 15), InteractableObject.Direction.ANY));
+        inside1.addDoor(new Door(new Point(5, 8), "/resources/doors/exit_door.png", 
+                            "outside", new Point(12, 8), InteractableObject.Direction.BACK));
+        
+        // Add various items using simplified methods - no sprite paths needed!
+        inside1.addPokeball("poke ball", 3, 2, 3);
+        inside1.addMedicine("potion", 2, 7, 10);
+        inside1.addKeyItem("good rod", 8, 5);
+        
+        // Add custom items with custom messages
+        inside1.addCustomItem("master ball", 1, 1, 1, "You found a rare Master Ball!");
+            
         addBoard(inside1);
     }
 }

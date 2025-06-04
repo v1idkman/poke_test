@@ -46,8 +46,6 @@ public class Menu {
         
         // Add action listener to open menu
         menuButton.addActionListener(e -> openPlayerMenu(board));
-        
-        // Don't add to board or position it here - that will be done by WorldManager
     }
     
     
