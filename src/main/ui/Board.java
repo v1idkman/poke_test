@@ -189,15 +189,16 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             encounterCooldown--;
         }
         
-        // Check for wild Pokémon encounters if not in battle and cooldown is over
-        if (!player.isInBattle() && !inBattle && encounterCooldown == 0) {
+        // In Board.actionPerformed(), add this debug code:
+        if (!player.isInBattle() && !inBattle) {
             boolean isInGrass = tileManager.isPlayerInTallGrass(player);
             boolean isMoving = player.isMoving();
             
-            if (encounterManager.checkEncounter(isInGrass, isMoving)) {
+            if (encounterCooldown == 0 && encounterManager.checkEncounter(isInGrass, isMoving)) {
                 startWildEncounter();
             }
         }
+
         
         // Clear previous movement
         boolean[] directions = {upPressed, downPressed, leftPressed, rightPressed};
@@ -752,6 +753,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private void playEncounterAnimation(Pokemon wildPokemon) {
         // This would be where you'd implement a screen flash or transition animation
         // For now, just print to console
+        System.out.println("Moves: " + wildPokemon.getMoves().toString());
         System.out.println("A wild " + wildPokemon.getName() + " appeared!");
     }
     
@@ -874,6 +876,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     private void endWildEncounter() {
         inBattle = false;
+        player.setInBattle(false);
         player.setMovementState(MovementState.FREE);
         encounterCooldown = ENCOUNTER_COOLDOWN_TIME;
         timer.start();

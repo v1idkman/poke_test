@@ -350,4 +350,8 @@ public class Player extends Trainer {
     public float getMoveSpeed() {
         return moveSpeed;
     }
+
+    public void setInBattle(boolean b) {
+        inBattle = b;
+    }
 }
