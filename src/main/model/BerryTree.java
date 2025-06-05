@@ -1,7 +1,6 @@
 package model;
 
 import java.awt.Point;
-import java.util.Random;
 
 import ui.Board;
 
@@ -10,15 +9,14 @@ public class BerryTree extends InteractableObject {
     private int currentBerries;
     private int maxBerries;
     private long lastHarvestTime;
-    private long regrowthTimeMs; // Time in milliseconds for berries to regrow
-    private Random random = new Random();
+    private long regrowthTimeMs;
     
     public BerryTree(Point position, Berry.BerryType berryType, int maxBerries) {
-        super(position, generateTreeSpritePath(berryType), Direction.ANY);
+        super(position, "/" + generateTreeSpritePath(berryType), Direction.ANY);
         this.berryType = berryType;
         this.maxBerries = maxBerries;
         this.currentBerries = maxBerries;
-        this.regrowthTimeMs = 300000;
+        this.regrowthTimeMs = 30000; // time in miliseconds to regrow
         this.lastHarvestTime = 0;
         
         // Add validation similar to InteractableItem
@@ -57,7 +55,7 @@ public class BerryTree extends InteractableObject {
         }
     }
     
-    private void checkBerryRegrowth() {
+    public void checkBerryRegrowth() {
         if (currentBerries < maxBerries && lastHarvestTime > 0) {
             long timeSinceHarvest = System.currentTimeMillis() - lastHarvestTime;
             if (timeSinceHarvest >= regrowthTimeMs) {
@@ -90,7 +88,7 @@ public class BerryTree extends InteractableObject {
 
     private static String generateTreeSpritePath(Berry.BerryType berryType) {
         String normalizedName = berryType.getName().replace(" ", "_").toLowerCase();
-        return "/resources/trees/" + normalizedName + "_tree_full.png";
+        return "resources/trees/" + normalizedName + "_tree_full.png";
     }
     
     private static String generateEmptyTreeSpritePath(Berry.BerryType berryType) {

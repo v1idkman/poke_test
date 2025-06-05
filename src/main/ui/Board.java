@@ -145,6 +145,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         // Draw tiles first
         tileManager.draw(g2d);
+
+        updateBerryTrees();
         
         // Draw objects
         for (WorldObject obj : objects) {
@@ -304,10 +306,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             return false;
         }
         
-        // Check object collisions (keep this part)
+        // Check object collisions
         for (WorldObject obj : objects) {
             if (obj.getClass() == Door.class) {
                 continue; // Skip doors for collision detection
+            } else if (obj.isWalkable()) {
+                continue;
             } else if (nextBounds.intersects(obj.getBounds(TILE_SIZE))) {
                 return false; // Collision detected
             }
@@ -520,42 +524,42 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         switch (npc.getDirection()) {
             case FRONT: // Looking up - vertical rectangle
-                int frontVisionHeight = 5 * playerWidth; // 5 * 32 = 160 pixels
+                int frontVisionHeight = 5 * playerWidth; 
                 battleArea = new Rectangle(
-                    npcBounds.x + (npcBounds.width / 2) - (playerWidth / 2), // Center on NPC
-                    npcBounds.y - frontVisionHeight, // Extend upward
-                    playerWidth, // Width = 32 pixels
-                    frontVisionHeight // Height = 160 pixels
+                    npcBounds.x + (npcBounds.width / 2) - (playerWidth / 2), 
+                    npcBounds.y - frontVisionHeight, 
+                    playerWidth, 
+                    frontVisionHeight 
                 );
                 break;
                 
             case BACK: // Looking down - vertical rectangle
-                int backVisionHeight = 5 * playerWidth; // 5 * 32 = 160 pixels
+                int backVisionHeight = 5 * playerWidth; 
                 battleArea = new Rectangle(
-                    npcBounds.x + (npcBounds.width / 2) - (playerWidth / 2), // Center on NPC
-                    npcBounds.y + npcBounds.height, // Start after NPC sprite
-                    playerWidth, // Width = 32 pixels
-                    backVisionHeight // Height = 160 pixels
+                    npcBounds.x + (npcBounds.width / 2) - (playerWidth / 2), 
+                    npcBounds.y + npcBounds.height, 
+                    playerWidth,
+                    backVisionHeight 
                 );
                 break;
                 
             case LEFT: // Looking left - horizontal rectangle
-                int leftVisionWidth = 5 * playerHeight; // 5 * 32 = 160 pixels
+                int leftVisionWidth = 5 * playerHeight; 
                 battleArea = new Rectangle(
-                    npcBounds.x - leftVisionWidth, // Extend leftward
-                    npcBounds.y + (npcBounds.height / 2) - (playerHeight / 2), // Center on NPC
-                    leftVisionWidth, // Width = 160 pixels
-                    playerHeight // Height = 32 pixels
+                    npcBounds.x - leftVisionWidth, 
+                    npcBounds.y + (npcBounds.height / 2) - (playerHeight / 2), 
+                    leftVisionWidth, 
+                    playerHeight 
                 );
                 break;
                 
             case RIGHT: // Looking right - horizontal rectangle
-                int rightVisionWidth = 5 * playerHeight; // 5 * 32 = 160 pixels
+                int rightVisionWidth = 5 * playerHeight;
                 battleArea = new Rectangle(
-                    npcBounds.x + npcBounds.width, // Start after NPC sprite
-                    npcBounds.y + (npcBounds.height / 2) - (playerHeight / 2), // Center on NPC
-                    rightVisionWidth, // Width = 160 pixels
-                    playerHeight // Height = 32 pixels
+                    npcBounds.x + npcBounds.width,
+                    npcBounds.y + (npcBounds.height / 2) - (playerHeight / 2),
+                    rightVisionWidth, 
+                    playerHeight
                 );
                 break;
                 
@@ -572,7 +576,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         return battleArea;
     }
     
-    private void drawDebugLegend(Graphics g) {
+    /* private void drawDebugLegend(Graphics g) {
         g.setColor(Color.BLACK);
         g.fillRect(10, 10, 200, 160);
         g.setColor(Color.WHITE);
@@ -605,8 +609,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         y += 15;
         g.setColor(Color.MAGENTA);
         g.drawString("MAGENTA: Interactable Objects", 15, y);
-    }
-    
+    } */
     
     @Override
     public void keyTyped(KeyEvent e) {}
@@ -1048,4 +1051,11 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
     }
 
+    public void updateBerryTrees() {
+        for (WorldObject obj : objects) {
+            if (obj instanceof BerryTree) {
+                ((BerryTree) obj).checkBerryRegrowth();
+            }
+        }
+    }
 }
