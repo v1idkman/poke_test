@@ -4,6 +4,8 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
+import model.Berry;
+import model.BerryTree;
 import model.Building;
 import model.CivilianNpc;
 import model.Door;
@@ -20,6 +22,7 @@ import tiles.TileManager;
 import model.Npc;
 
 import java.util.List;
+import java.util.Random;
 import java.util.ArrayList;
 
 public class Board extends JPanel implements ActionListener, KeyListener {
@@ -504,7 +507,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
     
         // Add legend for debug colors
-        drawDebugLegend(g);
+        // drawDebugLegend(g);
 
     }
     
@@ -1015,4 +1018,34 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
         addInteractableObject(item);
     }
+
+    public void addBerryTree(Berry.BerryType berryType, int maxBerries, int x, int y) {
+        BerryTree berryTree = new BerryTree(new Point(x, y), berryType, maxBerries);
+        addInteractableObject(berryTree);
+        System.out.println("Added " + berryType.getName() + " tree at (" + x + ", " + y + ")");
+    }
+
+    // Convenience method for adding multiple berry trees
+    public void addBerryTreesInArea(Berry.BerryType berryType, int maxBerries, 
+                                int startX, int startY, int endX, int endY, 
+                                int spacing, int density) {
+        Random random = new Random();
+        
+        for (int y = startY; y <= endY; y += spacing) {
+            for (int x = startX; x <= endX; x += spacing) {
+                // Add some randomness to tree placement
+                if (random.nextInt(100) < density) { // density is percentage chance
+                    // Add small random offset to make placement more natural
+                    int offsetX = random.nextInt(spacing / 2) - spacing / 4;
+                    int offsetY = random.nextInt(spacing / 2) - spacing / 4;
+                    
+                    int finalX = Math.max(0, Math.min(columns - 1, x + offsetX));
+                    int finalY = Math.max(0, Math.min(rows - 1, y + offsetY));
+                    
+                    addBerryTree(berryType, maxBerries, finalX, finalY);
+                }
+            }
+        }
+    }
+
 }

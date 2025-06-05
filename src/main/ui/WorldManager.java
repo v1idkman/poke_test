@@ -12,6 +12,7 @@ import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 
 import exceptions.NoSuchWorldException;
+import model.Berry;
 import model.Door;
 import model.InteractableObject;
 import model.Player;
@@ -179,6 +180,8 @@ public class WorldManager {
         outsideBoard.addObject("/resources/buildings/tiny_tree1.png", 8, 11);
         outsideBoard.addObject("/resources/buildings/tiny_tree1.png", 8, 12);
 
+        outsideBoard.addBerryTree(Berry.BerryType.ORAN_BERRY, 4, 14, 15);
+
         // Create an NPC
         TrainerNpc bugCatcher = new TrainerNpc(new Point(10, 20), "Bug Catcher", "/resources/npc_sprites/bug_catcher/facing_back.png", 
                         Direction.BACK, outsideBoard, "Bug Catcher Class", true);
@@ -207,7 +210,7 @@ public class WorldManager {
         
         // Add various items using simplified methods - no sprite paths needed!
         inside1.addPokeball("poke ball", 3, 2, 3);
-        inside1.addMedicine("potion", 2, 7, 10);
+        inside1.addMedicine("potion", 2, 7, 8);
         inside1.addKeyItem("good rod", 8, 5);
         
         // Add custom items with custom messages

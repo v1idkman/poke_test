@@ -15,6 +15,8 @@ public abstract class WorldObject implements Drawable {
     protected int width;
     protected int height;
 
+    protected boolean walkable = false;
+
     public WorldObject(Point position, String location) {
         this.position = position;
         this.location = location;
@@ -63,7 +65,7 @@ public abstract class WorldObject implements Drawable {
             }
             
         } catch (Exception exc) {
-            System.err.println("Error loading sprite: " + location + " - " + exc.getMessage());
+            // System.err.println("Error loading sprite: " + location + " - " + exc.getMessage());
             sprite = null;
             width = 32;
             height = 32;
@@ -97,4 +99,27 @@ public abstract class WorldObject implements Drawable {
     public Rectangle getBounds(int tileSize) {
         return new Rectangle(position.x * tileSize, position.y * tileSize, width, height);
     }
+
+    public boolean isWalkable() {
+        return walkable;
+    }
+    
+    public void setWalkable(boolean walkable) {
+        this.walkable = walkable;
+    }
+
+    protected void loadSprite(String spritePath) {
+        try {
+            java.io.File file = new java.io.File(spritePath);
+            if (file.exists()) {
+                sprite = new javax.swing.ImageIcon(file.getAbsolutePath()).getImage();
+                System.out.println("Successfully loaded sprite: " + spritePath);
+            } else {
+                System.err.println("Sprite file not found: " + spritePath);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading sprite: " + e.getMessage());
+        }
+    }
+
 }
