@@ -17,9 +17,16 @@ public class BerryTree extends InteractableObject {
         super(position, generateTreeSpritePath(berryType), Direction.ANY);
         this.berryType = berryType;
         this.maxBerries = maxBerries;
-        this.currentBerries = maxBerries; // Start with full berries
-        this.regrowthTimeMs = 300000; // 5 minutes for testing (adjust as needed)
+        this.currentBerries = maxBerries;
+        this.regrowthTimeMs = 300000;
         this.lastHarvestTime = 0;
+        
+        // Add validation similar to InteractableItem
+        if (this.sprite == null) {
+            System.err.println("Failed to load berry tree sprite: " + generateTreeSpritePath(berryType));
+        } else {
+            System.out.println("Successfully loaded berry tree sprite for: " + berryType.getName());
+        }
     }
     
     @Override
@@ -28,7 +35,7 @@ public class BerryTree extends InteractableObject {
         
         if (currentBerries > 0) {
             // Determine how many berries to give (1-3 random)
-            int berriesGiven = Math.min(random.nextInt(3) + 1, currentBerries);
+            int berriesGiven = currentBerries;
             
             // Add berries to player inventory
             for (int i = 0; i < berriesGiven; i++) {
@@ -62,25 +69,34 @@ public class BerryTree extends InteractableObject {
     }
     
     private void updateSprite() {
-        // Update sprite based on berry availability
         String spritePath = currentBerries > 0 ? 
             generateTreeSpritePath(berryType) : 
             generateEmptyTreeSpritePath(berryType);
-        
-        loadSprite(spritePath);
+        try {
+            java.io.InputStream imageStream = getClass().getClassLoader().getResourceAsStream(spritePath);
+            if (imageStream != null) {
+                this.sprite = javax.imageio.ImageIO.read(imageStream);
+                imageStream.close();
+                System.out.println("Successfully updated berry tree sprite: " + spritePath);
+            } else {
+                System.err.println("Berry tree sprite resource not found: " + spritePath);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading berry tree sprite: " + e.getMessage());
+        }
+        width = sprite.getWidth(null);
+        height = sprite.getHeight(null);
     }
-    
+
     private static String generateTreeSpritePath(Berry.BerryType berryType) {
-        // Match your actual file naming convention: oran_berry_tree_...
         String normalizedName = berryType.getName().replace(" ", "_").toLowerCase();
         return "/resources/trees/" + normalizedName + "_tree_full.png";
     }
     
     private static String generateEmptyTreeSpritePath(Berry.BerryType berryType) {
-        // Match your actual file naming convention: oran_berry_tree_...
         String normalizedName = berryType.getName().replace(" ", "_").toLowerCase();
-        return "/resources/trees/" + normalizedName + "_tree_empty.png";
-    }
+        return "resources/trees/" + normalizedName + "_tree_empty.png";
+    }    
     
     // Getters
     public int getCurrentBerries() { return currentBerries; }
