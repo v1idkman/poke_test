@@ -208,14 +208,16 @@ public class WorldManager {
         inside1.addDoor(new Door(new Point(5, 8), "/resources/doors/exit_door.png", 
                             "outside", new Point(12, 8), InteractableObject.Direction.BACK));
         
-        // Add various items using simplified methods - no sprite paths needed!
         inside1.addPokeball("poke ball", 3, 2, 3);
         inside1.addMedicine("potion", 2, 7, 8);
         inside1.addKeyItem("good rod", 8, 5);
         
-        // Add custom items with custom messages
         inside1.addCustomItem("master ball", 1, 1, 1, "You found a rare Master Ball!");
             
         addBoard(inside1);
+    }
+
+    public void createOutside2Board() {
+        
     }
 }

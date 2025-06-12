@@ -55,11 +55,12 @@ public abstract class InteractableObject extends WorldObject {
      */
     public Rectangle getInteractionArea(int tileSize) {
         Rectangle bounds = getBounds(tileSize);
+        int interactionPadding = tileSize / 4;
         return new Rectangle(
-            bounds.x - tileSize, 
-            bounds.y - tileSize,
-            bounds.width + tileSize * 2, 
-            bounds.height + tileSize * 2
+            bounds.x - interactionPadding, 
+            bounds.y - interactionPadding,
+            bounds.width + interactionPadding * 2, 
+            bounds.height + interactionPadding * 2
         );
     }
     

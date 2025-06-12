@@ -452,9 +452,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             Rectangle bounds = obj.getBounds(TILE_SIZE);
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
             
-            // Draw interaction area
+            // Draw interaction area - this will automatically use the new smaller area
             Rectangle interactionArea = obj.getInteractionArea(TILE_SIZE);
-            g.setColor(new Color(255, 0, 255, 50)); // Semi-transparent magenta
+            g.setColor(new Color(255, 0, 255, 50));
             g.fillRect(interactionArea.x, interactionArea.y, 
                     interactionArea.width, interactionArea.height);
             g.setColor(Color.MAGENTA);
@@ -464,6 +464,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             // Draw direction indicator
             drawDirectionIndicator(g, obj, bounds);
         }
+
         
         // YELLOW: Midpoint lines for battle rectangles
         g.setColor(Color.YELLOW);
@@ -512,7 +513,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
     
         // Add legend for debug colors
-        // drawDebugLegend(g);
+        drawDebugLegend(g);
 
     }
     
@@ -577,7 +578,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         return battleArea;
     }
     
-    /* private void drawDebugLegend(Graphics g) {
+    private void drawDebugLegend(Graphics g) {
         g.setColor(Color.BLACK);
         g.fillRect(10, 10, 200, 160);
         g.setColor(Color.WHITE);
@@ -610,7 +611,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         y += 15;
         g.setColor(Color.MAGENTA);
         g.drawString("MAGENTA: Interactable Objects", 15, y);
-    } */
+    }
     
     @Override
     public void keyTyped(KeyEvent e) {}

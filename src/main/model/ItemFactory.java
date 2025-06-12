@@ -5,7 +5,7 @@ public class ItemFactory {
     public static Item createItem(String itemName) {
         // Normalize the item name for lookup
         String normalizedName = itemName.toLowerCase().replace(" ", "-").trim();
-        System.out.println("normalized name: " + normalizedName);
+        // System.out.println("normalized name: " + normalizedName);
         
         for (Medicine.MedicineType type : Medicine.MedicineType.values()) {
             String enumName = type.getName().replace(" ", "-");
