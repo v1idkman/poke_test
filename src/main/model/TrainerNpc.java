@@ -553,4 +553,34 @@ public class TrainerNpc extends Npc {
     public boolean isIconComplete() {
         return exclamationIcon != null && exclamationIcon.isComplete();
     }
+
+    public void drawIconWithZoom(Graphics2D g2d, int zoomLevel) {
+        if (sprite != null && !isDefeated()) {
+            int effectiveTileSize = Board.TILE_SIZE * zoomLevel;
+            
+            // Calculate scaled position
+            int scaledX = position.x * effectiveTileSize;
+            int scaledY = position.y * effectiveTileSize;
+            
+            // Calculate scaled size
+            int scaledWidth = width * zoomLevel;
+            int scaledHeight = height * zoomLevel;
+            
+            g2d.drawImage(sprite, scaledX, scaledY, scaledWidth, scaledHeight, null);
+            
+            // Draw any additional UI elements (like exclamation marks) if needed
+            if (canInitiateBattle() && !isDefeated()) {
+                // Scale UI elements too
+                g2d.setColor(Color.RED);
+                g2d.fillOval(scaledX + scaledWidth - 8 * zoomLevel, scaledY - 8 * zoomLevel, 
+                            8 * zoomLevel, 8 * zoomLevel);
+            }
+        }
+    }
+
+    // Also add the regular drawIcon method if it doesn't exist
+    public void drawIcon(Graphics2D g2d) {
+        drawIconWithZoom(g2d, 1); // Default zoom level of 1
+    }
+
 }

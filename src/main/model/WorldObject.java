@@ -122,4 +122,28 @@ public abstract class WorldObject implements Drawable {
         }
     }
 
+    public void drawWithZoom(Graphics g, ImageObserver observer, int tileSize, int zoomLevel) {
+        int effectiveTileSize = tileSize * zoomLevel;
+        
+        if (sprite != null) {
+            g.drawImage(
+                sprite,
+                position.x * effectiveTileSize,
+                position.y * effectiveTileSize,
+                width * zoomLevel,
+                height * zoomLevel,
+                observer
+            );
+        } else {
+            // Fallback: draw a placeholder if image is missing
+            g.setColor(Color.GRAY);
+            g.fillRect(
+                position.x * effectiveTileSize, 
+                position.y * effectiveTileSize, 
+                effectiveTileSize, 
+                effectiveTileSize
+            );
+        }
+    }
+
 }

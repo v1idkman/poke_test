@@ -71,7 +71,12 @@ public abstract class BattleScreen extends JFrame {
 
     protected Deque<String> messageQueue = new LinkedList<>();
     protected boolean isDisplayingMessages = false;
-    
+
+    // Add these fields to BattleScreen class
+    protected PlayerBattleView playerBattleView;
+    protected boolean isPlayingThrowAnimation = false;
+    protected Timer throwAnimationTimer;
+        
     public BattleScreen(Player player, Pokemon initialOpponent, String battleLocation) {
         this.player = player;
         this.currentOpponentPokemon = initialOpponent;
@@ -81,7 +86,11 @@ public abstract class BattleScreen extends JFrame {
         if (currentOpponentPokemon.getMoves().isEmpty()) {
             currentOpponentPokemon.generateWildMoves();
         }
-        
+
+        setUndecorated(true);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setSize(App.CURRENT_WIDTH, App.CURRENT_HEIGHT);
+            
         validateOpponentPokemonMoves();
     
         if ("route".equalsIgnoreCase(this.battleLocation)) {
@@ -205,6 +214,11 @@ public abstract class BattleScreen extends JFrame {
                 protected void paintComponent(Graphics g) {
                     super.paintComponent(g);
                     g.drawImage(routeBackgroundImage, 0, 0, BG_WIDTH, BG_HEIGHT, this);
+                    
+                    // Draw player using PlayerBattleView
+                    if (playerBattleView != null) {
+                        playerBattleView.draw(g, this);
+                    }
                 }
                 
                 @Override
@@ -213,7 +227,17 @@ public abstract class BattleScreen extends JFrame {
                 }
             };
         } else {
-            battlegroundPanel = new JPanel(null);
+            battlegroundPanel = new JPanel(null) {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    
+                    // Draw player using PlayerBattleView
+                    if (playerBattleView != null) {
+                        playerBattleView.draw(g, this);
+                    }
+                }
+            };
             
             switch (battleLocation.toLowerCase()) {
                 case "city":
@@ -236,13 +260,23 @@ public abstract class BattleScreen extends JFrame {
         opponentPokemonImage.setBounds(450, 140, 150, 150);
         opponentPokemonImage.setIcon(loadPokemonImage(currentOpponentPokemon, true));
         battlegroundPanel.add(opponentPokemonImage);
-
-        // Player Pokémon sprite
+    
+        // Player Pokémon sprite - INITIALLY HIDDEN
         playerPokemonImage = new JLabel();
         playerPokemonImage.setBounds(175, 190, 150, 150);
-        playerPokemonImage.setIcon(loadPokemonImage(playerPokemon, false));
+        // DON'T set the icon yet - it will be set after the throwing animation
+        playerPokemonImage.setVisible(false); // Start hidden
         battlegroundPanel.add(playerPokemonImage);
         
+        // Initialize player battle view
+        initializePlayerBattleView();
+        
+        // Rest of the info boxes setup...
+        createInfoBoxes();
+    }
+    
+    // Separate method for creating info boxes to keep code clean
+    private void createInfoBoxes() {
         // Opponent Pokémon info box
         JPanel opponentInfoBox = new JPanel(null);
         opponentInfoBox.setBounds(50, 50, 250, 80);
@@ -294,31 +328,43 @@ public abstract class BattleScreen extends JFrame {
         playerPokemonHP.setBorderPainted(false);
         playerPokemonHP.setStringPainted(false);
         playerInfoBox.add(playerPokemonHP);
-
+    
         hpValueLabel = new JLabel(playerPokemon.getStats().getCurrentHp() + "/" + playerPokemon.getStats().getMaxHp());
         hpValueLabel.setBounds(130, 60, 100, 15);
         hpValueLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         hpValueLabel.setHorizontalAlignment(JLabel.RIGHT);
         playerInfoBox.add(hpValueLabel);
-
+    
         playerExpBar = new JProgressBar();
         playerExpBar.setBounds(50, 55, 150, 5);
         playerExpBar.setForeground(new Color(30, 144, 255));
         playerExpBar.setBackground(new Color(224, 224, 224));
         playerExpBar.setBorderPainted(false);
         playerExpBar.setStringPainted(false);
-
+    
         int currentLevelExp = playerPokemon.getLevelManager().getCurrentLevelExp();
         int expToNextLevel = playerPokemon.getLevelManager().getExpToNextLevel();
         
         playerExpBar.setMinimum(0);
         playerExpBar.setMaximum(currentLevelExp + expToNextLevel);
         playerExpBar.setValue(currentLevelExp);
-
+    
         playerInfoBox.add(playerExpBar);
         battlegroundPanel.add(playerInfoBox);
     }
-
+    
+    // Initialize PlayerBattleView
+    private void initializePlayerBattleView() {
+        int playerBattleX = 175;
+        int playerBattleY = 190;
+        
+        playerBattleView = new PlayerBattleView(player, playerBattleX, playerBattleY);
+        playerBattleView.updateDirection(Player.Direction.BACK);
+        
+        // Ensure player starts hidden
+        playerBattleView.hidePlayer();
+    }
+    
     protected void updateOpponentDisplay(Pokemon newOpponent) {
         this.currentOpponentPokemon = newOpponent;
         
@@ -499,20 +545,23 @@ public abstract class BattleScreen extends JFrame {
                 
                 switch (animationStep) {
                     case 1:
-                        // Now it's safe to call getInitialBattleMessage() since construction is complete
                         battleMessageLabel.setText(getInitialBattleMessage());
                         break;
                     case 2:
                         battleMessageLabel.setText("Go, " + playerPokemon.getName() + "!");
-                        break;
-                    case 3:
-                        battleMessageLabel.setText("What will " + playerPokemon.getName() + " do?");
-                        
-                        mainPanel.remove(infoPanel);
-                        mainPanel.add(actionPanel, BorderLayout.SOUTH);
-                        mainPanel.revalidate();
-                        mainPanel.repaint();
-                        
+                        // Play pokeball throwing animation - Pokemon sprite appears AFTER this
+                        playPokeballThrowAnimation(() -> {
+                            Timer continueTimer = new Timer(500, event -> {
+                                battleMessageLabel.setText("What will " + playerPokemon.getName() + " do?");
+                                
+                                mainPanel.remove(infoPanel);
+                                mainPanel.add(actionPanel, BorderLayout.SOUTH);
+                                mainPanel.revalidate();
+                                mainPanel.repaint();
+                            });
+                            continueTimer.setRepeats(false);
+                            continueTimer.start();
+                        });
                         animationTimer.stop();
                         break;
                 }
@@ -1345,39 +1394,33 @@ public abstract class BattleScreen extends JFrame {
                 
                 switch (animationStep) {
                     case 1:
+                        // Hide current Pokemon sprite
+                        playerPokemonImage.setVisible(false);
+                        
                         playerPokemon = newPokemon;
-                        
                         battleMessageLabel.setText("Go, " + playerPokemon.getName() + "!");
-                        break;
                         
-                    case 2:
-                        playerPokemonImage.setIcon(loadPokemonImage(playerPokemon, false));
-                        playerPokemonInfo.setText(playerPokemon.getName() + " L" + playerPokemon.getLevel());
-                        
-                        playerPokemonHP.setMaximum(playerPokemon.getStats().getMaxHp());
-                        playerPokemonHP.setValue(playerPokemon.getStats().getCurrentHp());
-                        hpValueLabel.setText(playerPokemon.getStats().getCurrentHp() + "/" + playerPokemon.getStats().getMaxHp());
-                        
-                        createMovePanel();
-                        
-                        float percentage = (float) playerPokemon.getStats().getCurrentHp() / 
-                                        playerPokemon.getStats().getMaxHp();
-                        if (percentage < 0.2) {
-                            playerPokemonHP.setForeground(Color.RED);
-                        } else if (percentage < 0.5) {
-                            playerPokemonHP.setForeground(Color.ORANGE);
-                        } else {
-                            playerPokemonHP.setForeground(new Color(96, 192, 96));
-                        }
-                        
-                        updatePlayerExpBar();
-                        break;
-                        
-                    case 3:
-                        playerTurn = false;
-                        opponentPokemonAttack();
-                        
-                        animationTimer.stop();
+                        // Play throwing animation for new Pokemon
+                        playPokeballThrowAnimation(() -> {
+                            // Update UI after animation completes and sprite is shown
+                            playerPokemonInfo.setText(playerPokemon.getName() + " L" + playerPokemon.getLevel());
+                            
+                            playerPokemonHP.setMaximum(playerPokemon.getStats().getMaxHp());
+                            playerPokemonHP.setValue(playerPokemon.getStats().getCurrentHp());
+                            hpValueLabel.setText(playerPokemon.getStats().getCurrentHp() + "/" + playerPokemon.getStats().getMaxHp());
+                            
+                            createMovePanel();
+                            updatePlayerExpBar();
+                            
+                            // Continue with opponent's turn
+                            Timer opponentTurnTimer = new Timer(1000, event -> {
+                                playerTurn = false;
+                                opponentPokemonAttack();
+                                animationTimer.stop();
+                            });
+                            opponentTurnTimer.setRepeats(false);
+                            opponentTurnTimer.start();
+                        });
                         break;
                 }
             }
@@ -1489,4 +1532,83 @@ public abstract class BattleScreen extends JFrame {
             currentOpponentPokemon.generateWildMoves();
         }
     }
+
+    protected void playPokeballThrowAnimation(Runnable onComplete) {
+        if (isPlayingThrowAnimation) return;
+        
+        isPlayingThrowAnimation = true;
+        
+        // Show player and start throwing animation
+        playerBattleView.showForThrow();
+        playerBattleView.startThrowingAnimation();
+        
+        // Create pokeball sprite
+        JLabel pokeballSprite = new JLabel();
+        try {
+            Image pokeballImage = javax.imageio.ImageIO.read(getClass().getResource("/resources/items/pokeball.png"));
+            if (pokeballImage != null) {
+                pokeballSprite.setIcon(new javax.swing.ImageIcon(pokeballImage.getScaledInstance(32, 32, Image.SCALE_SMOOTH)));
+            }
+        } catch (Exception e) {
+            pokeballSprite.setText("●");
+            pokeballSprite.setForeground(Color.RED);
+            pokeballSprite.setFont(new Font("Arial", Font.BOLD, 24));
+        }
+        
+        Point throwingCenter = playerBattleView.getThrowingCenter();
+        int startX = throwingCenter.x - 16;
+        int startY = throwingCenter.y - 16;
+        int endX = 450 + 75;
+        int endY = 140 + 75;
+        
+        pokeballSprite.setBounds(startX, startY, 32, 32);
+        battlegroundPanel.add(pokeballSprite);
+        battlegroundPanel.setComponentZOrder(pokeballSprite, 0);
+        
+        final int[] animationStep = {0};
+        final int totalSteps = 20;
+        
+        throwAnimationTimer = new Timer(50, e -> {
+            animationStep[0]++;
+            
+            // Update player throwing animation every 5th step
+            if (animationStep[0] % 5 == 0) {
+                playerBattleView.advanceThrowingFrame();
+            }
+            
+            // Move pokeball in an arc
+            float progress = (float) animationStep[0] / totalSteps;
+            int currentX = (int) (startX + (endX - startX) * progress);
+            int arcHeight = 50;
+            int currentY = (int) (startY + (endY - startY) * progress - 
+                                arcHeight * Math.sin(Math.PI * progress));
+            
+            pokeballSprite.setLocation(currentX, currentY);
+            battlegroundPanel.repaint();
+            
+            // Animation complete
+            if (animationStep[0] >= totalSteps) {
+                throwAnimationTimer.stop();
+                battlegroundPanel.remove(pokeballSprite);
+                
+                // Hide player after throw is complete
+                playerBattleView.stopThrowingAnimation();
+                playerBattleView.hidePlayer();
+                
+                // NOW show the player's Pokemon sprite
+                playerPokemonImage.setIcon(loadPokemonImage(playerPokemon, false));
+                playerPokemonImage.setVisible(true);
+                
+                isPlayingThrowAnimation = false;
+                battlegroundPanel.repaint();
+                
+                if (onComplete != null) {
+                    onComplete.run();
+                }
+            }
+        });
+        
+        throwAnimationTimer.start();
+    }
+
 }

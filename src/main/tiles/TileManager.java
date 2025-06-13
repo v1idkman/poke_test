@@ -120,62 +120,56 @@ public class TileManager {
     }
     
     public void draw(Graphics2D g2d) {
-        // Set rendering hints for pixel-perfect rendering to prevent white lines
+        // Set rendering hints for pixel-perfect rendering
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, 
                             RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, 
                             RenderingHints.VALUE_RENDER_SPEED);
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
                             RenderingHints.VALUE_ANTIALIAS_OFF);
-        g2d.setRenderingHint(RenderingHints.KEY_ALPHA_INTERPOLATION,
-                            RenderingHints.VALUE_ALPHA_INTERPOLATION_SPEED);
         
-        int tileSize = Board.TILE_SIZE;
+        int tileSize = Board.TILE_SIZE; // Use logical tile size
         
         // Calculate which tiles are visible based on camera position
         Camera camera = Camera.getInstance();
         
-        // Ensure camera coordinates are integers to prevent sub-pixel rendering
         int cameraX = camera.getX();
         int cameraY = camera.getY();
         
-        // Calculate visible tile range with proper bounds checking
+        // Calculate visible tile range in logical coordinates
         int startCol = Math.max(0, cameraX / tileSize);
         int startRow = Math.max(0, cameraY / tileSize);
         
-        // Calculate viewport dimensions
-        int viewportWidth = board.isLarge() ? App.FIXED_WIDTH : board.getWidth();
-        int viewportHeight = board.isLarge() ? App.FIXED_HEIGHT : board.getHeight();
+        // Calculate viewport dimensions in logical coordinates
+        int viewportWidth = App.CURRENT_WIDTH / App.getZoomLevel();
+        int viewportHeight = App.CURRENT_HEIGHT / App.getZoomLevel();
         
-        // Calculate how many tiles to draw (viewport width/height in tiles + buffer)
         int tilesInViewportX = (viewportWidth / tileSize) + 2;
         int tilesInViewportY = (viewportHeight / tileSize) + 2;
         
         int endCol = Math.min(board.columns, startCol + tilesInViewportX);
         int endRow = Math.min(board.rows, startRow + tilesInViewportY);
         
-        // Draw visible tiles with pixel-perfect positioning
+        // Draw visible tiles in logical coordinates
         for (int row = startRow; row < endRow; row++) {
             for (int col = startCol; col < endCol; col++) {
                 int tileNum = mapTileNum[col][row];
                 
-                // Get the tile from the factory
                 Tile tile = tileFactory.getTile(tileNum);
                 
                 if (tile != null) {
                     BufferedImage tileImage = tile.getImage();
                     
-                    // Calculate exact pixel positions (ensure integer coordinates)
+                    // Calculate exact pixel positions in logical coordinates
                     int pixelX = col * tileSize;
                     int pixelY = row * tileSize;
                     
-                    // Use the simple 4-parameter drawImage method for pixel-perfect rendering
+                    // Draw with logical tile size (zoom scaling handled elsewhere)
                     g2d.drawImage(tileImage, pixelX, pixelY, tileSize, tileSize, null);
                 }
             }
         }
     }
-    
     public boolean isTileCollision(int col, int row) {
         if (col < 0 || col >= board.columns || row < 0 || row >= board.rows) {
             return true; // Out of bounds is considered collision

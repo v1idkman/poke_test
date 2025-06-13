@@ -55,13 +55,18 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private boolean inBattle = false;
     private int encounterCooldown = 0;
     private static final int ENCOUNTER_COOLDOWN_TIME = 3;
+    private TrainerNpc approachingTrainer = null;
 
     public Board(Player player, String worldName, int rows, int columns) {
         this.rows = rows;
         this.columns = columns;
 
-        setPreferredSize(new Dimension(TILE_SIZE * columns, TILE_SIZE * rows));
+        // Set preferred size based on current zoom level
+        int displayWidth = App.getEffectiveTileSize() * columns;
+        int displayHeight = App.getEffectiveTileSize() * rows;
+        setPreferredSize(new Dimension(displayWidth, displayHeight));
         setBackground(new Color(232, 232, 232));
+        
         this.player = player;
         this.worldName = worldName;
         tileManager = new TileManager(this, worldName);
@@ -79,14 +84,21 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         menu.setGameTimer(timer);
         menu.initializeMenuButton(this, TILE_SIZE, columns, rows);
 
+        // Initialize player position in logical coordinates (not scaled)
         player.setPosition(new Point(columns, rows));
+        
         Camera camera = Camera.getInstance();
+        camera.setWorldDimensions(
+            columns * TILE_SIZE, // Use logical world size
+            rows * TILE_SIZE
+        );
         if (isLarge()) {
+            camera.setActive(true);
             camera.update(player);
         }
 
         this.encounterManager = new EncounterManager();
-        // Add this to the Board constructor
+        
         this.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
@@ -98,21 +110,32 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 resetKeyStates();
             }
         });
-
     }
 
     public void setWorldManager(WorldManager manager) {
         this.worldManager = manager;
     }
+
+    public void setZoomLevel(int zoom) {
+        // Update display size
+        int displayWidth = App.getEffectiveTileSize() * columns;
+        int displayHeight = App.getEffectiveTileSize() * rows;
+        setPreferredSize(new Dimension(displayWidth, displayHeight));
+        
+        // Update player sprite for zoom
+        if (playerView != null) {
+            playerView.loadImage();
+        }
+        
+        repaint();
+    }
     
-    // Update the addDoor method
     public void addDoor(Door door) {
         doors.add(door);
         objects.add(door);
         interactableObjects.add(door);
     }
 
-    // Add method for adding any interactable object
     public void addInteractableObject(InteractableObject obj) {
         interactableObjects.add(obj);
         objects.add(obj);
@@ -128,7 +151,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         Graphics2D g2d = (Graphics2D) g.create();
         
-        // Set rendering hints for pixel-perfect rendering
+        // Set rendering hints for pixel-perfect zoomed rendering
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, 
                             RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
         g2d.setRenderingHint(RenderingHints.KEY_RENDERING, 
@@ -136,42 +159,49 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, 
                             RenderingHints.VALUE_ANTIALIAS_OFF);
         
+        // Apply zoom scaling first
+        int zoomLevel = App.getZoomLevel();
+        g2d.scale(zoomLevel, zoomLevel);
+        
         Camera camera = worldManager.getCamera();
         
-        // Apply camera translation if active - ensure integer coordinates
+        // Apply camera translation (in logical coordinates)
         if (camera != null && camera.isActive()) {
             g2d.translate(-camera.getX(), -camera.getY());
         }
         
-        // Draw tiles first
+        // Draw tiles (in logical coordinates)
         tileManager.draw(g2d);
-
+        
         updateBerryTrees();
         
-        // Draw objects
+        // Draw objects (in logical coordinates)
         for (WorldObject obj : objects) {
             obj.draw(g2d, this, TILE_SIZE);
         }
 
+        // Draw player (in logical coordinates)
         playerView.draw(g2d, this, TILE_SIZE);
 
+        // Draw NPCs (in logical coordinates)
         for (TrainerNpc trainer : trainers) {
             trainer.drawIcon(g2d);
         }
-
-        drawDebugBounds(g2d);
         
         g2d.dispose();
+
+        // Draw debug overlays in screen coordinates (after zoom)
+        drawDebugBounds(g);
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         player.updateAnimation();
-
         if (worldManager != null) {
             worldManager.getCamera().update(player);
         }
 
+        checkNPCEncounters();
         updateNpcs();
 
         if (approachingTrainer != null && approachingTrainer.isApproachingForBattle()) {
@@ -183,22 +213,21 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
 
         checkNPCEncounters();
-        
+
         // Decrease encounter cooldown if active
         if (encounterCooldown > 0) {
             encounterCooldown--;
         }
         
-        // In Board.actionPerformed(), add this debug code:
-        if (!player.isInBattle() && !inBattle) {
+        // Check for wild Pokémon encounters if not in battle and cooldown is over
+        if (!player.isInBattle() && !inBattle && encounterCooldown == 0) {
             boolean isInGrass = tileManager.isPlayerInTallGrass(player);
             boolean isMoving = player.isMoving();
             
-            if (encounterCooldown == 0 && encounterManager.checkEncounter(isInGrass, isMoving)) {
+            if (encounterManager.checkEncounter(isInGrass, isMoving)) {
                 startWildEncounter();
             }
         }
-
         
         // Clear previous movement
         boolean[] directions = {upPressed, downPressed, leftPressed, rightPressed};
@@ -226,17 +255,15 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 playerView.loadImage();
             }
         }
-
         if (worldManager != null) {
             Camera camera = worldManager.getCamera();
             camera.update(player);
         }
-
         tileManager.update();
         
         repaint();
     }
-
+    
     private void handleMovement(int dx, int dy, Direction dir) {
         player.setDirection(dir);
         
@@ -247,16 +274,10 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     
         player.setDirection(dir);
     
-        // Check for tile collisions
-        if (checkTileCollision(dx, dy)) {
-            // If there's a collision, don't move the player
-            player.setMoving(false);
-        } else {
-            // Move player if no collision
-            player.move(dx * moveSpeed, dy * moveSpeed);
-            player.setMoving(true);
-            player.setSprintKeyPressed(shiftPressed);
-        }
+        // Move player if no collision
+        player.move(dx * moveSpeed, dy * moveSpeed);
+        player.setMoving(true);
+        player.setSprintKeyPressed(shiftPressed);
         
         playerView.loadImage();
         
@@ -266,23 +287,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         repaint();
     }
-
-    private boolean checkTileCollision(int dx, int dy) {
-        // Get player's current bounds
-        Rectangle playerBounds = player.getBounds(TILE_SIZE);
-        
-        // Calculate the position after movement
-        int moveAmount = Math.round(player.getMoveSpeed());
-        Rectangle nextBounds = new Rectangle(
-            playerBounds.x + dx * moveAmount,
-            playerBounds.y + dy * moveAmount,
-            playerBounds.width,
-            playerBounds.height
-        );
-        
-        return checkTileBoundsCollision(nextBounds);
-    }
-
+    
     public boolean canMove(int dx, int dy) {
         Rectangle playerBounds = player.getBounds(TILE_SIZE);
         Rectangle nextBounds = new Rectangle(
@@ -300,14 +305,14 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             fullPixelRectangle.height
         );
         
-        // Check world boundaries
+        // Check world boundaries (logical coordinates)
         if (nextFullPixelRectangle.x < 0 || nextFullPixelRectangle.y < 0 || 
             nextFullPixelRectangle.x + nextFullPixelRectangle.width > columns * TILE_SIZE || 
             nextFullPixelRectangle.y + nextFullPixelRectangle.height > rows * TILE_SIZE) {
             return false;
         }
         
-        // Check object collisions
+        // Check object collisions (logical coordinates)
         for (WorldObject obj : objects) {
             if (obj.getClass() == Door.class) {
                 continue; // Skip doors for collision detection
@@ -318,12 +323,12 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             }
         }
         
-        // Check tile collisions using the bounds
+        // Check tile collisions
         return !checkTileBoundsCollision(nextBounds);
     } 
     
     private boolean checkTileBoundsCollision(Rectangle bounds) {
-        // Convert pixel coordinates to tile coordinates
+        // Convert pixel coordinates to tile coordinates (logical)
         int startTileX = bounds.x / TILE_SIZE;
         int startTileY = bounds.y / TILE_SIZE;
         int endTileX = (bounds.x + bounds.width - 1) / TILE_SIZE;
@@ -339,94 +344,62 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
         return false; // No collision
     }
-    
-
 
     public void addObject(String path, int x, int y) {
         objects.add(new Building(new Point(x, y), path));
     }
 
     private void drawDebugBounds(Graphics g) {
+        // Convert logical coordinates to screen coordinates for debug display
+        int zoomLevel = App.getZoomLevel();
+        Camera camera = worldManager.getCamera();
+        int cameraX = camera != null && camera.isActive() ? camera.getX() : 0;
+        int cameraY = camera != null && camera.isActive() ? camera.getY() : 0;
+        
+        // Helper method to convert logical to screen coordinates
+        java.util.function.Function<Rectangle, Rectangle> toScreen = (logicalRect) -> {
+            return new Rectangle(
+                (logicalRect.x - cameraX) * zoomLevel,
+                (logicalRect.y - cameraY) * zoomLevel,
+                logicalRect.width * zoomLevel,
+                logicalRect.height * zoomLevel
+            );
+        };
+        
         // RED: player bounds
         g.setColor(Color.RED);
-        Rectangle playerBounds = player.getBounds(TILE_SIZE);
+        Rectangle playerBounds = toScreen.apply(player.getBounds(TILE_SIZE));
         g.drawRect(playerBounds.x, playerBounds.y, playerBounds.width, playerBounds.height);
         
         // BLUE: object bounds
         g.setColor(Color.BLUE);
         for (WorldObject obj : objects) {
-            Rectangle bounds = obj.getBounds(TILE_SIZE);
+            Rectangle bounds = toScreen.apply(obj.getBounds(TILE_SIZE));
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
     
-        // GREEN: door bounds and interaction areas with direction indicators
+        // GREEN: door bounds and interaction areas
         g.setColor(Color.GREEN);
         for (Door door : doors) {
-            Rectangle bounds = door.getBounds(TILE_SIZE);
+            Rectangle bounds = toScreen.apply(door.getBounds(TILE_SIZE));
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
             
-            // Draw door interaction area
-            Rectangle interactionArea = new Rectangle(
-                bounds.x - TILE_SIZE, 
-                bounds.y - TILE_SIZE,
-                bounds.width + TILE_SIZE * 2, 
-                bounds.height + TILE_SIZE * 2
+            Rectangle logicalInteractionArea = new Rectangle(
+                door.getBounds(TILE_SIZE).x - TILE_SIZE, 
+                door.getBounds(TILE_SIZE).y - TILE_SIZE,
+                door.getBounds(TILE_SIZE).width + TILE_SIZE * 2, 
+                door.getBounds(TILE_SIZE).height + TILE_SIZE * 2
             );
+            Rectangle interactionArea = toScreen.apply(logicalInteractionArea);
             g.drawRect(interactionArea.x, interactionArea.y, 
                     interactionArea.width, interactionArea.height);
-            
-            // Draw direction indicator
-            g.setColor(Color.YELLOW);
-            int centerX = bounds.x + bounds.width / 2;
-            int centerY = bounds.y + bounds.height / 2;
-            
-            switch (door.getDirection()) {
-                case FRONT:
-                    // Arrow pointing up
-                    g.drawLine(centerX, centerY, centerX, centerY - 10);
-                    g.drawLine(centerX, centerY - 10, centerX - 3, centerY - 7);
-                    g.drawLine(centerX, centerY - 10, centerX + 3, centerY - 7);
-                    break;
-                case BACK:
-                    // Arrow pointing down
-                    g.drawLine(centerX, centerY, centerX, centerY + 10);
-                    g.drawLine(centerX, centerY + 10, centerX - 3, centerY + 7);
-                    g.drawLine(centerX, centerY + 10, centerX + 3, centerY + 7);
-                    break;
-                case LEFT:
-                    // Arrow pointing left
-                    g.drawLine(centerX, centerY, centerX - 10, centerY);
-                    g.drawLine(centerX - 10, centerY, centerX - 7, centerY - 3);
-                    g.drawLine(centerX - 10, centerY, centerX - 7, centerY + 3);
-                    break;
-                case RIGHT:
-                    // Arrow pointing right
-                    g.drawLine(centerX, centerY, centerX + 10, centerY);
-                    g.drawLine(centerX + 10, centerY, centerX + 7, centerY - 3);
-                    g.drawLine(centerX + 10, centerY, centerX + 7, centerY + 3);
-                    break;
-                case ANY:
-                    // Arrow pointing in all directions
-                    g.drawLine(centerX, centerY, centerX - 10, centerY);
-                    g.drawLine(centerX, centerY, centerX + 10, centerY);
-                    g.drawLine(centerX, centerY, centerX, centerY - 10);
-                    g.drawLine(centerX, centerY, centerX, centerY + 10);
-                    break;
-            }
-            g.setColor(Color.GREEN); // Reset color
+            drawDirectionIndicator(g, door, interactionArea);
         }
     
         // ORANGE: Trainer NPC bounds
         g.setColor(Color.ORANGE);
         for (TrainerNpc trainer : trainers) {
-            Rectangle bounds = trainer.getBounds(TILE_SIZE);
-            g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-        }
-        
-        // PINK: Civilian NPC bounds
-        g.setColor(Color.PINK);
-        for (CivilianNpc civilian : civilians) {
-            Rectangle bounds = civilian.getBounds(TILE_SIZE);
+            Rectangle bounds = toScreen.apply(trainer.getBounds(TILE_SIZE));
             g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
         }
         
@@ -434,8 +407,8 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         g.setColor(Color.CYAN);
         for (TrainerNpc trainer : trainers) {
             if (!trainer.isDefeated()) {
-                Rectangle npcBounds = trainer.getBounds(TILE_SIZE);
-                Rectangle battleArea = getBattleInitiationArea(trainer, npcBounds, 0);
+                Rectangle logicalBattleArea = getBattleInitiationArea(trainer, trainer.getBounds(TILE_SIZE), 0);
+                Rectangle battleArea = toScreen.apply(logicalBattleArea);
                 
                 Graphics2D g2d = (Graphics2D) g.create();
                 g2d.setColor(new Color(0, 255, 255, 50));
@@ -446,62 +419,13 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             }
         }
 
-        // PURPLE: All interactable objects
-        g.setColor(Color.MAGENTA);
-        for (InteractableObject obj : interactableObjects) {
-            Rectangle bounds = obj.getBounds(TILE_SIZE);
-            g.drawRect(bounds.x, bounds.y, bounds.width, bounds.height);
-            
-            // Draw interaction area - this will automatically use the new smaller area
-            Rectangle interactionArea = obj.getInteractionArea(TILE_SIZE);
-            g.setColor(new Color(255, 0, 255, 50));
-            g.fillRect(interactionArea.x, interactionArea.y, 
-                    interactionArea.width, interactionArea.height);
-            g.setColor(Color.MAGENTA);
-            g.drawRect(interactionArea.x, interactionArea.y, 
-                    interactionArea.width, interactionArea.height);
-            
-            // Draw direction indicator
-            drawDirectionIndicator(g, obj, bounds);
-        }
-
-        
-        // YELLOW: Midpoint lines for battle rectangles
-        g.setColor(Color.YELLOW);
-        for (TrainerNpc trainer : trainers) {
-            if (!trainer.isDefeated()) {
-                Rectangle battleArea = getBattleInitiationArea(trainer, trainer.getBounds(TILE_SIZE), 0);
-                
-                switch (trainer.getDirection()) {
-                    case FRONT:
-                    case BACK:
-                        // Vertical rectangle - draw VERTICAL midpoint line
-                        int midX = battleArea.x + (battleArea.width / 2);
-                        g.drawLine(midX, battleArea.y, midX, battleArea.y + battleArea.height);
-                        break;
-                        
-                    case LEFT:
-                    case RIGHT:
-                        // Horizontal rectangle - draw HORIZONTAL midpoint line
-                        int midY = battleArea.y + (battleArea.height / 2);
-                        g.drawLine(battleArea.x, midY, battleArea.x + battleArea.width, midY);
-                        break;
-                }
-            }
-        }
-        
-        // RED DOT: Player center
-        int playerCenterX = player.getWorldX() + (TILE_SIZE / 2);
-        int playerCenterY = player.getWorldY() + (TILE_SIZE / 2);
-        g.setColor(Color.RED);
-        g.fillOval(playerCenterX - 3, playerCenterY - 3, 6, 6);
-        
         // LIGHT GREEN: Tall grass areas
-        g.setColor(new Color(0, 255, 0, 100)); // Semi-transparent green
+        g.setColor(new Color(0, 255, 0, 100));
         for (int y = 0; y < rows; y++) {
             for (int x = 0; x < columns; x++) {
                 if (tileManager.isInTallGrass(x, y)) {
-                    g.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    Rectangle grassRect = toScreen.apply(new Rectangle(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE));
+                    g.fillRect(grassRect.x, grassRect.y, grassRect.width, grassRect.height);
                 }
             }
         }
@@ -512,21 +436,25 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             g.drawString("IN GRASS", playerBounds.x, playerBounds.y - 10);
         }
     
+        // RED DOT: Player center
+        int playerCenterX = (player.getWorldX() + (player.getWidth() / 2) - cameraX) * zoomLevel;
+        int playerCenterY = (player.getWorldY() + (player.getHeight() / 2) - cameraY) * zoomLevel;
+        g.setColor(Color.RED);
+        g.fillOval(playerCenterX - 3, playerCenterY - 3, 6, 6);
+    
         // Add legend for debug colors
         drawDebugLegend(g);
-
     }
     
     private Rectangle getBattleInitiationArea(TrainerNpc npc, Rectangle npcBounds, int sightRange) {
-        // Use player dimensions for consistent rectangle size
-        int playerWidth = player.getHeight(); 
-        int playerHeight = player.getWidth();
+        int playerWidth = TILE_SIZE; 
+        int playerHeight = TILE_SIZE;
         
         Rectangle battleArea;
         
         switch (npc.getDirection()) {
             case FRONT: // Looking up - vertical rectangle
-                int frontVisionHeight = 5 * playerWidth; 
+                int frontVisionHeight = 5 * TILE_SIZE; 
                 battleArea = new Rectangle(
                     npcBounds.x + (npcBounds.width / 2) - (playerWidth / 2), 
                     npcBounds.y - frontVisionHeight, 
@@ -536,7 +464,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 break;
                 
             case BACK: // Looking down - vertical rectangle
-                int backVisionHeight = 5 * playerWidth; 
+                int backVisionHeight = 5 * TILE_SIZE; 
                 battleArea = new Rectangle(
                     npcBounds.x + (npcBounds.width / 2) - (playerWidth / 2), 
                     npcBounds.y + npcBounds.height, 
@@ -546,7 +474,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 break;
                 
             case LEFT: // Looking left - horizontal rectangle
-                int leftVisionWidth = 5 * playerHeight; 
+                int leftVisionWidth = 5 * TILE_SIZE; 
                 battleArea = new Rectangle(
                     npcBounds.x - leftVisionWidth, 
                     npcBounds.y + (npcBounds.height / 2) - (playerHeight / 2), 
@@ -556,7 +484,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 break;
                 
             case RIGHT: // Looking right - horizontal rectangle
-                int rightVisionWidth = 5 * playerHeight;
+                int rightVisionWidth = 5 * TILE_SIZE;
                 battleArea = new Rectangle(
                     npcBounds.x + npcBounds.width,
                     npcBounds.y + (npcBounds.height / 2) - (playerHeight / 2),
@@ -597,9 +525,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         g.setColor(Color.ORANGE);
         g.drawString("ORANGE: NPC Bounds", 15, y);
         y += 15;
-        g.setColor(Color.MAGENTA);
-        g.drawString("MAGENTA: NPC Interaction", 15, y);
-        y += 15;
         g.setColor(Color.CYAN);
         g.drawString("CYAN: NPC Battle Range", 15, y);
         y += 15;
@@ -608,9 +533,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         y += 15;
         g.setColor(Color.YELLOW);
         g.drawString("YELLOW: In Grass Indicator", 15, y);
-        y += 15;
-        g.setColor(Color.MAGENTA);
-        g.drawString("MAGENTA: Interactable Objects", 15, y);
     }
     
     @Override
@@ -632,20 +554,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         if (key == KeyEvent.VK_UP || key == KeyEvent.VK_W) {
             upPressed = true;
             player.setDirection(Player.Direction.FRONT);
-            player.setMoving(true);
         } else if (key == KeyEvent.VK_RIGHT || key == KeyEvent.VK_D) {
             rightPressed = true;
             player.setDirection(Player.Direction.RIGHT);
-            player.setMoving(true);
         } else if (key == KeyEvent.VK_DOWN || key == KeyEvent.VK_S) {
             downPressed = true;
             player.setDirection(Player.Direction.BACK);
-            player.setMoving(true);
         } else if (key == KeyEvent.VK_LEFT || key == KeyEvent.VK_A) {
             leftPressed = true;
             player.setDirection(Player.Direction.LEFT);
-            player.setMoving(true);
         }
+        player.setMoving(true);
     }
 
     @Override
@@ -663,12 +582,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         if (key == KeyEvent.VK_LEFT) leftPressed = false;
         if (key == KeyEvent.VK_RIGHT) rightPressed = false;
 
-        // If no movement keys are pressed, stop animation
-        if (!upPressed && !downPressed && !leftPressed && !rightPressed) {
-            player.setMoving(false);
-            playerView.loadImage();
-        }
-
         repaint();
 
         if (key == KeyEvent.VK_E) {
@@ -679,7 +592,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         }
     }
 
-        // Replace the existing checkDoorInteraction method with a generic one
     private void checkInteractableObjectInteraction() {
         Rectangle playerBounds = player.getBounds(TILE_SIZE);
         
@@ -750,7 +662,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         return rows >= 20 || columns >= 30;
     }
     
-    // Add method for encounter animation
     private void playEncounterAnimation(Pokemon wildPokemon) {
         // This would be where you'd implement a screen flash or transition animation
         // For now, just print to console
@@ -886,7 +797,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         requestFocusInWindow();
     }
     
-    // Update the startTrainerBattle method:
     private void startTrainerBattle(TrainerNpc npc) {
         SwingUtilities.invokeLater(() -> {
             TrainerBattle battleScreen = new TrainerBattle(player, npc, "route");
@@ -907,8 +817,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         requestFocusInWindow();
     }
 
-    private TrainerNpc approachingTrainer = null;
-    
     private void checkNPCEncounters() {
         if (npcBattleInProgress || inBattle || approachingTrainer != null) return;
         
@@ -991,33 +899,28 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 		return worldManager;
 	}
 
-    // Generic method for adding any interactable item
     public void addInteractableItem(String itemName, int quantity, int x, int y, InteractableObject.Direction direction) {
         InteractableItem item = new InteractableItem(new Point(x, y), itemName, quantity, direction);
         addInteractableObject(item);
     }
 
-    // Convenience method for pokeballs - REMOVE spritePath parameter
     public void addPokeball(String pokeballType, int quantity, int x, int y) {
         InteractableItem pokeball = new InteractableItem(new Point(x, y), pokeballType, quantity);
         pokeball.setInteractionMessage("Found " + quantity + " " + pokeballType + "(s)!");
         addInteractableObject(pokeball);
     }
 
-    // Convenience method for medicine items - REMOVE spritePath parameter
     public void addMedicine(String medicineType, int quantity, int x, int y) {
         InteractableItem medicine = new InteractableItem(new Point(x, y), medicineType, quantity);
         addInteractableObject(medicine);
     }
 
-    // Convenience method for key items - REMOVE spritePath parameter
     public void addKeyItem(String keyItemType, int x, int y) {
         InteractableItem keyItem = new InteractableItem(new Point(x, y), keyItemType, 1);
         keyItem.setInteractionMessage("Found " + keyItemType + "!");
         addInteractableObject(keyItem);
     }
 
-    // Remove the old addCustomItem method with spritePath parameter and keep only this one:
     public void addCustomItem(String itemName, int quantity, int x, int y, String customMessage) {
         InteractableItem item = new InteractableItem(new Point(x, y), itemName, quantity);
         if (customMessage != null) {
@@ -1032,7 +935,6 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         System.out.println("Added " + berryType.getName() + " tree at (" + x + ", " + y + ")");
     }
 
-    // Convenience method for adding multiple berry trees
     public void addBerryTreesInArea(Berry.BerryType berryType, int maxBerries, 
                                 int startX, int startY, int endX, int endY, 
                                 int spacing, int density) {

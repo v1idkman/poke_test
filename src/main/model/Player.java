@@ -25,7 +25,7 @@ public class Player extends Trainer {
     
     // Animation constants
     private static final int NUM_FRAMES = 2; 
-    private static final int ANIMATION_DELAY = 12; // Increased from 3 to 12
+    private static final int ANIMATION_DELAY = 10;
     private static final float RUN_SPEED = 2.5f;
     private static final int TILE_SIZE = 32;
     
@@ -78,13 +78,13 @@ public class Player extends Trainer {
         if (isMoving()) {
             animationCounter++;
             if (animationCounter >= ANIMATION_DELAY) {
+                int oldFrame = animationFrame;
                 nextAnimationFrame();
                 animationCounter = 0;
+                System.out.println("Animation frame changed from " + oldFrame + " to " + animationFrame + " (Direction: " + direction + ")");
             }
-        } else {
-            animationFrame = 0;
-            animationCounter = 0;
         }
+        // Remove the else clause that was resetting animation every frame
     }
     
     public void updatePosition() {
@@ -180,12 +180,20 @@ public class Player extends Trainer {
     }
     
     public void setMoving(boolean moving) {
+        boolean wasMoving = this.moving;
         this.moving = moving;
-        if (!moving) {
+        
+        // Only reset animation when transitioning from moving to not moving
+        if (!moving && wasMoving) {
             animationFrame = 0;
             animationCounter = 0;
+            System.out.println("Player stopped moving, resetting animation frame to 0");
+        } else if (!wasMoving && moving) {
+            System.out.println("Player started moving, continuing animation from frame " + animationFrame);
         }
+        // Don't print or reset anything if the state hasn't changed
     }
+    
     
     public boolean isMoving() {
         return moving || hasTarget;
@@ -193,9 +201,10 @@ public class Player extends Trainer {
     
     public void nextAnimationFrame() {
         animationFrame = (animationFrame + 1) % NUM_FRAMES;
+        System.out.println("Animation frame updated to: " + animationFrame);
     }
     
-    public int getAnimationFrame() {
+    public int getAnimationFrame() {    
         return animationFrame;
     }
 

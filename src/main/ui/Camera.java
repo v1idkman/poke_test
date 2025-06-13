@@ -4,24 +4,14 @@ import model.Player;
 
 public class Camera {
     private static Camera instance;
-    private int x;
-    private int y;
-    private boolean active;
-    private int viewportWidth;
-    private int viewportHeight;
-    private int worldWidth;
-    private int worldHeight;
+    private int x, y;
+    private int worldWidth, worldHeight;
+    private boolean isActive;
+    private int zoomLevel = 1;
     
     private Camera() {
-        this.x = 0;
-        this.y = 0;
-        this.active = false;
-        this.viewportWidth = App.FIXED_WIDTH;
-        this.viewportHeight = App.FIXED_HEIGHT;
-        this.worldWidth = 0;
-        this.worldHeight = 0;
     }
-
+    
     public static Camera getInstance() {
         if (instance == null) {
             instance = new Camera();
@@ -29,42 +19,58 @@ public class Camera {
         return instance;
     }
     
-    public void setWorldDimensions(int width, int height) {
-        this.worldWidth = width;
-        this.worldHeight = height;
+    public void setWorldDimensions(int worldWidth, int worldHeight) {
+        this.worldWidth = worldWidth;
+        this.worldHeight = worldHeight;
     }
     
-    public void setViewportDimensions(int width, int height) {
-        this.viewportWidth = width;
-        this.viewportHeight = height;
+    public void setActive(boolean active) {
+        this.isActive = active;
+    }
+    
+    public boolean isActive() {
+        return isActive;
+    }
+    
+    public void setZoomLevel(int zoomLevel) {
+        this.zoomLevel = Math.max(1, Math.min(4, zoomLevel)); // Clamp between 1-4
+    }
+    
+    /**
+     * Get the current zoom level
+     * @return current zoom level
+     */
+    public int getZoomLevel() {
+        return zoomLevel;
     }
     
     public void update(Player player) {
-        // If camera isn't active for small worlds, don't update position
-        if (!active) {
-            x = 0;
-            y = 0;
-            return;
+        if (!isActive) return;
+        
+        // Get logical viewport dimensions (screen size divided by zoom)
+        int logicalViewportWidth = App.CURRENT_WIDTH / zoomLevel;
+        int logicalViewportHeight = App.CURRENT_HEIGHT / zoomLevel;
+        
+        // Center camera on player (in logical coordinates)
+        int targetX = player.getWorldX() + (Board.TILE_SIZE / 2) - (logicalViewportWidth / 2);
+        int targetY = player.getWorldY() + (Board.TILE_SIZE / 2) - (logicalViewportHeight / 2);
+        
+        // Smooth camera following
+        float followSpeed = 0.1f;
+        x = (int)(x + (targetX - x) * followSpeed);
+        y = (int)(y + (targetY - y) * followSpeed);
+        
+        // Clamp camera to world bounds
+        x = Math.max(0, Math.min(x, worldWidth - logicalViewportWidth));
+        y = Math.max(0, Math.min(y, worldHeight - logicalViewportHeight));
+        
+        // Handle cases where world is smaller than viewport
+        if (worldWidth < logicalViewportWidth) {
+            x = -(logicalViewportWidth - worldWidth) / 2;
         }
-        
-        // Get player position and calculate center
-        int playerX = player.getWorldX();
-        int playerY = player.getWorldY();
-        
-        // Calculate player's center
-        int playerWidth = Board.TILE_SIZE;
-        int playerHeight = Board.TILE_SIZE;
-        
-        int playerCenterX = playerX + (playerWidth / 2);
-        int playerCenterY = playerY + (playerHeight / 2);
-        
-        // Calculate the ideal camera position (player centered)
-        int idealX = playerCenterX - (viewportWidth / 2);
-        int idealY = playerCenterY - (viewportHeight / 2);
-        
-        // Clamp camera position to prevent showing outside the world
-        x = Math.max(0, Math.min(idealX, worldWidth - viewportWidth));
-        y = Math.max(0, Math.min(idealY, worldHeight - viewportHeight));
+        if (worldHeight < logicalViewportHeight) {
+            y = -(logicalViewportHeight - worldHeight) / 2;
+        }
     }
     
     public int getX() {
@@ -75,11 +81,8 @@ public class Camera {
         return y;
     }
     
-    public boolean isActive() {
-        return active;
-    }
-    
-    public void setActive(boolean active) {
-        this.active = active;
+    public void setPosition(int x, int y) {
+        this.x = x;
+        this.y = y;
     }
 }

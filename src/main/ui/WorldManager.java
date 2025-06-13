@@ -128,7 +128,7 @@ public class WorldManager {
             layeredPane.add(centeringPanel, JLayeredPane.DEFAULT_LAYER);
         } else {
             // Large board - fit it to the fixed dimensions
-            currentWorld.setBounds(0, 0, App.FIXED_WIDTH, App.FIXED_HEIGHT);
+            currentWorld.setBounds(0, 0, App.CURRENT_WIDTH, App.CURRENT_HEIGHT);
             layeredPane.add(currentWorld, JLayeredPane.DEFAULT_LAYER);
         }
         
@@ -183,7 +183,7 @@ public class WorldManager {
         outsideBoard.addBerryTree(Berry.BerryType.ORAN_BERRY, 4, 14, 15);
 
         // Create an NPC
-        TrainerNpc bugCatcher = new TrainerNpc(new Point(10, 20), "Bug Catcher", "/resources/npc_sprites/bug_catcher/facing_back.png", 
+        TrainerNpc bugCatcher = new TrainerNpc(new Point(20, 10), "Bug Catcher", "/resources/npc_sprites/bug_catcher/facing_back.png", 
                         Direction.BACK, outsideBoard, "Bug Catcher Class", true);
         bugCatcher.setDialogueText("I love catching bugs! Want to battle?");
 
