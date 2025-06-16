@@ -31,8 +31,6 @@ public abstract class BattleScreen extends JFrame {
     
     // UI Components
     protected Image routeBackgroundImage;
-    protected static final int BG_WIDTH = 800;
-    protected static final int BG_HEIGHT = 475;
 
     protected JPanel mainPanel;
     protected JPanel currentCategoryPanel;
@@ -90,13 +88,14 @@ public abstract class BattleScreen extends JFrame {
         setUndecorated(true);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
         setSize(App.CURRENT_WIDTH, App.CURRENT_HEIGHT);
+        setLocationRelativeTo(null);
             
         validateOpponentPokemonMoves();
     
         if ("route".equalsIgnoreCase(this.battleLocation)) {
             try {
                 Image originalImage = ImageIO.read(getClass().getResource("/resources/backgrounds/route_bg.png"));
-                routeBackgroundImage = originalImage.getScaledInstance(BG_WIDTH, BG_HEIGHT, Image.SCALE_SMOOTH);
+                routeBackgroundImage = originalImage.getScaledInstance(App.CURRENT_WIDTH, App.CURRENT_HEIGHT, Image.SCALE_SMOOTH);
             } catch (Exception e) {
                 System.err.println("Failed to load route background image: " + e.getMessage());
                 routeBackgroundImage = null;
@@ -147,7 +146,7 @@ public abstract class BattleScreen extends JFrame {
         if ("route".equalsIgnoreCase(this.battleLocation)) {
             try {
                 Image originalImage = ImageIO.read(getClass().getResource("/resources/backgrounds/route_bg.png"));
-                routeBackgroundImage = originalImage.getScaledInstance(BG_WIDTH, BG_HEIGHT, Image.SCALE_SMOOTH);
+                routeBackgroundImage = originalImage.getScaledInstance(App.CURRENT_WIDTH, App.CURRENT_HEIGHT, Image.SCALE_SMOOTH);
             } catch (Exception e) {
                 System.err.println("Failed to load route background image: " + e.getMessage());
                 routeBackgroundImage = null;
@@ -169,10 +168,10 @@ public abstract class BattleScreen extends JFrame {
         }
         
         setTitle("Pokémon Battle");
-        setSize(800, 600);
+        setUndecorated(true);
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+        setSize(App.CURRENT_WIDTH, App.CURRENT_HEIGHT);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setResizable(false);
         
         // Use the provided initial message instead of calling getInitialBattleMessage()
         String message = initialMessage != null ? initialMessage : "Battle is starting...";
@@ -213,17 +212,12 @@ public abstract class BattleScreen extends JFrame {
                 @Override
                 protected void paintComponent(Graphics g) {
                     super.paintComponent(g);
-                    g.drawImage(routeBackgroundImage, 0, 0, BG_WIDTH, BG_HEIGHT, this);
+                    g.drawImage(routeBackgroundImage, 0, 0, App.CURRENT_WIDTH, App.CURRENT_HEIGHT, this);
                     
                     // Draw player using PlayerBattleView
                     if (playerBattleView != null) {
                         playerBattleView.draw(g, this);
                     }
-                }
-                
-                @Override
-                public Dimension getPreferredSize() {
-                    return new Dimension(BG_WIDTH, BG_HEIGHT);
                 }
             };
         } else {
@@ -253,25 +247,24 @@ public abstract class BattleScreen extends JFrame {
             }
         }
         
-        battlegroundPanel.setPreferredSize(new Dimension(800, 400));
+        battlegroundPanel.setPreferredSize(new Dimension(App.CURRENT_WIDTH, App.CURRENT_HEIGHT - 200));
         
         // Opponent Pokémon sprite
         opponentPokemonImage = new JLabel();
-        opponentPokemonImage.setBounds(450, 140, 150, 150);
+        opponentPokemonImage.setBounds(scaleX(450), scaleY(140), scaleX(150), scaleY(150));
         opponentPokemonImage.setIcon(loadPokemonImage(currentOpponentPokemon, true));
         battlegroundPanel.add(opponentPokemonImage);
     
         // Player Pokémon sprite - INITIALLY HIDDEN
         playerPokemonImage = new JLabel();
-        playerPokemonImage.setBounds(175, 190, 150, 150);
-        // DON'T set the icon yet - it will be set after the throwing animation
+        playerPokemonImage.setBounds(scaleX(175), scaleY(190), scaleX(150), scaleY(150));
+        // set icon after player throws pokeball
         playerPokemonImage.setVisible(false); // Start hidden
         battlegroundPanel.add(playerPokemonImage);
         
         // Initialize player battle view
         initializePlayerBattleView();
         
-        // Rest of the info boxes setup...
         createInfoBoxes();
     }
     
@@ -279,7 +272,7 @@ public abstract class BattleScreen extends JFrame {
     private void createInfoBoxes() {
         // Opponent Pokémon info box
         JPanel opponentInfoBox = new JPanel(null);
-        opponentInfoBox.setBounds(50, 50, 250, 80);
+        opponentInfoBox.setBounds(scaleX(50), scaleY(50), scaleX(250), scaleY(80));
         opponentInfoBox.setBackground(new Color(248, 248, 240));
         opponentInfoBox.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         
@@ -306,7 +299,7 @@ public abstract class BattleScreen extends JFrame {
         
         // Player Pokémon info box
         JPanel playerInfoBox = new JPanel(null);
-        playerInfoBox.setBounds(475, 300, 250, 80);
+        playerInfoBox.setBounds(scaleX(475), scaleY(300), scaleX(250), scaleY(80));
         playerInfoBox.setBackground(new Color(248, 248, 240));
         playerInfoBox.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         
@@ -1611,4 +1604,11 @@ public abstract class BattleScreen extends JFrame {
         throwAnimationTimer.start();
     }
 
+    private int scaleX(int originalX) {
+        return (int)(originalX * ((double)App.CURRENT_WIDTH / 800.0));
+    }
+    
+    private int scaleY(int originalY) {
+        return (int)(originalY * ((double)App.CURRENT_HEIGHT / 600.0));
+    }
 }
