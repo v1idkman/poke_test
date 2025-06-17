@@ -1,7 +1,6 @@
 package ui;
 
 import javax.swing.*;
-import javax.swing.Timer;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -121,19 +120,20 @@ public class Menu {
     public void hideMenu() {
         if (!menuVisible || menuOverlay == null) return;
         
+        // Remove the paused label if it exists
+        JLabel pausedLabel = (JLabel) menuOverlay.getClientProperty("pausedLabel");
+        if (pausedLabel != null) {
+            gameLayeredPane.remove(pausedLabel);
+        }
+        
         gameLayeredPane.remove(menuOverlay);
         menuOverlay = null;
         menuVisible = false;
         
-        // Re-enable input processing on the game board
-        player.setMovementState(MovementState.FREE);
-        
-        // Resume the game timer
         if (gameTimer != null) {
             gameTimer.start();
         }
         
-        // Return focus to game board
         gameBoard.requestFocusInWindow();
         gameLayeredPane.revalidate();
         gameLayeredPane.repaint();
@@ -164,24 +164,44 @@ public class Menu {
         // Create larger right panel
         JPanel rightPanel = createRightMenuPanel();
         
-        // Add panels to overlay
+        // Add panels to overlay with BorderLayout
         menuOverlay.add(leftPanel, BorderLayout.WEST);
         menuOverlay.add(rightPanel, BorderLayout.EAST);
+        
+        // Create "PAUSED" text as a separate overlay component
+        JLabel pausedLabel = new JLabel("PAUSED", JLabel.CENTER);
+        pausedLabel.setFont(new Font("Arial", Font.BOLD, 48));
+        pausedLabel.setForeground(Color.WHITE);
+        pausedLabel.setOpaque(false);
+        
+        // Position the label at a higher layer
+        int centerAreaWidth = gameLayeredPane.getWidth() - 600;
+        int labelWidth = 200;
+        int labelHeight = 60;
+        int labelX = 300 + (centerAreaWidth - labelWidth) / 2;
+        int labelY = 30;
+        
+        pausedLabel.setBounds(labelX, labelY, labelWidth, labelHeight);
+        
+        // Add the label directly to the layered pane at a higher layer
+        gameLayeredPane.add(pausedLabel, JLayeredPane.POPUP_LAYER);
+        
+        // Store reference to remove it later
+        menuOverlay.putClientProperty("pausedLabel", pausedLabel);
         
         // Add click listener to close menu when clicking center area
         menuOverlay.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // Check if click is in center area (not on side panels)
-                int leftPanelWidth = 300; // Updated for larger panels
-                int rightPanelWidth = 300; // Updated for larger panels
+                int leftPanelWidth = 300;
+                int rightPanelWidth = 300;
                 if (e.getX() > leftPanelWidth && e.getX() < (menuOverlay.getWidth() - rightPanelWidth)) {
                     hideMenu();
                 }
             }
         });
     }
-    
+
     private JPanel createLeftMenuPanel() {
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
@@ -346,7 +366,7 @@ public class Menu {
         subMenuOverlay.setBounds(0, 0, gameLayeredPane.getWidth(), gameLayeredPane.getHeight());
         
         JPanel subMenuPanel = new JPanel(new BorderLayout());
-        subMenuPanel.setBackground(new Color(240, 240, 240)); // Light background for sub-menus
+        subMenuPanel.setBackground(PANEL_BG); // Light background for sub-menus
         subMenuPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(120, 120, 120), 2),
             BorderFactory.createEmptyBorder(20, 20, 20, 20)
