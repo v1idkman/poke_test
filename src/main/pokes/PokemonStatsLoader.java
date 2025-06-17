@@ -19,7 +19,7 @@ public class PokemonStatsLoader {
     private Map<Integer, Boolean> pokemonLegendary = new HashMap<>();
     private Map<Integer, List<String>> pokemonNamesByDex = new HashMap<>();
     private Map<String, String> pokemonClassifications = new HashMap<>();
-    private Map<String, String> pokemonAbilities = new HashMap<>();
+    private Map<String, List<String>> pokemonAbilities = new HashMap<>();
     private Map<String, String> pokemonExpGrowth = new HashMap<>();
     
     private PokemonStatsLoader() {}
@@ -71,7 +71,6 @@ public class PokemonStatsLoader {
                 String pokemonName = cleanPokemonName(nextLine[2]); // Column 3 (index 2)
                 String classification = cleanString(nextLine[3]);
                 String alternateForm = cleanString(nextLine[4]);
-                String originalPokemonId = cleanString(nextLine[5]);
                 String legendaryType = cleanString(nextLine[6]);
                 
                 // Skip height and weight (columns 7-8)
@@ -122,7 +121,12 @@ public class PokemonStatsLoader {
                 
                 // Store additional data
                 pokemonClassifications.put(compositeKey, classification);
-                pokemonAbilities.put(compositeKey, primaryAbility);
+                ArrayList<String> abilities = new ArrayList<>();
+                abilities.add(primaryAbility);
+                if (hiddenAbility != null && !hiddenAbility.isEmpty() && !hiddenAbility.equals("NULL")) {
+                    abilities.add(hiddenAbility);
+                }
+                pokemonAbilities.put(compositeKey, abilities);
                 pokemonExpGrowth.put(compositeKey, expGrowth);
                 
                 // Store names by dex for forms lookup
@@ -246,9 +250,9 @@ public class PokemonStatsLoader {
     }
     
     // Get Pokemon ability
-    public String getPokemonAbility(int dexNumber, String name) {
+    public List<String> getPokemonAbilities(int dexNumber, String name) {
         String compositeKey = dexNumber + "_" + name;
-        return pokemonAbilities.getOrDefault(compositeKey, "No Ability");
+        return pokemonAbilities.get(compositeKey);
     }
     
     // Get Pokemon experience growth rate

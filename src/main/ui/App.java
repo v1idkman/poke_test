@@ -119,6 +119,7 @@ public class App {
         
         // Position menu button for fullscreen
         Menu menu = Menu.getInstance();
+        menu.setGameLayeredPane(layeredPane);
         menu.positionMenuButtonForWindow(layeredPane, CURRENT_WIDTH - 40, CURRENT_HEIGHT - 40);
         
         window.getContentPane().removeAll();

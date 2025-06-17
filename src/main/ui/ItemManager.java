@@ -3,222 +3,265 @@ package ui;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.util.*;
 
 import model.Player;
-import model.Pokeball;
 import model.Item;
-import model.Medicine;
 import model.KeyItem;
-import pokes.Pokemon;
 
 public class ItemManager {
     private Player player;
-    private JDialog menuDialog;
-    private JButton menuButton;
     
-    public ItemManager(Player player, JDialog menuDialog, JButton menuButton) {
+    public ItemManager(Player player) {
         this.player = player;
-        this.menuDialog = menuDialog;
-        this.menuButton = menuButton;
     }
     
-    public void updateItemInfoPanel(Item item, JLabel nameLabel, JLabel descLabel, JPanel imagePanel, JPanel infoPanel) {
-        // Update name with quantity if stackable
-        nameLabel.setText(item.getName() + (item.isStackable() ? " (x" + item.getQuantity() + ")" : ""));
+    public String getItemType(Item item) {
+        if (item instanceof KeyItem) {
+            return "Key Items";
+        } else if (item.getName().toLowerCase().contains("ball")) {
+            return "Poké Balls";
+        } else if (item.getName().toLowerCase().contains("potion") || 
+                   item.getName().toLowerCase().contains("revive") ||
+                   item.getName().toLowerCase().contains("heal")) {
+            return "Medicine";
+        } else if (item.getName().toLowerCase().contains("berry")) {
+            return "Berries";
+        } else {
+            return "Items";
+        }
+    }
+    
+    public void updateItemInfoPanel(Item item, JLabel nameLabel, JLabel descLabel, 
+                                  JPanel imagePanel, JPanel infoPanel) {
+        if (item == null) {
+            nameLabel.setText("No Item Selected");
+            nameLabel.setFont(new Font("Lato", Font.BOLD, 18));
+            nameLabel.setForeground(new Color(100, 100, 100));
+            descLabel.setText("");
+            imagePanel.removeAll();
+            imagePanel.revalidate();
+            imagePanel.repaint();
+            return;
+        }
         
-        // Update description
-        descLabel.setText("<html>" + item.getDescription() + "</html>");
+        // Update name with enhanced styling
+        String displayName = item.getName();
+        if (item.getQuantity() > 1) {
+            displayName = item.getName() + " ×" + item.getQuantity();
+        }
+        nameLabel.setText(displayName);
+        nameLabel.setFont(new Font("Lato", Font.BOLD, 18));
+        nameLabel.setForeground(new Color(50, 50, 50));
         
-        // Update image panel
+        // Update description with better formatting
+        String description = item.getDescription();
+        if (description == null || description.isEmpty()) {
+            description = "No description available.";
+        }
+        
+        // Enhanced HTML formatting for description
+        descLabel.setText("<html><div style='width: 180px; text-align: center; " +
+                         "font-family: Arial, sans-serif; font-size: 12px; " +
+                         "color: #555555; line-height: 1.4;'>" + 
+                         description + "</div></html>");
+        
+        // Update image with enhanced styling
         imagePanel.removeAll();
+        imagePanel.setLayout(new BorderLayout());
+        imagePanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        imagePanel.setBackground(new Color(248, 248, 248));
         
-        // Create a custom panel to draw the image with proper scaling
         if (item.getImage() != null) {
-            final Image itemImage = item.getImage();
-            
-            JPanel scaledImagePanel = new JPanel() {
+            JPanel imageDisplayPanel = new JPanel() {
                 @Override
                 protected void paintComponent(Graphics g) {
                     super.paintComponent(g);
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, 
+                                        RenderingHints.VALUE_INTERPOLATION_BILINEAR);
                     
-                    int imgWidth = itemImage.getWidth(this);
-                    int imgHeight = itemImage.getHeight(this);
-                    
-                    // Calculate scaling factor to maintain aspect ratio
-                    double scale = Math.min(
-                        (double)getWidth() / imgWidth,
-                        (double)getHeight() / imgHeight
-                    );
-                    
-                    // Calculate new dimensions
-                    int scaledWidth = (int)(imgWidth * scale);
-                    int scaledHeight = (int)(imgHeight * scale);
-                    
-                    // Calculate position to center the image
-                    int x = (getWidth() - scaledWidth) / 2;
-                    int y = (getHeight() - scaledHeight) / 2;
-                    
-                    // Draw the scaled image
-                    g.drawImage(itemImage, x, y, scaledWidth, scaledHeight, this);
+                    if (item.getImage() != null) {
+                        Image img = item.getImage();
+                        int size = Math.min(getWidth(), getHeight()) - 20;
+                        int x = (getWidth() - size) / 2;
+                        int y = (getHeight() - size) / 2;
+                        g2d.drawImage(img, x, y, size, size, this);
+                    }
+                    g2d.dispose();
                 }
             };
-            
-            imagePanel.setLayout(new BorderLayout());
-            imagePanel.add(scaledImagePanel, BorderLayout.CENTER);
+            imageDisplayPanel.setOpaque(false);
+            imagePanel.add(imageDisplayPanel, BorderLayout.CENTER);
+        } else {
+            // Add placeholder when no image is available
+            JLabel placeholderLabel = new JLabel("No Image", JLabel.CENTER);
+            placeholderLabel.setFont(new Font("Lato", Font.ITALIC, 12));
+            placeholderLabel.setForeground(new Color(150, 150, 150));
+            imagePanel.add(placeholderLabel, BorderLayout.CENTER);
         }
         
+        // Force refresh with smooth animation
         imagePanel.revalidate();
         imagePanel.repaint();
-
-        // Remove any existing button panel
-        for (Component comp : infoPanel.getComponents()) {
-            if (comp instanceof JPanel && comp == infoPanel.getComponent(infoPanel.getComponentCount() - 1)) {
-                infoPanel.remove(comp);
-                break;
-            }
-        }
-        
-        // Add a new "Use" button for usable items
-        if (item instanceof Medicine || item instanceof KeyItem) {
-            JPanel buttonPanel = new JPanel();
-            JButton useButton = new JButton("Use");
-            useButton.setBackground(new Color(30, 201, 139));
-            useButton.setForeground(Color.WHITE);
-            
-            if (item instanceof Medicine) {
-                useButton.addActionListener(e -> openMedicineSelectionDialog((Medicine)item));
-            } else if (item instanceof KeyItem) {
-                useButton.addActionListener(e -> {
-                    boolean used = item.use(player);
-                    if (used && item.getQuantity() <= 0) {
-                        player.removeItem(item);
-                        menuDialog.dispose();
-                        openPlayerMenu((JPanel)menuButton.getParent());
-                    }
-                });
-            }
-            
-            buttonPanel.add(useButton);
-            infoPanel.add(buttonPanel, BorderLayout.PAGE_END);
-        }
-        
         infoPanel.revalidate();
         infoPanel.repaint();
     }
     
-    public void openMedicineSelectionDialog(Medicine medicine) {
-        // Get a fresh reference to the medicine item
-        Medicine currentMedicine = null;
+    public JPanel createInventoryPanel() {
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBackground(new Color(245, 245, 245));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        
+        if (player == null || player.getInventory() == null || player.getInventory().isEmpty()) {
+            JPanel emptyPanel = new JPanel(new BorderLayout());
+            emptyPanel.setBackground(new Color(245, 245, 245));
+            
+            JLabel emptyLabel = new JLabel("Your inventory is empty", JLabel.CENTER);
+            emptyLabel.setFont(new Font("Lato", Font.PLAIN, 18));
+            emptyLabel.setForeground(new Color(120, 120, 120));
+            
+            JLabel hintLabel = new JLabel("Items you collect will appear here", JLabel.CENTER);
+            hintLabel.setFont(new Font("Lato", Font.ITALIC, 14));
+            hintLabel.setForeground(new Color(150, 150, 150));
+            
+            JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 5));
+            textPanel.setOpaque(false);
+            textPanel.add(emptyLabel);
+            textPanel.add(hintLabel);
+            
+            emptyPanel.add(textPanel, BorderLayout.CENTER);
+            return emptyPanel;
+        }
+        
+        // Create categories panel
+        Map<String, java.util.List<Item>> categorizedItems = new HashMap<>();
         for (Item item : player.getInventory()) {
-            if (item.equals(medicine) && item instanceof Medicine) {
-                currentMedicine = (Medicine) item;
-                break;
-            }
+            String category = getItemType(item);
+            categorizedItems.computeIfAbsent(category, k -> new ArrayList<>()).add(item);
         }
         
-        // If the item is no longer in inventory, return
-        if (currentMedicine == null) return;
+        JTabbedPane categoryTabs = new JTabbedPane();
+        categoryTabs.setFont(new Font("Lato", Font.BOLD, 12));
+        categoryTabs.setBackground(new Color(245, 245, 245));
         
-        // Create dialog to select which Pokémon to use the item on
-        JDialog selectDialog = new JDialog(menuDialog, "Use " + currentMedicine.getName(), true);
-        selectDialog.setSize(400, 300);
-        selectDialog.setLocationRelativeTo(menuDialog);
-        
-        JPanel dialogMainPanel = new JPanel(new BorderLayout(10, 10));
-        dialogMainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        // Create a panel to display Pokémon list
-        JPanel pokemonListPanel = new JPanel(new GridLayout(0, 1, 5, 5));
-        pokemonListPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        
-        boolean anyValidTarget = false;
-        final Medicine finalMedicine = currentMedicine; // For use in lambda
-        
-        // Add each Pokémon to the list
-        for (Pokemon pokemon : player.getTeam()) {
-            boolean canUseItem = false;
-            
-            // Check if the item can be used on this Pokémon
-            if (finalMedicine.isRevive()) {
-                // Revives can only be used on fainted Pokémon
-                canUseItem = pokemon.getStats().hasFainted();
-            } else {
-                // Healing items can only be used on non-fainted Pokémon that aren't at full health
-                canUseItem = !pokemon.getStats().hasFainted() && 
-                             pokemon.getStats().getCurrentHp() < pokemon.getStats().getMaxHp();
-            }
-            
-            JPanel pokemonPanel = PokemonPanelManager.createPokemonSelectionPanel(pokemon, canUseItem);
-            
-            if (canUseItem) {
-                anyValidTarget = true;
-                // Add click listener to use item on this Pokémon
-                pokemonPanel.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        // Apply medicine and close dialog before refreshing
-                        applyMedicineEffect(finalMedicine, pokemon);
-                        selectDialog.dispose();
-                        
-                        if (finalMedicine.getQuantity() <= 0) {
-                            player.removeItem(finalMedicine);
-                        }
-                        
-                        // Refresh both panels
-                        Menu.getInstance().refreshInventoryPanel();
-                        Menu.getInstance().refreshPokemonPanel();
-                    }
-                });
-            }
-            
-            pokemonListPanel.add(pokemonPanel);
+        for (Map.Entry<String, java.util.List<Item>> entry : categorizedItems.entrySet()) {
+            JPanel categoryPanel = createCategoryPanel(entry.getValue());
+            categoryTabs.addTab(entry.getKey(), categoryPanel);
         }
         
-        JScrollPane scrollPane = new JScrollPane(pokemonListPanel);
-        dialogMainPanel.add(scrollPane, BorderLayout.CENTER);
-        
-        // Add cancel button
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> selectDialog.dispose());
-        
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(cancelButton);
-        dialogMainPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        // If no valid targets, show message and return
-        if (!anyValidTarget) {
-            JOptionPane.showMessageDialog(menuDialog, 
-                "Cannot use " + finalMedicine.getName() + " on any Pokémon in your team.", 
-                "Cannot Use Item", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-        
-        selectDialog.add(dialogMainPanel);
-        selectDialog.setVisible(true);
+        mainPanel.add(categoryTabs, BorderLayout.CENTER);
+        return mainPanel;
     }
     
-    private void applyMedicineEffect(Medicine medicine, Pokemon pokemon) {
-        boolean applied = medicine.applyTo(pokemon);
-        if (applied) {
-            // Reduce quantity after successful use
-            medicine.reduceQuantity(1);
+    private JPanel createCategoryPanel(java.util.List<Item> items) {
+        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        panel.setBackground(new Color(250, 250, 250));
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        // Create items grid
+        JPanel itemsGrid = new JPanel(new GridLayout(0, 3, 10, 10));
+        itemsGrid.setBackground(new Color(250, 250, 250));
+        
+        for (Item item : items) {
+            JPanel itemPanel = createItemPanel(item);
+            itemsGrid.add(itemPanel);
         }
+        
+        JScrollPane scrollPane = new JScrollPane(itemsGrid);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        scrollPane.setBorder(null);
+        scrollPane.getViewport().setBackground(new Color(250, 250, 250));
+        
+        panel.add(scrollPane, BorderLayout.CENTER);
+        return panel;
     }
     
-    private void openPlayerMenu(JPanel parentBoard) {
-        Menu.getInstance().openPlayerMenu(parentBoard);
-    }
-    
-    public String getItemType(Item item) {
-        if (item instanceof Medicine) {
-            return "Medicine";
-        } else if (item instanceof Pokeball) {
-            return "Poké Balls";
-        } else if (item instanceof KeyItem) {
-            return "Key Items";
+    private JPanel createItemPanel(Item item) {
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+        panel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
+            BorderFactory.createEmptyBorder(8, 8, 8, 8)
+        ));
+        panel.setBackground(Color.WHITE);
+        panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        // Add hover effect
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                panel.setBackground(new Color(240, 248, 255));
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(30, 201, 139), 2),
+                    BorderFactory.createEmptyBorder(7, 7, 7, 7)
+                ));
+            }
+            
+            @Override
+            public void mouseExited(MouseEvent e) {
+                panel.setBackground(Color.WHITE);
+                panel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(220, 220, 220), 1),
+                    BorderFactory.createEmptyBorder(8, 8, 8, 8)
+                ));
+            }
+        });
+        
+        // Item image
+        JPanel imagePanel = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                if (item.getImage() != null) {
+                    Graphics2D g2d = (Graphics2D) g.create();
+                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, 
+                                        RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                    int size = Math.min(getWidth(), getHeight()) - 4;
+                    int x = (getWidth() - size) / 2;
+                    int y = (getHeight() - size) / 2;
+                    g2d.drawImage(item.getImage(), x, y, size, size, this);
+                    g2d.dispose();
+                }
+            }
+        };
+        imagePanel.setPreferredSize(new Dimension(40, 40));
+        imagePanel.setOpaque(false);
+        
+        // Item name and quantity
+        JLabel nameLabel = new JLabel(item.getName(), JLabel.CENTER);
+        nameLabel.setFont(new Font("Lato", Font.BOLD, 12));
+        nameLabel.setForeground(new Color(60, 60, 60));
+        
+        if (item.getQuantity() > 1) {
+            JLabel quantityLabel = new JLabel("×" + item.getQuantity(), JLabel.CENTER);
+            quantityLabel.setFont(new Font("Lato", Font.PLAIN, 10));
+            quantityLabel.setForeground(new Color(100, 100, 100));
+            
+            JPanel textPanel = new JPanel(new GridLayout(2, 1, 0, 2));
+            textPanel.setOpaque(false);
+            textPanel.add(nameLabel);
+            textPanel.add(quantityLabel);
+            
+            panel.add(textPanel, BorderLayout.SOUTH);
         } else {
-            // For any other item types that might be added later
-            return "Other Items";
+            panel.add(nameLabel, BorderLayout.SOUTH);
+        }
+        
+        panel.add(imagePanel, BorderLayout.CENTER);
+        
+        return panel;
+    }
+    
+    public void refreshCurrentMenu() {
+        Menu menu = Menu.getInstance();
+        if (menu.isMenuVisible()) {
+            SwingUtilities.invokeLater(() -> {
+                menu.refreshInventoryPanel();
+            });
         }
     }
 }

@@ -27,6 +27,7 @@ public abstract class Pokemon {
     protected StatusEffect status;
     protected StatusEffect previousStatus;
     protected LevelManager levelManager;
+    protected List<String> abilities;
 
     public enum PokemonType {
         NORMAL, FIRE, WATER, GRASS, ELECTRIC, ICE, FIGHTING, POISON, GROUND, 
@@ -78,6 +79,9 @@ public abstract class Pokemon {
         }
         ExpGrowthRate growthRate = determineGrowthRate(dexNumber);
         this.levelManager = new LevelManager(this, level, growthRate);
+
+        List<String> abilities = PokemonStatsLoader.getInstance().getPokemonAbilities(dexNumber, name);
+        this.abilities = abilities != null ? abilities : new ArrayList<>();
     }
 
     /**
@@ -384,6 +388,10 @@ public abstract class Pokemon {
         if (tackle != null && !this.moves.contains(tackle)) {
             this.moves.add(tackle);
         }
+    }
+
+    public List<String> getAbilities() {
+        return abilities;
     }
     
     private Move getDefaultMoveForType(PokemonType type) {

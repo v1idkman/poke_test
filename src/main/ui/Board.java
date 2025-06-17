@@ -81,7 +81,7 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         
         Menu menu = Menu.getInstance();
         menu.setPlayer(player);
-        menu.setGameTimer(timer);
+        // menu.setGameTimer(timer);
         menu.initializeMenuButton(this, TILE_SIZE, columns, rows);
 
         // Initialize player position in logical coordinates (not scaled)
@@ -541,6 +541,11 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     @Override
     public void keyPressed(KeyEvent e) {
         if (approachingTrainer != null && player.getMoving() == false) {
+            return;
+        }
+
+        if (player.getMovementState() == MovementState.FROZEN || player.getMovementState() == MovementState.IN_BATTLE) {
+            // Prevent movement when frozen or in battle
             return;
         }
 

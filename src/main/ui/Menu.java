@@ -1,31 +1,37 @@
 package ui;
 
 import javax.swing.*;
-import java.awt.*;
-import java.awt.event.*;
-import java.util.*;
 import javax.swing.Timer;
 
-import model.Player;
-import model.Item;
-import pokes.Pokemon;
+import java.awt.*;
+import java.awt.event.*;
 
-import java.util.List;
+import model.Player;
+import model.Player.MovementState;
 
 public class Menu {
     private static Menu instance;
     
     private JButton menuButton;
-    private JDialog menuDialog;
+    private JPanel menuOverlay;
     private Timer gameTimer;
     private Player player;
+    private JLayeredPane gameLayeredPane;
+    private Board gameBoard;
     
     private ItemManager itemManager;
     private PokemonPanelManager pokemonManager;
     
-    private Menu() {
-        // Initialize any constant properties here
-    }
+    private boolean menuVisible = false;
+    
+    // Updated Menu Colors - lighter backgrounds
+    private static final Color MENU_BG = new Color(60, 60, 60, 240);
+    private static final Color PANEL_BG = new Color(220, 220, 220);
+    private static final Color PANEL_HOVER = new Color(240, 240, 240);
+    private static final Color PANEL_SELECTED = new Color(200, 200, 200);
+    private static final Color TEXT_COLOR = new Color(40, 40, 40);
+    
+    private Menu() {}
     
     public static Menu getInstance() {
         if (instance == null) {
@@ -34,544 +40,482 @@ public class Menu {
         return instance;
     }
     
+    public JLayeredPane getGameLayeredPane() {
+        return this.gameLayeredPane;
+    }
+    
     public void initializeMenuButton(JPanel board, int tileSize, int columns, int rows) {
-        // Create menu button
+        this.gameBoard = (Board) board;
+        
         menuButton = new JButton("MENU");
-        menuButton.setFont(new Font("Lato", Font.BOLD, 16));
-        menuButton.setBackground(new Color(30, 201, 139));
+        menuButton.setFont(new Font("Arial", Font.BOLD, 14));
+        menuButton.setBackground(new Color(70, 130, 180));
         menuButton.setForeground(Color.WHITE);
         menuButton.setFocusPainted(false);
-        menuButton.setBorder(BorderFactory.createRaisedBevelBorder());
-        menuButton.setPreferredSize(new Dimension(60, 30));
+        menuButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(50, 50, 50), 2),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        menuButton.setPreferredSize(new Dimension(70, 35));
         
-        // Add action listener to open menu
-        menuButton.addActionListener(e -> openPlayerMenu(board));
+        menuButton.addActionListener(e -> toggleMenu());
+        
+        board.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeMenu");
+        board.getActionMap().put("closeMenu", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (menuVisible) {
+                    hideMenu();
+                }
+            }
+        });
     }
     
-    
-    // Set the current player for the menu
     public void setPlayer(Player player) {
         this.player = player;
-        this.itemManager = new ItemManager(player, menuDialog, menuButton);
-        this.pokemonManager = new PokemonPanelManager(player, menuDialog);
+        this.itemManager = new ItemManager(player);
+        this.pokemonManager = new PokemonPanelManager(player);
     }
     
-    // Set the game timer for pausing/resuming
     public void setGameTimer(Timer timer) {
         this.gameTimer = timer;
     }
     
-    public void openPlayerMenu(JPanel parentBoard) {
-        // Pause the game timer when menu is open
+    public void setGameLayeredPane(JLayeredPane layeredPane) {
+        this.gameLayeredPane = layeredPane;
+    }
+    
+    private void toggleMenu() {
+        if (menuVisible) {
+            hideMenu();
+        } else {
+            showMenu();
+        }
+    }
+    
+    public void showMenu() {
+        if (menuVisible || gameLayeredPane == null) return;
+        
+        player.setMovementState(MovementState.FROZEN);
+
+        // Stop the game timer
         if (gameTimer != null) {
             gameTimer.stop();
         }
         
-        // Create dialog for the menu
-        menuDialog = new JDialog();
-        menuDialog.setUndecorated(true);
-        menuDialog.setSize(500, 400);
-        menuDialog.setLocationRelativeTo(parentBoard);
-        menuDialog.setModal(true);
+        // Clear all key states to prevent continued movement
+        gameBoard.resetKeyStates();
         
-        // Reinitialize managers with the new dialog
-        this.itemManager = new ItemManager(player, menuDialog, menuButton);
-        this.pokemonManager = new PokemonPanelManager(player, menuDialog);
+        createSidePanelMenu();
         
-        // Create tabbed pane for different menu sections
-        JTabbedPane tabbedPane = new JTabbedPane();
+        gameLayeredPane.add(menuOverlay, JLayeredPane.MODAL_LAYER);
+        gameLayeredPane.setLayer(menuOverlay, JLayeredPane.MODAL_LAYER);
         
-        // Add tabs for different menu sections
-        tabbedPane.addTab("Pokémon", createPokemonPanel());
-        tabbedPane.addTab("Inventory", createInventoryPanel());
-        tabbedPane.addTab("Gym Badges", createBadgesPanel());
-        tabbedPane.addTab("Trainer Card", createTrainerPanel());
-        tabbedPane.addTab("Map", createMapPanel());
+        menuVisible = true;
+        menuOverlay.requestFocusInWindow();
+        gameLayeredPane.revalidate();
+        gameLayeredPane.repaint();
+    }
+    
+    public void hideMenu() {
+        if (!menuVisible || menuOverlay == null) return;
         
-        // Add close button
-        JButton closeButton = new JButton("Close Menu");
-        closeButton.addActionListener(e -> {
-            menuDialog.dispose();
-            if (gameTimer != null) {
-                gameTimer.start();
+        gameLayeredPane.remove(menuOverlay);
+        menuOverlay = null;
+        menuVisible = false;
+        
+        // Re-enable input processing on the game board
+        player.setMovementState(MovementState.FREE);
+        
+        // Resume the game timer
+        if (gameTimer != null) {
+            gameTimer.start();
+        }
+        
+        // Return focus to game board
+        gameBoard.requestFocusInWindow();
+        gameLayeredPane.revalidate();
+        gameLayeredPane.repaint();
+    }
+    
+    public boolean isMenuVisible() {
+        return menuVisible;
+    }
+    
+    private void createSidePanelMenu() {
+        menuOverlay = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                // Semi-transparent overlay that preserves center visibility
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setColor(new Color(0, 0, 0, 60));
+                g2d.fillRect(0, 0, getWidth(), getHeight());
+                g2d.dispose();
+            }
+        };
+        menuOverlay.setOpaque(false);
+        menuOverlay.setLayout(new BorderLayout());
+        menuOverlay.setBounds(0, 0, gameLayeredPane.getWidth(), gameLayeredPane.getHeight());
+        
+        // Create larger left panel
+        JPanel leftPanel = createLeftMenuPanel();
+        
+        // Create larger right panel
+        JPanel rightPanel = createRightMenuPanel();
+        
+        // Add panels to overlay
+        menuOverlay.add(leftPanel, BorderLayout.WEST);
+        menuOverlay.add(rightPanel, BorderLayout.EAST);
+        
+        // Add click listener to close menu when clicking center area
+        menuOverlay.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                // Check if click is in center area (not on side panels)
+                int leftPanelWidth = 300; // Updated for larger panels
+                int rightPanelWidth = 300; // Updated for larger panels
+                if (e.getX() > leftPanelWidth && e.getX() < (menuOverlay.getWidth() - rightPanelWidth)) {
+                    hideMenu();
+                }
+            }
+        });
+    }
+    
+    private JPanel createLeftMenuPanel() {
+        JPanel leftPanel = new JPanel();
+        leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
+        leftPanel.setBackground(MENU_BG);
+        leftPanel.setPreferredSize(new Dimension(300, gameLayeredPane.getHeight())); // Increased from 200 to 300
+        leftPanel.setBorder(BorderFactory.createEmptyBorder(80, 40, 80, 40)); // Increased padding
+        
+        // Group 1: Pokémon, Bag, Trainer Info - larger buttons
+        JPanel pokemonPanel = createMenuItemPanel("POKEMON", "🔴", () -> openPokemonMenu());
+        JPanel bagPanel = createMenuItemPanel("BAG", "🎒", () -> openBagMenu());
+        JPanel trainerPanel = createMenuItemPanel("ID", "👤", () -> openTrainerMenu());
+        
+        leftPanel.add(Box.createVerticalGlue());
+        leftPanel.add(pokemonPanel);
+        leftPanel.add(Box.createVerticalStrut(30)); // Increased spacing
+        leftPanel.add(bagPanel);
+        leftPanel.add(Box.createVerticalStrut(30)); // Increased spacing
+        leftPanel.add(trainerPanel);
+        leftPanel.add(Box.createVerticalGlue());
+        
+        return leftPanel;
+    }
+    
+    private JPanel createRightMenuPanel() {
+        JPanel rightPanel = new JPanel();
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+        rightPanel.setBackground(MENU_BG);
+        rightPanel.setPreferredSize(new Dimension(300, gameLayeredPane.getHeight())); // Increased from 200 to 300
+        rightPanel.setBorder(BorderFactory.createEmptyBorder(80, 40, 80, 40)); // Increased padding
+        
+        // Group 2: Settings, Save, Map
+        JPanel mapPanel = createMenuItemPanel("MAP", "🗺️", () -> openMapMenu());
+        JPanel settingsPanel = createMenuItemPanel("SETTINGS", "⚙️", () -> openSettingsMenu());
+        JPanel savePanel = createMenuItemPanel("SAVE", "💾", () -> openSaveMenu());
+        
+        rightPanel.add(Box.createVerticalGlue());
+        rightPanel.add(mapPanel);
+        rightPanel.add(Box.createVerticalStrut(30));
+        rightPanel.add(savePanel);
+        rightPanel.add(Box.createVerticalStrut(30));
+        rightPanel.add(settingsPanel);
+        rightPanel.add(Box.createVerticalGlue());
+        
+        return rightPanel;
+    }
+    
+    private JPanel createMenuItemPanel(String text, String icon, Runnable action) {
+        JPanel panel = new JPanel() {
+            private boolean isHovered = false;
+            private boolean isPressed = false;
+            
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                
+                Color bgColor = isPressed ? PANEL_SELECTED : (isHovered ? PANEL_HOVER : PANEL_BG);
+                
+                g2d.setColor(bgColor);
+                g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 15, 15); // Slightly more rounded corners
+                
+                // Add subtle border
+                g2d.setColor(new Color(180, 180, 180));
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawRoundRect(1, 1, getWidth() - 2, getHeight() - 2, 15, 15);
+                
+                g2d.dispose();
+            }
+        };
+        
+        panel.setLayout(new BorderLayout(15, 10)); // Increased spacing
+        panel.setPreferredSize(new Dimension(220, 100)); // Increased from 160x60 to 220x100
+        panel.setMaximumSize(new Dimension(220, 100));
+        panel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        
+        // Larger icon
+        JLabel iconLabel = new JLabel(icon, JLabel.CENTER);
+        iconLabel.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36)); // Increased from 24 to 36
+        
+        // Larger text
+        JLabel textLabel = new JLabel(text, JLabel.CENTER);
+        textLabel.setFont(new Font("Arial", Font.BOLD, 18)); // Increased from 14 to 18
+        textLabel.setForeground(TEXT_COLOR);
+        
+        panel.add(iconLabel, BorderLayout.CENTER);
+        panel.add(textLabel, BorderLayout.SOUTH);
+        
+        panel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                try {
+                    panel.getClass().getDeclaredField("isHovered").setBoolean(panel, true);
+                } catch (Exception ex) {}
+                panel.repaint();
             }
             
-            // Use multiple invokeLater calls to ensure proper sequencing
-            SwingUtilities.invokeLater(() -> {
-                // First invokeLater - give time for dialog disposal to complete
-                SwingUtilities.invokeLater(() -> {
-                    // Second invokeLater - now try to set focus
-                    if (parentBoard instanceof Board) {
-                        Board gameBoard = (Board) parentBoard;
-                        
-                        // Get the top-level window first
-                        Window window = SwingUtilities.getWindowAncestor(gameBoard);
-                        if (window instanceof JFrame) {
-                            JFrame frame = (JFrame) window;
-                            frame.toFront();
-                            frame.requestFocus();
-                            
-                            // Now request focus on the board
-                            gameBoard.resetKeyStates();
-                            boolean success = gameBoard.requestFocusInWindow();
-                            // System.out.println("Focus requested for game board: " + success);
-                            
-                            // If still failing, try one more time
-                            if (!success) {
-                                SwingUtilities.invokeLater(() -> {
-                                    gameBoard.requestFocusInWindow();
-                                });
-                            }
-                        }
-                    }
-                });
-            });
-        });
-        
-        // Layout components
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.add(tabbedPane, BorderLayout.CENTER);
-        
-        // Create a panel for the button to center it
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.add(closeButton);
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        menuDialog.add(mainPanel);
-        menuDialog.setVisible(true);
-        // Add window listener to handle focus when dialog closes
-        menuDialog.addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosed(WindowEvent e) {
-                // Use nested invokeLater calls for proper sequencing
-                SwingUtilities.invokeLater(() -> {
-                    SwingUtilities.invokeLater(() -> {
-                        if (parentBoard instanceof Board) {
-                            Board gameBoard = (Board) parentBoard;
-                            
-                            // Get the top-level window first
-                            Window window = SwingUtilities.getWindowAncestor(gameBoard);
-                            if (window instanceof JFrame) {
-                                JFrame frame = (JFrame) window;
-                                frame.toFront();
-                                frame.requestFocus();
-                                
-                                // Now request focus on the board
-                                gameBoard.resetKeyStates();
-                                gameBoard.requestFocusInWindow();
-                            }
-                        }
-                    });
-                });
+            public void mouseExited(MouseEvent e) {
+                try {
+                    panel.getClass().getDeclaredField("isHovered").setBoolean(panel, false);
+                } catch (Exception ex) {}
+                panel.repaint();
+            }
+            
+            @Override
+            public void mousePressed(MouseEvent e) {
+                try {
+                    panel.getClass().getDeclaredField("isPressed").setBoolean(panel, true);
+                } catch (Exception ex) {}
+                panel.repaint();
+            }
+            
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                try {
+                    panel.getClass().getDeclaredField("isPressed").setBoolean(panel, false);
+                } catch (Exception ex) {}
+                panel.repaint();
+                if (panel.contains(e.getPoint())) {
+                    action.run();
+                }
             }
         });
-
+        
+        return panel;
+    }
+    
+    private void openPokemonMenu() {
+        SwingUtilities.invokeLater(() -> createFullScreenSubMenu("POKÉMON", createPokemonPanel()));
+    }
+    
+    private void openBagMenu() {
+        SwingUtilities.invokeLater(() -> createFullScreenSubMenu("BAG", createInventoryPanel()));
+    }
+    
+    private void openTrainerMenu() {
+        SwingUtilities.invokeLater(() -> createFullScreenSubMenu("TRAINER", createTrainerPanel()));
+    }
+    
+    private void openMapMenu() {
+        SwingUtilities.invokeLater(() -> createFullScreenSubMenu("MAP", createMapPanel()));
+    }
+    
+    private void openSaveMenu() {
+        JOptionPane.showMessageDialog(gameLayeredPane, "Game Saved!", "Save", JOptionPane.INFORMATION_MESSAGE);
+    }
+    
+    private void openSettingsMenu() {
+        SwingUtilities.invokeLater(() -> createFullScreenSubMenu("SETTINGS", createSettingsPanel()));
+    }
+    
+    private void createFullScreenSubMenu(String title, JComponent content) {
+        JPanel subMenuOverlay = new JPanel() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(new Color(0, 0, 0, 200));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        subMenuOverlay.setOpaque(false);
+        subMenuOverlay.setLayout(new BorderLayout());
+        subMenuOverlay.setBounds(0, 0, gameLayeredPane.getWidth(), gameLayeredPane.getHeight());
+        
+        JPanel subMenuPanel = new JPanel(new BorderLayout());
+        subMenuPanel.setBackground(new Color(240, 240, 240)); // Light background for sub-menus
+        subMenuPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(120, 120, 120), 2),
+            BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+        
+        JLabel titleLabel = new JLabel(title, JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setForeground(new Color(40, 40, 40)); // Dark text on light background
+        titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
+        
+        JButton backButton = new JButton("← BACK");
+        backButton.setFont(new Font("Arial", Font.BOLD, 14));
+        backButton.setBackground(new Color(70, 130, 180));
+        backButton.setForeground(Color.WHITE);
+        backButton.setFocusPainted(false);
+        backButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(50, 50, 50), 1),
+            BorderFactory.createEmptyBorder(8, 15, 8, 15)
+        ));
+        
+        backButton.addActionListener(e -> {
+            gameLayeredPane.remove(subMenuOverlay);
+            gameLayeredPane.revalidate();
+            gameLayeredPane.repaint();
+            showMenu();
+        });
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(backButton);
+        
+        subMenuPanel.add(titleLabel, BorderLayout.NORTH);
+        subMenuPanel.add(content, BorderLayout.CENTER);
+        subMenuPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        int menuWidth = Math.min(900, gameLayeredPane.getWidth() - 100);
+        int menuHeight = Math.min(700, gameLayeredPane.getHeight() - 100);
+        int x = (gameLayeredPane.getWidth() - menuWidth) / 2;
+        int y = (gameLayeredPane.getHeight() - menuHeight) / 2;
+        
+        subMenuPanel.setBounds(x, y, menuWidth, menuHeight);
+        subMenuOverlay.add(subMenuPanel, BorderLayout.CENTER);
+        
+        gameLayeredPane.add(subMenuOverlay, JLayeredPane.POPUP_LAYER);
+        gameLayeredPane.revalidate();
+        gameLayeredPane.repaint();
+        
+        subMenuOverlay.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
+            KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeSubMenu");
+        subMenuOverlay.getActionMap().put("closeSubMenu", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                gameLayeredPane.remove(subMenuOverlay);
+                gameLayeredPane.revalidate();
+                gameLayeredPane.repaint();
+                showMenu();
+            }
+        });
+        
+        subMenuOverlay.requestFocusInWindow();
     }
     
     private JPanel createPokemonPanel() {
-        // Main panel with BorderLayout
-        JPanel panel = new JPanel(new BorderLayout());
+        if (pokemonManager != null) {
+            return pokemonManager.createPokemonTeamPanel();
+        }
+        
+        // Fallback if pokemonManager is null
+        JPanel emptyPanel = new JPanel(new BorderLayout());
+        emptyPanel.setBackground(new Color(245, 245, 245));
+        JLabel emptyLabel = new JLabel("You don't have any Pokémon yet", JLabel.CENTER);
+        emptyLabel.setFont(new Font("Arial", Font.PLAIN, 18));
+        emptyLabel.setForeground(new Color(120, 120, 120));
+        emptyPanel.add(emptyLabel, BorderLayout.CENTER);
+        return emptyPanel;
+    }
 
-        // Check if player is available or has Pokémon
-        if (player == null || player.getTeam() == null || player.getTeam().isEmpty()) {
-            JLabel placeholder = new JLabel("You don't have any Pokémon yet", JLabel.CENTER);
-            placeholder.setFont(new Font("Lato", Font.PLAIN, 18));
-            panel.add(placeholder, BorderLayout.CENTER);
-            return panel;
-        }
-        
-        // Create a panel to display Pokémon list (similar to Pokétch app)
-        JPanel pokemonListPanel = new JPanel(new GridLayout(6, 1, 5, 5)); // Max 6 Pokémon in team
-        pokemonListPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        // Right side - Pokémon details panel
-        JPanel detailsPanel = new JPanel(new BorderLayout(0, 10));
-        detailsPanel.setBorder(BorderFactory.createTitledBorder("Pokémon Info"));
-        detailsPanel.setPreferredSize(new Dimension(200, 0));
-        
-        // Components for the details panel
-        JLabel pokemonNameLabel = new JLabel();
-        pokemonNameLabel.setFont(new Font("Lato", Font.BOLD, 18));
-        pokemonNameLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        JLabel pokemonStatsLabel = new JLabel();
-        pokemonStatsLabel.setFont(new Font("Lato", Font.PLAIN, 14));
-        
-        // Panel for Pokémon image
-        JPanel pokemonImagePanel = new JPanel(new BorderLayout());
-        pokemonImagePanel.setPreferredSize(new Dimension(120, 120));
-        pokemonImagePanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-        
-        // Layout the details panel
-        JPanel imageContainer = new JPanel(new BorderLayout());
-        imageContainer.add(pokemonImagePanel, BorderLayout.CENTER);
-        
-        detailsPanel.add(imageContainer, BorderLayout.NORTH);
-        detailsPanel.add(pokemonNameLabel, BorderLayout.CENTER);
-        
-        // Add each Pokémon to the list
-        List<Pokemon> team = player.getTeam();
-        for (Pokemon pokemon : team) {
-            // Create a panel for each Pokémon in the list
-            JPanel pokemonPanel = new JPanel(new BorderLayout());
-            pokemonPanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-            
-            // Create a PokemonView to handle drawing
-            PokemonView pokemonView = new PokemonView(pokemon);
-            
-            // Create a custom panel to display the Pokémon sprite
-            JPanel spritePanel = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    // Draw the Pokémon icon (using PokemonView)
-                    pokemonView.draw(g, this, 5, 5, getWidth() - 10, getHeight() - 10, false, pokemon.getIsShiny());
-                }
-            };
-            spritePanel.setPreferredSize(new Dimension(60, 60));
-            
-            // Create HP bar similar to Pokétch
-            JProgressBar hpBar = new JProgressBar(0, pokemon.getStats().getMaxHp());
-            hpBar.setValue(pokemon.getStats().getCurrentHp());
-            hpBar.setForeground(new Color(30, 201, 139));
-            hpBar.setStringPainted(false);
-            
-            // Display Pokémon name
-            JLabel nameLabel = new JLabel(pokemon.getName(), JLabel.CENTER);
-            
-            // Add components to the Pokémon panel
-            JPanel infoPanel = new JPanel(new BorderLayout());
-            infoPanel.add(nameLabel, BorderLayout.NORTH);
-            infoPanel.add(hpBar, BorderLayout.SOUTH);
-            
-            pokemonPanel.add(spritePanel, BorderLayout.WEST);
-            pokemonPanel.add(infoPanel, BorderLayout.CENTER);
-            
-            JLabel itemLabel;
-            if (pokemon.getHeldItem() != null) {
-                itemLabel = new JLabel(new ImageIcon(pokemon.getHeldItem().getImage()));
-            } else {
-                itemLabel = new JLabel() {
-                    @Override
-                    public Dimension getPreferredSize() {
-                        return new Dimension(30, 30);
-                    }
-                    
-                    @Override
-                    protected void paintComponent(Graphics g) {
-                        super.paintComponent(g);
-                    }
-                };
-            }
-            itemLabel.setVerticalAlignment(SwingConstants.TOP);
-            itemLabel.setHorizontalAlignment(SwingConstants.RIGHT);
-            pokemonPanel.add(itemLabel, BorderLayout.EAST);
-            
-            // Add click listener to show Pokémon details
-            pokemonPanel.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    // Update details panel with selected Pokémon
-                    pokemonManager.updatePokemonDetailsPanel(pokemon, pokemonNameLabel, pokemonStatsLabel, 
-                                                           pokemonImagePanel, pokemonView);
-                }
-            });
-            
-            pokemonListPanel.add(pokemonPanel);
-        }
-        
-        // Display the first Pokémon's details by default
-        if (!team.isEmpty()) {
-            pokemonManager.updatePokemonDetailsPanel(team.get(0), pokemonNameLabel, pokemonStatsLabel, 
-                                                   pokemonImagePanel, new PokemonView(team.get(0)));
-        }
-        
-        // Create a split layout
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, pokemonListPanel, detailsPanel);
-        splitPane.setDividerLocation(300);
-        splitPane.setEnabled(false); // Prevent user from moving the divider
-        
-        panel.add(splitPane, BorderLayout.CENTER);
-        return panel;
-    }
-    
-    public void refreshPokemonPanel() {
-        // Get the current tab index
-        int currentTab = 0;
-        Container contentPane = menuDialog.getContentPane();
-        if (contentPane.getComponent(0) instanceof JPanel) {
-            JPanel mainPanel = (JPanel) contentPane.getComponent(0);
-            if (mainPanel.getComponent(0) instanceof JTabbedPane) {
-                JTabbedPane tabbedPane = (JTabbedPane) mainPanel.getComponent(0);
-                currentTab = tabbedPane.getSelectedIndex();
-                
-                // Replace the Pokémon panel with a fresh one
-                tabbedPane.setComponentAt(0, createPokemonPanel());
-                
-                // Restore the selected tab
-                tabbedPane.setSelectedIndex(currentTab);
-            }
-        }
-    }
-    
-    public void refreshInventoryPanel() {
-        if (menuDialog != null && menuDialog.isVisible()) {
-            // Get the tabbed pane
-            Container contentPane = menuDialog.getContentPane();
-            if (contentPane.getComponentCount() > 0 && contentPane.getComponent(0) instanceof JPanel) {
-                JPanel mainPanel = (JPanel) contentPane.getComponent(0);
-                if (mainPanel.getComponentCount() > 0 && mainPanel.getComponent(0) instanceof JTabbedPane) {
-                    JTabbedPane tabbedPane = (JTabbedPane) mainPanel.getComponent(0);
-                    
-                    // Get the current selected tab index
-                    int selectedIndex = tabbedPane.getSelectedIndex();
-                    
-                    // Replace the inventory tab with a fresh one
-                    tabbedPane.setComponentAt(1, createInventoryPanel());
-                    
-                    // Restore the selected tab
-                    tabbedPane.setSelectedIndex(selectedIndex);
-                    
-                    // Force repaint
-                    tabbedPane.revalidate();
-                    tabbedPane.repaint();
-                }
-            }
-        }
-    }
-    
     private JComponent createInventoryPanel() {
-        // Check if player is available
-        if (player == null || player.getInventory() == null || player.getInventory().isEmpty()) {
-            JPanel emptyPanel = new JPanel(new BorderLayout());
-            JLabel emptyLabel = new JLabel("Your inventory is empty", JLabel.CENTER);
-            emptyLabel.setFont(new Font("Lato", Font.PLAIN, 18));
-            emptyPanel.add(emptyLabel, BorderLayout.CENTER);
-            return emptyPanel;
+        if (itemManager != null) {
+            JPanel inventoryPanel = itemManager.createInventoryPanel();
+            inventoryPanel.setBackground(new Color(245, 245, 245)); // Light background
+            return inventoryPanel;
         }
         
-        // Create a tabbed pane for different item categories
-        JTabbedPane itemCategories = new JTabbedPane();
-        
-        // Get player's inventory
-        Set<Item> inventory = player.getInventory();
-        
-        // Create maps to organize items by type
-        Map<String, List<Item>> itemsByType = new HashMap<>();
-        
-        // Sort items by their types
-        for (Item item : inventory) {
-            String type = itemManager.getItemType(item);
-            if (!itemsByType.containsKey(type)) {
-                itemsByType.put(type, new ArrayList<>());
-            }
-            itemsByType.get(type).add(item);
-        }
-        
-        // Add tabs for each item type
-        for (String type : itemsByType.keySet()) {
-            JPanel typePanel = createItemTypePanel(itemsByType.get(type), type);
-            itemCategories.addTab(type, typePanel);
-        }
-        
-        // If there are no categories (shouldn't happen if inventory has items)
-        if (itemCategories.getTabCount() == 0) {
-            JPanel emptyPanel = new JPanel(new BorderLayout());
-            JLabel emptyLabel = new JLabel("Your inventory is empty", JLabel.CENTER);
-            emptyLabel.setFont(new Font("Lato", Font.PLAIN, 18));
-            emptyPanel.add(emptyLabel, BorderLayout.CENTER);
-            return emptyPanel;
-        }
-        
-        return itemCategories;
-    }
-    
-    private JPanel createItemTypePanel(List<Item> items, String itemType) {
-        // Main panel with BorderLayout
-        JPanel panel = new JPanel(new BorderLayout(10, 0));
-        
-        // Left side - scrollable item grid
-        JPanel leftPanel = new JPanel(new BorderLayout());
-        
-        // Create a panel with FlowLayout instead of GridLayout
-        JPanel itemsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        itemsPanel.setBorder(BorderFactory.createEmptyBorder(10, 4, 10, 10));
-
-        // Calculate rows needed based on item count
-        int rows = (int)Math.ceil(items.size() / 5.0); // 5 items per row
-        int preferredHeight = rows * 65; // 60px for item + 5px for spacing
-        itemsPanel.setPreferredSize(new Dimension(300, preferredHeight));
-        
-        // Configure scroll pane with proper policies
-        JScrollPane scrollPane = new JScrollPane(itemsPanel);
-        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-
-        scrollPane.getViewport().setAlignmentY(Component.TOP_ALIGNMENT);
-        
-        // Right side - item information panel
-        JPanel infoPanel = new JPanel(new BorderLayout(0, 10));
-        infoPanel.setBorder(BorderFactory.createTitledBorder("Item Info"));
-        infoPanel.setPreferredSize(new Dimension(180, 0));
-        
-        // Components for the info panel
-        JLabel itemNameLabel = new JLabel();
-        itemNameLabel.setFont(new Font("Lato", Font.BOLD, 18));
-        itemNameLabel.setHorizontalAlignment(SwingConstants.CENTER);
-        
-        JLabel itemDescLabel = new JLabel();
-        itemDescLabel.setFont(new Font("Lato", Font.PLAIN, 14));
-        
-        // Create a panel for the item image
-        JPanel itemImagePanel = new JPanel(new BorderLayout());
-        itemImagePanel.setPreferredSize(new Dimension(100, 100));
-        itemImagePanel.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY));
-        
-        // Layout the info panel
-        JPanel imageContainer = new JPanel(new BorderLayout());
-        imageContainer.add(itemImagePanel, BorderLayout.CENTER);
-        
-        infoPanel.add(imageContainer, BorderLayout.NORTH);
-        infoPanel.add(itemNameLabel, BorderLayout.CENTER);
-        infoPanel.add(itemDescLabel, BorderLayout.SOUTH);
-        
-        // Check if there are items of this type
-        if (items.isEmpty()) {
-            itemNameLabel.setText("No Items");
-            itemDescLabel.setText("<html>No items of type " + itemType + " available</html>");
-        } else {
-            // Add each item to the grid panel
-            for (Item item : items) {
-                // Create a small square panel for each item
-                JPanel itemPanel = new JPanel() {
-                    @Override
-                    protected void paintComponent(Graphics g) {
-                        super.paintComponent(g);
-                        if (item.getImage() != null) {
-                            Image img = item.getImage();
-                            int size = Math.min(getWidth(), getHeight()) - 10; // Smaller padding
-                            g.drawImage(img, (getWidth() - size)/2, (getHeight() - size)/2, size, size, this);
-                        }
-                    }
-                };
-                
-                // Set larger fixed size for the item squares
-                itemPanel.setPreferredSize(new Dimension(60, 60));
-                itemPanel.setMinimumSize(new Dimension(60, 60));
-                
-                itemPanel.setToolTipText(item.getName());
-                
-                // Add click listener to show item info
-                itemPanel.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        // Update info panel with selected item details
-                        itemManager.updateItemInfoPanel(item, itemNameLabel, itemDescLabel, itemImagePanel, infoPanel);
-                        
-                        if (e.getClickCount() == 2) {
-                            // Get a fresh reference to the item from inventory
-                            Item currentItem = null;
-                            for (Item inventoryItem : player.getInventory()) {
-                                if (inventoryItem.equals(item)) {
-                                    currentItem = inventoryItem;
-                                    break;
-                                }
-                            }
-                            
-                            // Use the fresh reference instead of the potentially stale one
-                            if (currentItem != null) {
-                                boolean used = currentItem.use(player);
-                                if (used && currentItem.getQuantity() <= 0) {
-                                    player.removeItem(currentItem);
-                                    menuDialog.dispose();
-                                    openPlayerMenu((JPanel)menuButton.getParent());
-                                }
-                            }
-                        }
-                    }
-                });
-                
-                itemsPanel.add(itemPanel);
-            }
-            
-            // Display the first item's info by default
-            itemManager.updateItemInfoPanel(items.get(0), itemNameLabel, itemDescLabel, itemImagePanel, infoPanel);
-        }
-        
-        scrollPane.setViewportView(itemsPanel);
-        leftPanel.add(scrollPane, BorderLayout.CENTER);
-        
-        // Add both panels to the main panel
-        panel.add(leftPanel, BorderLayout.CENTER);
-        panel.add(infoPanel, BorderLayout.EAST);
-        
-        return panel;
-    }
-    
-    private JPanel createBadgesPanel() {
-        JPanel panel = new JPanel(new GridLayout(2, 4, 15, 15));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        
-        String[] badges = {"Boulder", "Cascade", "Thunder", "Rainbow", 
-                           "Soul", "Marsh", "Volcano", "Earth"};
-        
-        for (String badge : badges) {
-            JPanel badgePanel = new JPanel(new BorderLayout());
-            JLabel badgeLabel = new JLabel(badge + " Badge", JLabel.CENTER);
-            
-            boolean hasBadge = Math.random() > 0.5;
-            if (!hasBadge) {
-                badgeLabel.setForeground(Color.GRAY);
-            }
-            
-            badgePanel.add(badgeLabel, BorderLayout.CENTER);
-            panel.add(badgePanel);
-        }
-        
-        return panel;
+        JPanel emptyPanel = new JPanel(new BorderLayout());
+        emptyPanel.setBackground(new Color(245, 245, 245));
+        JLabel emptyLabel = new JLabel("Your bag is empty", JLabel.CENTER);
+        emptyLabel.setFont(new Font("Arial", Font.PLAIN, 18));
+        emptyLabel.setForeground(new Color(80, 80, 80)); // Dark text
+        emptyPanel.add(emptyLabel, BorderLayout.CENTER);
+        return emptyPanel;
     }
     
     private JPanel createTrainerPanel() {
         JPanel panel = new JPanel(new BorderLayout(20, 20));
+        panel.setBackground(new Color(245, 245, 245)); // Light background
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
         
         String playerName = player != null ? player.getName() : "Unknown";
         JLabel nameLabel = new JLabel("Trainer: " + playerName, JLabel.CENTER);
-        nameLabel.setFont(new Font("Lato", Font.BOLD, 20));
+        nameLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        nameLabel.setForeground(new Color(40, 40, 40)); // Dark text
         
         JPanel statsPanel = new JPanel(new GridLayout(4, 2, 10, 10));
-        statsPanel.add(new JLabel("Trainer ID:"));
-        statsPanel.add(new JLabel("#" + player.getId()));
-        statsPanel.add(new JLabel("Money:"));
-        statsPanel.add(new JLabel("₽" + player.getMoney()));
-        statsPanel.add(new JLabel("Pokédex:"));
-        statsPanel.add(new JLabel("25 seen, 12 caught"));
-        statsPanel.add(new JLabel("Play Time:"));
-        statsPanel.add(new JLabel("12:34"));
+        statsPanel.setOpaque(false);
+        
+        addTrainerStat(statsPanel, "Trainer ID:", "#" + (player != null ? player.getId() : "000001"));
+        addTrainerStat(statsPanel, "Money:", "₽" + (player != null ? player.getMoney() : "0"));
+        addTrainerStat(statsPanel, "Pokédex:", "25 seen, 12 caught");
+        addTrainerStat(statsPanel, "Play Time:", "12:34");
         
         panel.add(nameLabel, BorderLayout.NORTH);
         panel.add(statsPanel, BorderLayout.CENTER);
         
         return panel;
     }
-
+    
+    private void addTrainerStat(JPanel parent, String label, String value) {
+        JLabel labelComponent = new JLabel(label);
+        labelComponent.setFont(new Font("Arial", Font.BOLD, 14));
+        labelComponent.setForeground(new Color(100, 100, 100));
+        
+        JLabel valueComponent = new JLabel(value);
+        valueComponent.setFont(new Font("Arial", Font.PLAIN, 14));
+        valueComponent.setForeground(new Color(40, 40, 40)); // Dark text
+        
+        parent.add(labelComponent);
+        parent.add(valueComponent);
+    }
+    
+    private JPanel createMapPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(245, 245, 245)); // Light background
+        
+        JLabel label = new JLabel("Map View - Coming Soon", JLabel.CENTER);
+        label.setFont(new Font("Arial", Font.PLAIN, 18));
+        label.setForeground(new Color(80, 80, 80)); // Dark text
+        
+        panel.add(label, BorderLayout.CENTER);
+        return panel;
+    }
+    
+    private JPanel createSettingsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(245, 245, 245)); // Light background
+        
+        JLabel label = new JLabel("Settings - Coming Soon", JLabel.CENTER);
+        label.setFont(new Font("Arial", Font.PLAIN, 18));
+        label.setForeground(new Color(80, 80, 80)); // Dark text
+        
+        panel.add(label, BorderLayout.CENTER);
+        return panel;
+    }
+    
     public void positionMenuButtonForWindow(JLayeredPane layeredPane, int windowWidth, int windowHeight) {
+        this.gameLayeredPane = layeredPane;
+        
         if (menuButton != null) {
-            // Remove button from its current parent if it exists
             Container parent = menuButton.getParent();
             if (parent != null) {
                 parent.remove(menuButton);
             }
             
-            // Position button at bottom right of window
             int buttonWidth = menuButton.getPreferredSize().width;
             int buttonHeight = menuButton.getPreferredSize().height;
-            menuButton.setBounds(windowWidth - buttonWidth - 10, 
-                                windowHeight - buttonHeight - 10,
+            menuButton.setBounds(windowWidth - buttonWidth - 15, 
+                                windowHeight - buttonHeight - 15,
                                 buttonWidth, buttonHeight);
             
-            // Add to layered pane with higher layer value to ensure visibility
             layeredPane.add(menuButton, JLayeredPane.PALETTE_LAYER);
             layeredPane.setLayer(menuButton, JLayeredPane.PALETTE_LAYER);
             layeredPane.revalidate();
@@ -579,15 +523,25 @@ public class Menu {
         }
     }
     
-
-    public Component createMapPanel() {
-        JPanel panel = new JPanel(new BorderLayout(20, 20));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-
-        return panel;
-    }
-
     public JButton getMenuButton() {
         return menuButton;
+    }
+    
+    public void refreshPokemonPanel() {
+        if (menuVisible && menuOverlay != null) {
+            SwingUtilities.invokeLater(() -> {
+                hideMenu();
+                showMenu();
+            });
+        }
+    }
+    
+    public void refreshInventoryPanel() {
+        if (menuVisible && menuOverlay != null) {
+            SwingUtilities.invokeLater(() -> {
+                hideMenu();
+                showMenu();
+            });
+        }
     }
 }
