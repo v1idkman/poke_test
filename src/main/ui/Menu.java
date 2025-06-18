@@ -96,21 +96,15 @@ public class Menu {
     public void showMenu() {
         if (menuVisible || gameLayeredPane == null) return;
         
-        // CRITICAL FIX: Properly freeze player and clear input
-        if (player != null) {
-            player.setMovementState(MovementState.FROZEN);
-        }
+        player.setMovementState(MovementState.FROZEN);
 
         // Stop the game timer
         if (gameTimer != null) {
             gameTimer.stop();
         }
         
-        // CRITICAL FIX: Clear all key states and remove focus from board
-        if (gameBoard != null) {
-            gameBoard.resetKeyStates();
-            gameBoard.setFocusable(false);
-        }
+        // Clear all key states to prevent continued movement
+        gameBoard.resetKeyStates();
         
         createSidePanelMenu();
         
@@ -118,13 +112,7 @@ public class Menu {
         gameLayeredPane.setLayer(menuOverlay, JLayeredPane.MODAL_LAYER);
         
         menuVisible = true;
-        
-        // CRITICAL FIX: Proper focus management
-        SwingUtilities.invokeLater(() -> {
-            menuOverlay.setFocusable(true);
-            menuOverlay.requestFocusInWindow();
-        });
-        
+        menuOverlay.requestFocusInWindow();
         gameLayeredPane.revalidate();
         gameLayeredPane.repaint();
     }
@@ -132,40 +120,23 @@ public class Menu {
     public void hideMenu() {
         if (!menuVisible || menuOverlay == null) return;
         
-        removePaused();
+        // Remove the paused label if it exists
+        JLabel pausedLabel = (JLabel) menuOverlay.getClientProperty("pausedLabel");
+        if (pausedLabel != null) {
+            gameLayeredPane.remove(pausedLabel);
+        }
         
         gameLayeredPane.remove(menuOverlay);
         menuOverlay = null;
         menuVisible = false;
         
-        // CRITICAL FIX: Proper restoration sequence
-        SwingUtilities.invokeLater(() -> {
-            // Restore game timer first
-            if (gameTimer != null) {
-                gameTimer.start();
-            }
-            
-            // Restore player movement state
-            if (player != null) {
-                player.setMovementState(MovementState.FREE);
-            }
-            
-            // Restore board focus
-            if (gameBoard != null) {
-                gameBoard.setFocusable(true);
-                gameBoard.requestFocusInWindow();
-                
-                // Double-check focus restoration
-                SwingUtilities.invokeLater(() -> {
-                    if (!gameBoard.hasFocus()) {
-                        gameBoard.grabFocus();
-                    }
-                });
-            }
-            
-            gameLayeredPane.revalidate();
-            gameLayeredPane.repaint();
-        });
+        if (gameTimer != null) {
+            gameTimer.start();
+        }
+        
+        gameBoard.requestFocusInWindow();
+        gameLayeredPane.revalidate();
+        gameLayeredPane.repaint();
     }
     
     public boolean isMenuVisible() {
@@ -186,17 +157,6 @@ public class Menu {
         menuOverlay.setOpaque(false);
         menuOverlay.setLayout(new BorderLayout());
         menuOverlay.setBounds(0, 0, gameLayeredPane.getWidth(), gameLayeredPane.getHeight());
-        
-        // CRITICAL FIX: Make menu overlay focusable and add key listener
-        menuOverlay.setFocusable(true);
-        menuOverlay.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    hideMenu();
-                }
-            }
-        });
         
         // Create larger left panel
         JPanel leftPanel = createLeftMenuPanel();
@@ -368,41 +328,28 @@ public class Menu {
         
         return panel;
     }
-
-    private void removePaused() {
-        JLabel pausedLabel = (JLabel) menuOverlay.getClientProperty("pausedLabel");
-        if (pausedLabel != null) {
-            gameLayeredPane.remove(pausedLabel);
-        }
-    }
     
     private void openPokemonMenu() {
-        removePaused();
         SwingUtilities.invokeLater(() -> createFullScreenSubMenu("POKÉMON", createPokemonPanel()));
     }
     
     private void openBagMenu() {
-        removePaused();
         SwingUtilities.invokeLater(() -> createFullScreenSubMenu("BAG", createInventoryPanel()));
     }
     
     private void openTrainerMenu() {
-        removePaused();
         SwingUtilities.invokeLater(() -> createFullScreenSubMenu("TRAINER", createTrainerPanel()));
     }
     
     private void openMapMenu() {
-        removePaused();
         SwingUtilities.invokeLater(() -> createFullScreenSubMenu("MAP", createMapPanel()));
     }
     
     private void openSaveMenu() {
-        removePaused();
         JOptionPane.showMessageDialog(gameLayeredPane, "Game Saved!", "Save", JOptionPane.INFORMATION_MESSAGE);
     }
     
     private void openSettingsMenu() {
-        removePaused();
         SwingUtilities.invokeLater(() -> createFullScreenSubMenu("SETTINGS", createSettingsPanel()));
     }
     
@@ -418,11 +365,8 @@ public class Menu {
         subMenuOverlay.setLayout(new BorderLayout());
         subMenuOverlay.setBounds(0, 0, gameLayeredPane.getWidth(), gameLayeredPane.getHeight());
         
-        // CRITICAL FIX: Make submenu focusable
-        subMenuOverlay.setFocusable(true);
-        
         JPanel subMenuPanel = new JPanel(new BorderLayout());
-        subMenuPanel.setBackground(PANEL_BG);
+        subMenuPanel.setBackground(PANEL_BG); // Light background for sub-menus
         subMenuPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(120, 120, 120), 2),
             BorderFactory.createEmptyBorder(20, 20, 20, 20)
@@ -430,7 +374,7 @@ public class Menu {
         
         JLabel titleLabel = new JLabel(title, JLabel.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
-        titleLabel.setForeground(new Color(40, 40, 40));
+        titleLabel.setForeground(new Color(40, 40, 40)); // Dark text on light background
         titleLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 20, 0));
         
         JButton backButton = new JButton("← BACK");
@@ -470,7 +414,6 @@ public class Menu {
         gameLayeredPane.revalidate();
         gameLayeredPane.repaint();
         
-        // CRITICAL FIX: Proper key binding for submenu
         subMenuOverlay.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(
             KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeSubMenu");
         subMenuOverlay.getActionMap().put("closeSubMenu", new AbstractAction() {
@@ -483,11 +426,9 @@ public class Menu {
             }
         });
         
-        // CRITICAL FIX: Proper focus for submenu
-        SwingUtilities.invokeLater(() -> {
-            subMenuOverlay.requestFocusInWindow();
-        });
+        subMenuOverlay.requestFocusInWindow();
     }
+    
     private JPanel createPokemonPanel() {
         if (pokemonManager != null) {
             return pokemonManager.createPokemonTeamPanel();

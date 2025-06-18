@@ -1,6 +1,7 @@
 package model;
 
 import java.awt.Point;
+
 import ui.Board;
 
 public class InteractableItem extends InteractableObject {
@@ -8,16 +9,17 @@ public class InteractableItem extends InteractableObject {
     private int quantity;
     private boolean collected = false;
     private String interactionMessage;
-    private Item actualItem;
+    private Item actualItem; // Store the created item for validation
     
     public InteractableItem(Point position, String itemName, int quantity, Direction direction) {
         super(position, generateSpritePath(itemName), direction);
         this.itemName = itemName;
         this.quantity = quantity;
-        this.actualItem = ItemFactory.createItem(itemName);
+        this.actualItem = ItemFactory.createItem(itemName); // Create item for validation
         this.interactionMessage = generateInteractionMessage();
         this.walkable = true;
         
+        // Use the item's own loadImage() method and copy its image to this object
         if (this.actualItem != null) {
             this.actualItem.loadImage();
             this.sprite = this.actualItem.getImage();
@@ -31,11 +33,12 @@ public class InteractableItem extends InteractableObject {
         }
     }
     
-    // Overloaded constructors remain the same
+    // Overloaded constructor with default ANY direction
     public InteractableItem(Point position, String itemName, int quantity) {
         this(position, itemName, quantity, Direction.ANY);
     }
     
+    // Constructor for single item (quantity = 1)
     public InteractableItem(Point position, String itemName) {
         this(position, itemName, 1, Direction.ANY);
     }
@@ -44,21 +47,21 @@ public class InteractableItem extends InteractableObject {
         if (quantity == 1) {
             return "Found " + itemName + "!";
         } else {
-            return "Found " + quantity + " " + itemName + "s!";
+            return "Found " + quantity + " " + itemName + "(s)!";
         }
     }
     
     @Override
     public void performAction(Player player, Board board) {
         if (!collected) {
-            // Show discovery message first
-            board.showDialogue(interactionMessage);
-            
-            // Automatically pick up all items
+            // Create fresh items for each interaction
             boolean allItemsAdded = true;
+            
             for (int i = 0; i < quantity; i++) {
                 Item itemToAdd = ItemFactory.createItem(itemName);
                 if (itemToAdd != null) {
+                    // Add to player's inventory using the string-based method
+                    // since the Item class doesn't have inventory integration built-in
                     player.addToInventory(itemName);
                 } else {
                     allItemsAdded = false;
@@ -67,32 +70,21 @@ public class InteractableItem extends InteractableObject {
             }
             
             if (allItemsAdded) {
-                // Show success message with item description if available
-                String successMessage;
-                if (quantity == 1) {
-                    successMessage = "You picked up the " + itemName + "!";
-                } else {
-                    successMessage = "You picked up all " + quantity + " " + itemName + "s!";
-                }
-                board.showDialogue(successMessage);
-                
+                System.out.println(interactionMessage);
                 collected = true;
             } else {
-                // Show error message
-                board.showDialogue("Something went wrong... couldn't pick up all the items.");
+                System.err.println("Some items could not be added to inventory");
             }
         } else {
-            // Already collected
-            board.showDialogue("There's nothing here...");
+            System.out.println("There's nothing here...");
         }
     }
-
+    
     @Override
     public boolean shouldRemoveAfterInteraction() {
         return collected;
     }
     
-    // Getters remain the same
     public boolean isCollected() {
         return collected;
     }
@@ -118,6 +110,8 @@ public class InteractableItem extends InteractableObject {
     }
 
     private static String generateSpritePath(String itemName) {
+        // This method is kept for compatibility with the parent class constructor
+        // but the actual image loading is now delegated to the item's loadImage() method
         String normalizedName = itemName.toLowerCase().replace(" ", "-").trim();
         return "sprites/sprites/items/" + normalizedName + ".png";
     }

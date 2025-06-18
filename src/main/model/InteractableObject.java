@@ -2,6 +2,7 @@ package model;
 
 import java.awt.Point;
 import java.awt.Rectangle;
+
 import ui.Board;
 
 public abstract class InteractableObject extends WorldObject {
@@ -16,24 +17,11 @@ public abstract class InteractableObject extends WorldObject {
         this.direction = direction;
     }
     
+    // Overloaded constructor for backward compatibility (defaults to ANY)
     public InteractableObject(Point position, String spriteLocation) {
         this(position, spriteLocation, Direction.ANY);
     }
     
-    // Helper method for common interaction patterns
-    protected void showTakeOrLeaveOptions(Board board, String itemName, Runnable takeAction, Runnable leaveAction) {
-        String[] options = {"Take it", "Leave it"};
-        board.showDialogueWithOptions("", "What would you like to do with the " + itemName + "?", 
-                                    options, (choice) -> {
-            if (choice == 0 && takeAction != null) {
-                takeAction.run();
-            } else if (choice == 1 && leaveAction != null) {
-                leaveAction.run();
-            }
-        });
-    }
-    
-    // Existing methods remain the same...
     public Direction getDirection() {
         return direction;
     }
@@ -42,6 +30,9 @@ public abstract class InteractableObject extends WorldObject {
         this.direction = direction;
     }
     
+    /**
+     * Checks if the player can interact with this object based on direction
+     */
     public boolean canPlayerInteract(Player.Direction playerDirection) {
         switch (this.direction) {
             case FRONT:
@@ -53,12 +44,15 @@ public abstract class InteractableObject extends WorldObject {
             case RIGHT:
                 return playerDirection == Player.Direction.RIGHT;
             case ANY:
-                return true;
+                return true; // Any direction can interact
             default:
                 return false;
         }
     }
     
+    /**
+     * Gets the interaction area around this object
+     */
     public Rectangle getInteractionArea(int tileSize) {
         Rectangle bounds = getBounds(tileSize);
         int interactionPadding = tileSize / 4;
@@ -70,8 +64,14 @@ public abstract class InteractableObject extends WorldObject {
         );
     }
     
+    /**
+     * Abstract method that defines what happens when the player interacts with this object
+     */
     public abstract void performAction(Player player, Board board);
     
+    /**
+     * Optional method to check if this object should be removed after interaction
+     */
     public boolean shouldRemoveAfterInteraction() {
         return false;
     }

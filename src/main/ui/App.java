@@ -56,55 +56,6 @@ public class App {
         worldManager.setCurrentWorld("outside");
     }
 
-    private static void addZoomKeyListener() {
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
-            @Override
-            public boolean dispatchKeyEvent(KeyEvent e) {
-                if (e.getID() == KeyEvent.KEY_PRESSED) {
-                    Board currentBoard = worldManager.getCurrentWorld();
-                    
-                    // CRITICAL FIX: Check if dialogue is active first
-                    if (currentBoard != null && currentBoard.isDialogueActive()) {
-                        // Let dialogue handle all keys when active
-                        return false;
-                    }
-                    
-                    // Plus key zooms in
-                    if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
-                        changeZoom(1);
-                        return true;
-                    }
-                    
-                    // Minus key zooms out
-                    if (e.getKeyCode() == KeyEvent.VK_MINUS) {
-                        changeZoom(-1);
-                        return true;
-                    }
-                    
-                    // ESC key exits application
-                    if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                        System.exit(0);
-                        return true;
-                    }
-                }
-                
-                // CRITICAL FIX: Only handle board keys if dialogue is not active
-                Board currentBoard = worldManager.getCurrentWorld();
-                if (currentBoard != null && !currentBoard.isDialogueActive() && !currentBoard.hasFocus()) {
-                    if (e.getID() == KeyEvent.KEY_PRESSED) {
-                        currentBoard.keyPressed(e);
-                        return true;
-                    } else if (e.getID() == KeyEvent.KEY_RELEASED) {
-                        currentBoard.keyReleased(e);
-                        return true;
-                    }
-                }
-                return false;
-            }
-        });
-    }
-    
-
     private static void initWindow() {
         // Force fullscreen - no windowed mode option
         if (!graphicsDevice.isFullScreenSupported()) {
@@ -225,6 +176,49 @@ public class App {
             
             System.out.println("Zoom level: " + ZOOM_LEVEL + "x");
         }
+    }
+    
+    /**
+     * Add zoom controls (+ and - keys)
+     */
+    private static void addZoomKeyListener() {
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
+            @Override
+            public boolean dispatchKeyEvent(KeyEvent e) {
+                if (e.getID() == KeyEvent.KEY_PRESSED) {
+                    // Plus key zooms in
+                    if (e.getKeyCode() == KeyEvent.VK_PLUS || e.getKeyCode() == KeyEvent.VK_EQUALS) {
+                        changeZoom(1);
+                        return true;
+                    }
+                    
+                    // Minus key zooms out
+                    if (e.getKeyCode() == KeyEvent.VK_MINUS) {
+                        changeZoom(-1);
+                        return true;
+                    }
+                    
+                    // ESC key exits application (since no windowed mode)
+                    if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+                        System.exit(0);
+                        return true;
+                    }
+                }
+                
+                // Handle other key events for the game board
+                Board currentBoard = worldManager.getCurrentWorld();
+                if (currentBoard != null && !currentBoard.hasFocus()) {
+                    if (e.getID() == KeyEvent.KEY_PRESSED) {
+                        currentBoard.keyPressed(e);
+                        return true;
+                    } else if (e.getID() == KeyEvent.KEY_RELEASED) {
+                        currentBoard.keyReleased(e);
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
     }
     
     public static int getEffectiveTileSize() {
