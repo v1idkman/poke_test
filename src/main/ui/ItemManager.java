@@ -514,23 +514,25 @@ public class ItemManager {
         itemImagePanel.removeAll();
         itemImagePanel.setLayout(new BorderLayout());
         
-        if (selectedItem.getImage() != null) {
+        // CRITICAL FIX: Add null check for selectedItem
+        if (selectedItem != null && selectedItem.getImage() != null) {
             JPanel imageDisplayPanel = new JPanel() {
                 @Override
                 protected void paintComponent(Graphics g) {
                     super.paintComponent(g);
-                    Graphics2D g2d = (Graphics2D) g.create();
-                    g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, 
-                                        RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                    
-                    if (selectedItem.getImage() != null) {
+                    // CRITICAL FIX: Double-check selectedItem is not null
+                    if (selectedItem != null && selectedItem.getImage() != null) {
+                        Graphics2D g2d = (Graphics2D) g.create();
+                        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, 
+                                            RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                        
                         Image img = selectedItem.getImage();
                         int size = Math.min(getWidth(), getHeight()) - 10;
                         int x = (getWidth() - size) / 2;
                         int y = (getHeight() - size) / 2;
                         g2d.drawImage(img, x, y, size, size, this);
+                        g2d.dispose();
                     }
-                    g2d.dispose();
                 }
             };
             imageDisplayPanel.setOpaque(false);

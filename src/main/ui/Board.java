@@ -23,6 +23,7 @@ import model.Npc;
 
 import java.util.List;
 import java.util.Random;
+import java.util.function.Consumer;
 import java.util.ArrayList;
 
 public class Board extends JPanel implements ActionListener, KeyListener {
@@ -56,6 +57,9 @@ public class Board extends JPanel implements ActionListener, KeyListener {
     private int encounterCooldown = 0;
     private static final int ENCOUNTER_COOLDOWN_TIME = 3;
     private TrainerNpc approachingTrainer = null;
+
+    private DialogueBox dialogueBox;
+    private boolean dialogueActive = false;
 
     public Board(Player player, String worldName, int rows, int columns) {
         this.rows = rows;
@@ -110,6 +114,21 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 resetKeyStates();
             }
         });
+
+        setLayout(null); // Use absolute positioning for layered components
+        
+        dialogueBox = new DialogueBox(this);
+        Rectangle bounds = dialogueBox.getDialogueBounds(getWidth(), getHeight());
+        dialogueBox.setBounds(bounds);
+        dialogueBox.setVisible(false);
+        
+        // Add to highest layer to ensure it's on top and gets focus properly
+        add(dialogueBox);
+        setComponentZOrder(dialogueBox, 0); // Bring to front
+        
+        // Ensure board can initially receive focus
+        setFocusable(true);
+        setRequestFocusEnabled(true);
     }
 
     public void setWorldManager(WorldManager manager) {
@@ -540,12 +559,23 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyPressed(KeyEvent e) {
+        // Don't process movement keys during dialogue
+        if (isDialogueActive()) {
+            e.consume();
+            return;
+        }
+
+        if (Menu.getInstance().isMenuVisible()) {
+            return;
+        }
+
+        // Don't move when a trainer is approaching
         if (approachingTrainer != null && player.getMoving() == false) {
             return;
         }
 
+        // Prevent movement when frozen or in battle
         if (player.getMovementState() == MovementState.FROZEN || player.getMovementState() == MovementState.IN_BATTLE) {
-            // Prevent movement when frozen or in battle
             return;
         }
 
@@ -574,6 +604,11 @@ public class Board extends JPanel implements ActionListener, KeyListener {
 
     @Override
     public void keyReleased(KeyEvent e) {
+        if (isDialogueActive()) {
+            e.consume();
+            return;
+        }
+
         if (approachingTrainer != null && player.getMoving() == false) {
             return;
         }
@@ -737,35 +772,34 @@ public class Board extends JPanel implements ActionListener, KeyListener {
         objects.add(civilian);
     }
     
+    // For trainer encounters
     private void initiateNPCBattle(TrainerNpc npc) {
-        npcBattleInProgress = true;
+        showDialogue(npc.getName(), npc.getDialogueText());
         
-        // Stop player movement
-        resetKeyStates();
-        player.setMoving(false);
-        player.stopMoving();
-        timer.stop();
-        
-        // Show dialogue first
-        showNPCDialogue(npc, () -> {
-            // Start battle after dialogue
-            startTrainerBattle(npc);
+        // Queue follow-up dialogue with battle option
+        String[] options = {"Accept Challenge", "Decline"};
+        showDialogueWithOptions(npc.getName(), "Do you want to battle?", options, (choice) -> {
+            if (choice == 0) {
+                startTrainerBattle(npc);
+            } else {
+                showDialogue(npc.getName(), "Maybe next time!");
+            }
         });
     }
 
-    private void showNPCDialogue(Npc npc, Runnable onComplete) {
-        SwingUtilities.invokeLater(() -> {
-            NpcDialogueScreen dialogue = new NpcDialogueScreen(npc, this);
-            dialogue.setVisible(true);
-            
-            dialogue.addWindowListener(new java.awt.event.WindowAdapter() {
-                @Override
-                public void windowClosed(java.awt.event.WindowEvent e) {
-                    onComplete.run();
+    // For civilian NPCs
+    /* private void talkToCivilian(CivilianNpc npc) {
+        showDialogue(npc.getName(), npc.getDialogueText());
+        
+        if (npc.hasItems()) {
+            String[] options = {"Buy Items", "Just Talking"};
+            showDialogueWithOptions(npc.getName(), "What can I do for you?", options, (choice) -> {
+                if (choice == 0) {
+                    openShop(npc);
                 }
             });
-        });
-    }
+        }
+    } */
 
     private void startWildEncounter() {
         inBattle = true;
@@ -968,5 +1002,75 @@ public class Board extends JPanel implements ActionListener, KeyListener {
                 ((BerryTree) obj).checkBerryRegrowth();
             }
         }
+    }
+
+    // When showing dialogue, ensure it gets focus:
+    public void showDialogue(String speaker, String text) {
+        dialogueActive = true;
+        
+        // Stop all board activity
+        resetKeyStates();
+        player.setMoving(false);
+        
+        // Queue the message (focus will be handled in showNextMessage)
+        dialogueBox.queueMessage(speaker, text);
+    }
+
+    public void showDialogue(String text) {
+        showDialogue("", text);
+    }
+
+    public void showDialogueWithOptions(String speaker, String text, String[] options, Consumer<Integer> callback) {
+        dialogueActive = true;
+        
+        // Stop all board activity
+        resetKeyStates();
+        player.setMoving(false);
+        
+        // Queue the message with options
+        dialogueBox.queueMessage(speaker, text, options, callback);
+    }
+    
+    public boolean isDialogueActive() {
+        return dialogueActive && dialogueBox != null && dialogueBox.isVisible();
+    }
+    
+    public void setDialogueActive(boolean active) {
+        this.dialogueActive = active;
+        if (!active) {
+            // Ensure focus returns to board when dialogue ends
+            SwingUtilities.invokeLater(() -> {
+                setFocusable(true);
+                requestFocusInWindow();
+            });
+        }
+    }
+
+    @Override
+    public void setBounds(int x, int y, int width, int height) {
+        super.setBounds(x, y, width, height);
+        
+        if (dialogueBox != null) {
+            Rectangle bounds = dialogueBox.getDialogueBounds(width, height);
+            dialogueBox.setBounds(bounds);
+        }
+    }
+
+    public void restoreGameFocus() {
+        SwingUtilities.invokeLater(() -> {
+            setFocusable(true);
+            requestFocusInWindow();
+            
+            if (player != null) {
+                player.setMovementState(Player.MovementState.FREE);
+            }
+            
+            // Double-check focus
+            SwingUtilities.invokeLater(() -> {
+                if (!hasFocus()) {
+                    grabFocus();
+                }
+            });
+        });
     }
 }
