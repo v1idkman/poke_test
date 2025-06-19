@@ -617,10 +617,17 @@ public class Board extends JPanel implements ActionListener, KeyListener {
             shiftPressed = false;
             player.setSprintKeyPressed(false);
         }
-        if (key == KeyEvent.VK_UP) upPressed = false;
+        if (key == KeyEvent.VK_UP) {
+            upPressed = false;
+        }
         if (key == KeyEvent.VK_DOWN) downPressed = false;
         if (key == KeyEvent.VK_LEFT) leftPressed = false;
         if (key == KeyEvent.VK_RIGHT) rightPressed = false;
+
+        if (!upPressed && !downPressed && !leftPressed && !rightPressed) {
+            player.setMoving(false);
+            playerView.loadImage();
+        }
 
         repaint();
 

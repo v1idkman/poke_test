@@ -84,7 +84,6 @@ public class Player extends Trainer {
                 System.out.println("Animation frame changed from " + oldFrame + " to " + animationFrame + " (Direction: " + direction + ")");
             }
         }
-        // Remove the else clause that was resetting animation every frame
     }
     
     public void updatePosition() {
@@ -187,11 +186,9 @@ public class Player extends Trainer {
         if (!moving && wasMoving) {
             animationFrame = 0;
             animationCounter = 0;
-            System.out.println("Player stopped moving, resetting animation frame to 0");
         } else if (!wasMoving && moving) {
-            System.out.println("Player started moving, continuing animation from frame " + animationFrame);
+            // System.out.println("Player started moving, continuing animation from frame " + animationFrame);
         }
-        // Don't print or reset anything if the state hasn't changed
     }
     
     
